@@ -3,307 +3,355 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>绒球 XR 实验室 🧶</title>
+  <title>绒球 XR 实验室 | Rongball XR Lab 🧶</title>
+  <meta name="description" content="WebXR / A-Frame / 空间音频 / VR 原型探索 — 为 VR Soundscape 毕设提供快速原型验证">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
       --bg: #0a0a1a;
-      --card-bg: #16213e;
-      --primary: #E8A87C;
-      --secondary: #7BC8A4;
+      --card-bg: rgba(22, 33, 62, 0.6);
+      --card-border: rgba(123, 200, 164, 0.1);
+      --primary: #7BC8A4;
+      --secondary: #E8A87C;
       --accent: #3498DB;
-      --text: #F0E6D8;
-      --text-light: #8B9BB4;
-      --glow: rgba(232, 168, 124, 0.15);
+      --text: #e8e6e3;
+      --text-dim: #8B9BB4;
+      --glow: rgba(123, 200, 164, 0.08);
     }
 
     body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
       overflow-x: hidden;
     }
 
-    /* 背景网格效果 */
+    /* 背景网格 */
     body::before {
       content: '';
       position: fixed;
       inset: 0;
-      background-image: 
-        linear-gradient(rgba(232,168,124,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(232,168,124,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
+      background-image:
+        linear-gradient(rgba(123,200,164,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(123,200,164,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* 背景光晕 */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -20%;
+      right: -10%;
+      width: 60vw;
+      height: 60vw;
+      background: radial-gradient(circle, rgba(123,200,164,0.06) 0%, transparent 70%);
       pointer-events: none;
       z-index: 0;
     }
 
     .container {
-      max-width: 960px;
+      max-width: 1000px;
       margin: 0 auto;
-      padding: 0 20px;
+      padding: 0 24px;
       position: relative;
       z-index: 1;
     }
 
-    /* 顶部 */
-    .header {
+    /* Hero */
+    .hero {
+      padding: 100px 0 60px;
       text-align: center;
-      padding: 60px 20px 40px;
     }
 
-    .header h1 {
-      font-family: 'Press Start 2P', monospace;
-      font-size: 1.8rem;
+    .hero .logo {
+      font-size: 0.85rem;
       color: var(--primary);
-      text-shadow: 0 0 30px var(--glow);
-      margin-bottom: 12px;
-      letter-spacing: 2px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: 0.8;
     }
 
-    .header .subtitle {
-      color: var(--text-light);
-      font-size: 1rem;
-      font-weight: 300;
+    .hero h1 {
+      font-size: 2.6rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+      line-height: 1.2;
     }
 
-    .header .badge {
-      display: inline-block;
-      margin-top: 16px;
-      padding: 4px 14px;
-      background: rgba(232,168,124,0.1);
-      border: 1px solid rgba(232,168,124,0.3);
-      border-radius: 20px;
-      color: var(--primary);
-      font-size: 0.8rem;
-    }
-
-    /* 分区标题 */
-    .section-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 40px 0 20px;
+    .hero .tagline {
       font-size: 1.1rem;
-      color: var(--secondary);
+      color: var(--text-dim);
+      font-weight: 300;
+      max-width: 500px;
+      margin: 0 auto 24px;
+      line-height: 1.6;
     }
 
-    .section-title::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: linear-gradient(90deg, rgba(123,200,164,0.3), transparent);
+    .hero .badges {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
     }
 
-    /* 卡片网格 */
-    .card-grid {
+    .badge {
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border: 1px solid;
+    }
+
+    .badge-webxr { background: rgba(123,200,164,0.1); border-color: rgba(123,200,164,0.3); color: var(--primary); }
+    .badge-aframe { background: rgba(52,152,219,0.1); border-color: rgba(52,152,219,0.3); color: var(--accent); }
+    .badge-audio { background: rgba(232,168,124,0.1); border-color: rgba(232,168,124,0.3); color: var(--secondary); }
+
+    /* Section */
+    .section {
+      margin: 50px 0 30px;
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      color: var(--primary);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      padding-left: 2px;
+    }
+
+    /* Project Cards */
+    .project-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
     }
 
-    .card {
+    .project-card {
       background: var(--card-bg);
-      border-radius: 14px;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
       overflow: hidden;
-      border: 1px solid rgba(232,168,124,0.1);
-      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      transition: all 0.25s ease;
       text-decoration: none;
       color: inherit;
       display: block;
+      position: relative;
     }
 
-    .card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(232,168,124,0.3);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    .project-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(123, 200, 164, 0.3);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 0 1px rgba(123,200,164,0.1);
     }
 
-    .card .thumb {
-      height: 140px;
+    .project-card .preview {
+      height: 150px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 3.5rem;
+      font-size: 3rem;
       position: relative;
-      overflow: hidden;
     }
 
-    .card .thumb::after {
+    .project-card .preview::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(180deg, transparent 50%, var(--card-bg));
+      background: linear-gradient(180deg, transparent 40%, var(--card-bg));
     }
 
-    .card .info {
-      padding: 14px 18px;
+    .project-card .content {
+      padding: 16px 20px 20px;
     }
 
-    .card .info h3 {
-      font-size: 1rem;
-      margin-bottom: 4px;
+    .project-card .content h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 6px;
     }
 
-    .card .info p {
-      font-size: 0.82rem;
-      color: var(--text-light);
+    .project-card .content p {
+      font-size: 0.8rem;
+      color: var(--text-dim);
       line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .project-card .tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
     }
 
     .tag {
-      display: inline-block;
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       padding: 2px 8px;
-      border-radius: 12px;
-      margin-top: 8px;
+      border-radius: 10px;
       font-weight: 500;
     }
 
-    .tag-xr { background: rgba(123,200,164,0.15); color: var(--secondary); }
-    .tag-audio { background: rgba(232,168,124,0.15); color: var(--primary); }
+    .tag-vr { background: rgba(123,200,164,0.15); color: var(--primary); }
+    .tag-spatial { background: rgba(232,168,124,0.15); color: var(--secondary); }
     .tag-learn { background: rgba(52,152,219,0.15); color: var(--accent); }
-    .tag-game { background: rgba(247,220,111,0.15); color: #F7DC6F; }
-    .tag-soon { background: rgba(139,155,180,0.1); color: var(--text-light); }
+    .tag-soon { background: rgba(139,155,180,0.08); color: var(--text-dim); }
 
-    /* 封面配色 */
-    .thumb-soundscape { background: linear-gradient(135deg, #1a1a2e, #2a1a3e); }
-    .thumb-hello { background: linear-gradient(135deg, #16213e, #1a3a5c); }
-    .thumb-component { background: linear-gradient(135deg, #1a2a1a, #1a3a2a); }
-    .thumb-community { background: linear-gradient(135deg, #1a1a2e, #0a1628); }
-    .thumb-game { background: linear-gradient(135deg, #2a1a1a, #3a2a1a); }
+    .preview-soundscape { background: linear-gradient(135deg, #0a1628, #1a1a3e, #2a1a3e); }
+    .preview-hello { background: linear-gradient(135deg, #0a1a2a, #16213e, #1a3a5c); }
+    .preview-component { background: linear-gradient(135deg, #0a1a1a, #1a2a1a, #1a3a2a); }
+    .preview-community { background: linear-gradient(135deg, #0a0a1a, #1a1a2e, #0a1628); }
 
-    /* 底部 */
+    /* Placeholder card */
+    .card-placeholder {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .card-placeholder:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: var(--card-border);
+    }
+
+    /* Footer */
     .footer {
       text-align: center;
-      padding: 50px 20px;
-      color: var(--text-light);
-      font-size: 0.8rem;
+      padding: 60px 20px 40px;
+      color: var(--text-dim);
+      font-size: 0.75rem;
     }
 
     .footer a {
       color: var(--primary);
       text-decoration: none;
+      opacity: 0.8;
+      transition: opacity 0.2s;
     }
 
-    @media (max-width: 600px) {
-      .header h1 { font-size: 1.2rem; }
-      .card-grid { grid-template-columns: 1fr; }
-      .card .thumb { height: 110px; font-size: 2.5rem; }
+    .footer a:hover { opacity: 1; }
+
+    .footer .links {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 640px) {
+      .hero { padding: 60px 0 40px; }
+      .hero h1 { font-size: 1.8rem; }
+      .project-grid { grid-template-columns: 1fr; }
+      .project-card .preview { height: 120px; }
     }
   </style>
 </head>
 <body>
 
-  <div class="header">
-    <h1>绒球 XR 实验室</h1>
-    <p class="subtitle">🧶 WebXR · A-Frame · 空间音频 · VR 原型</p>
-    <span class="badge">为 VR Soundscape 毕设提供快速原型验证</span>
-  </div>
-
   <div class="container">
 
-    <div class="section-title">🥽 XR 项目</div>
-    <div class="card-grid">
+    <header class="hero">
+      <div class="logo">🧶 Rongball XR Lab</div>
+      <h1>绒球 XR 实验室</h1>
+      <p class="tagline">WebXR 原型探索 · 空间音频实验 · VR 交互设计</p>
+      <div class="badges">
+        <span class="badge badge-webxr">WebXR</span>
+        <span class="badge badge-aframe">A-Frame</span>
+        <span class="badge badge-audio">Spatial Audio</span>
+      </div>
+    </header>
 
-      <a class="card" href="xr/soundscape-demo.html">
-        <div class="thumb thumb-soundscape">🎵</div>
-        <div class="info">
-          <h3>VR Soundscape 空间音频原型</h3>
-          <p>三种声源球体 + HRTF 空间音频 + 交互界面</p>
-          <span class="tag tag-xr">VR</span>
-          <span class="tag tag-audio">空间音频</span>
+    <section class="section">
+      <div class="section-label">◈ 项目与实验</div>
+      <div class="project-grid">
+
+        <a class="project-card" href="xr/soundscape-demo.html">
+          <div class="preview preview-soundscape">🎵</div>
+          <div class="content">
+            <h3>VR Soundscape 空间音频原型</h3>
+            <p>三种声源球体 + HRTF 空间化音频 + 交互界面，VR Soundscape 毕设概念验证</p>
+            <div class="tags">
+              <span class="tag tag-vr">VR</span>
+              <span class="tag tag-spatial">空间音频</span>
+            </div>
+          </div>
+        </a>
+
+        <a class="project-card" href="xr/hello-world.html">
+          <div class="preview preview-hello">🌐</div>
+          <div class="content">
+            <h3>A-Frame Hello World</h3>
+            <p>基础 3D 场景搭建：几何体、材质、光照与阴影</p>
+            <div class="tags">
+              <span class="tag tag-learn">入门</span>
+            </div>
+          </div>
+        </a>
+
+        <a class="project-card" href="xr/exercise-components.html">
+          <div class="preview preview-component">⚙️</div>
+          <div class="content">
+            <h3>自定义组件练习</h3>
+            <p>6 个组件实验：生命周期、交互、粒子系统、跟随逻辑</p>
+            <div class="tags">
+              <span class="tag tag-learn">进阶</span>
+            </div>
+          </div>
+        </a>
+
+        <a class="project-card" href="xr/exercise-community.html">
+          <div class="preview preview-community">✨</div>
+          <div class="content">
+            <h3>社区组件综合场景</h3>
+            <p>粒子系统 + 海洋 + 多光源动画 + 雾效氛围</p>
+            <div class="tags">
+              <span class="tag tag-learn">综合</span>
+            </div>
+          </div>
+        </a>
+
+        <div class="project-card card-placeholder">
+          <div class="preview" style="background: linear-gradient(135deg, #0a1a2a, #1a1a3e);">🏠</div>
+          <div class="content">
+            <h3>VR 空间搭建</h3>
+            <p>环境搭建与导航练习</p>
+            <div class="tags"><span class="tag tag-soon">即将推出</span></div>
+          </div>
         </div>
-      </a>
 
-      <a class="card" href="xr/hello-world.html">
-        <div class="thumb thumb-hello">🌐</div>
-        <div class="info">
-          <h3>A-Frame Hello World</h3>
-          <p>基础 3D 场景：几何体、光照、阴影</p>
-          <span class="tag tag-learn">入门</span>
+        <div class="project-card card-placeholder">
+          <div class="preview" style="background: linear-gradient(135deg, #1a0a2a, #2a1a3e);">🎛️</div>
+          <div class="content">
+            <h3>音频创作交互 UI</h3>
+            <p>拖拽声源 + 可视化编辑界面原型</p>
+            <div class="tags"><span class="tag tag-soon">即将推出</span></div>
+          </div>
         </div>
-      </a>
 
-      <a class="card" href="xr/exercise-components.html">
-        <div class="thumb thumb-component">⚙️</div>
-        <div class="info">
-          <h3>自定义组件练习</h3>
-          <p>6 个练习：hello-world、log、box、follow、cursor、粒子</p>
-          <span class="tag tag-learn">进阶</span>
-        </div>
-      </a>
-
-      <a class="card" href="xr/exercise-community.html">
-        <div class="thumb thumb-community">✨</div>
-        <div class="info">
-          <h3>社区组件综合场景</h3>
-          <p>粒子系统 + 海洋 + 多光源 + 雾效</p>
-          <span class="tag tag-learn">综合</span>
-        </div>
-      </a>
-
-      <a class="card" style="opacity:0.5; cursor:default;">
-        <div class="thumb" style="background: linear-gradient(135deg, #1a1a2e, #2a2a3e);">🏠</div>
-        <div class="info">
-          <h3>VR 空间搭建练习</h3>
-          <p>即将推出...</p>
-          <span class="tag tag-soon">待开发</span>
-        </div>
-      </a>
-
-      <a class="card" style="opacity:0.5; cursor:default;">
-        <div class="thumb" style="background: linear-gradient(135deg, #1a1a2e, #2a1a2a);">🎛️</div>
-        <div class="info">
-          <h3>音频创作交互界面</h3>
-          <p>即将推出...</p>
-          <span class="tag tag-soon">待开发</span>
-        </div>
-      </a>
-
-    </div>
-
-    <div class="section-title">🎮 游戏厅</div>
-    <div class="card-grid">
-
-      <a class="card" href="games/snake.html">
-        <div class="thumb thumb-game">🐍</div>
-        <div class="info">
-          <h3>贪吃蛇</h3>
-          <p>经典休闲游戏</p>
-          <span class="tag tag-game">休闲</span>
-        </div>
-      </a>
-
-      <a class="card" href="games/2048.html">
-        <div class="thumb thumb-game">🔢</div>
-        <div class="info">
-          <h3>2048</h3>
-          <p>益智数字合并</p>
-          <span class="tag tag-game">益智</span>
-        </div>
-      </a>
-
-      <a class="card" href="games/minesweeper.html">
-        <div class="thumb thumb-game">💣</div>
-        <div class="info">
-          <h3>扫雷</h3>
-          <p>经典策略游戏</p>
-          <span class="tag tag-game">策略</span>
-        </div>
-      </a>
-
-    </div>
+      </div>
+    </section>
 
   </div>
 
-  <div class="footer">
-    <p>Made with 🧶 by <a href="https://rongkyn.github.io/rongball-room/">绒球</a></p>
-    <p style="margin-top:6px;">Powered by <a href="https://aframe.io" target="_blank">A-Frame</a></p>
-  </div>
+  <footer class="footer">
+    <div class="links">
+      <a href="https://rongkyn.github.io/rongball-room/">绒球的房间</a>
+      <a href="https://github.com/Rongkyn/rongball-games">GitHub</a>
+      <a href="https://aframe.io" target="_blank">A-Frame Docs</a>
+    </div>
+    <p>Made with 🧶 by 绒球 · Powered by A-Frame</p>
+  </footer>
 
 </body>
 </html>
