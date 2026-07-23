@@ -2,29 +2,45 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>A-Frame Hello World - 绒球学习</title>
-    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <title>A-Frame Hello World - 绒球 XR 实验室</title>
+    <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
   </head>
   <body>
-    <a-scene>
-      <!-- 天空和环境 -->
-      <a-sky color="#ECECEC"></a-sky>
-      <a-plane position="0 0 -4" rotation="-90 0 0" width="20" height="20" color="#7BC8A4" shadow></a-plane>
+    <a-scene renderer="antialias: true; colorManagement: true">
+      <!-- 天空 -->
+      <a-sky color="#0a0a1a"></a-sky>
       
-      <!-- 基础几何体 -->
-      <a-box position="-1 0.5 -3" rotation="0 45 0" color="#4CC3D9" shadow></a-box>
-      <a-sphere position="0 1.25 -5" radius="1.25" color="#EF2D5E" shadow></a-sphere>
-      <a-cylinder position="1 0.75 -3" radius="0.5" height="1.5" color="#FFC65D" shadow></a-cylinder>
+      <!-- 地面 -->
+      <a-plane position="0 0 0" rotation="-90 0 0" width="20" height="20" color="#111122" shadow="receive: true"></a-plane>
       
-      <!-- 文本 -->
-      <a-text value="绒球 A-Frame 学习之旅 🧶" align="center" position="0 2.5 -4" color="#333" width="6"></a-text>
+      <!-- 灯光 -->
+      <a-light type="ambient" color="#303050" intensity="0.5"></a-light>
+      <a-light type="directional" color="#E8A87C" intensity="0.7" position="2 8 3" castShadow="true"></a-light>
+      <a-light type="point" color="#7BC8A4" intensity="0.4" position="-3 4 -2" distance="12"></a-light>
+
+      <!-- 几何体展示 -->
+      <a-box position="-2 0.75 -4" rotation="0 30 0" width="1.2" height="1.2" depth="1.2" color="#E8A87C" shadow="cast: true"
+        animation="property: rotation; to: 0 390 0; dur: 8000; loop: true; easing: linear"></a-box>
       
-      <!-- 相机默认已有，也可以自定义 -->
-      <a-entity camera look-controls wasd-controls position="0 1.6 0"></a-entity>
+      <a-sphere position="0 1.25 -5" radius="1" color="#7BC8A4" shadow="cast: true"
+        animation="property: position; to: 0 2  -5; dur: 2000; dir: alternate; loop: true; easing: easeInOutQuad"></a-sphere>
       
-      <!-- 光照 -->
-      <a-light type="directional" intensity="0.5" position="-1 1 1"></a-light>
-      <a-light type="ambient" intensity="0.3"></a-light>
+      <a-cylinder position="2 0.75 -4" radius="0.6" height="1.5" color="#3498DB" shadow="cast: true"
+        animation="property: rotation; to: 360 0 0; dur: 6000; loop: true; easing: linear"></a-cylinder>
+
+      <a-torus position="0 2 -7" radius="0.8" radius-tubular="0.15" color="#F7DC6F" 
+        animation="property: rotation; to: 360 360 0; dur: 10000; loop: true; easing: linear"></a-torus>
+
+      <!-- 相机 + 手柄 -->
+      <a-entity id="camera-rig" position="0 1.6 2" movement-controls="speed: 0.1">
+        <a-camera look-controls wasd-controls="enabled: false">
+          <a-cursor color="#E8A87C" raycaster="far: 20"></a-cursor>
+        </a-camera>
+        <a-entity laser-controls="hand: left; model: true; defaultModelColor: #7BC8A4"
+          raycaster="objects: .clickable; far: 20; showLine: true" line="color: #7BC8A4; opacity: 0.5"></a-entity>
+        <a-entity laser-controls="hand: right; model: true; defaultModelColor: #E8A87C"
+          raycaster="objects: .clickable; far: 20; showLine: true" line="color: #E8A87C; opacity: 0.5"></a-entity>
+      </a-entity>
     </a-scene>
   </body>
 </html>

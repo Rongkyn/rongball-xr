@@ -2,227 +2,162 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>练习：自定义组件 - 绒球 A-Frame 学习</title>
-    <meta name="description" content="跟着官方 Writing a Component 教程练习">
+    <title>自定义组件练习 - 绒球 XR 实验室</title>
     <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
-    <script>
-      // ====== 练习1: hello-world 组件 ======
-      AFRAME.registerComponent('hello-world', {
-        init: function () {
-          console.log('🧶 Hello, World! 绒球组件已初始化');
-        }
-      });
-
-      // ====== 练习2: log 组件（带 schema、事件、更新）======
-      AFRAME.registerComponent('log', {
-        schema: {
-          event: {type: 'string', default: ''},
-          message: {type: 'string', default: 'Hello, World!'}
-        },
-        multiple: true,
-        init: function () {
-          var self = this;
-          this.eventHandlerFn = function () { console.log(self.data.message); };
-        },
-        update: function (oldData) {
-          var data = this.data;
-          var el = this.el;
-          if (oldData.event && data.event !== oldData.event) {
-            el.removeEventListener(oldData.event, this.eventHandlerFn);
-          }
-          if (data.event) {
-            el.addEventListener(data.event, this.eventHandlerFn);
-          } else {
-            console.log(data.message);
-          }
-        },
-        remove: function () {
-          var data = this.data;
-          var el = this.el;
-          if (data.event) {
-            el.removeEventListener(data.event, this.eventHandlerFn);
-          }
-        }
-      });
-
-      // ====== 练习3: box 组件（three.js 网格操作）======
-      AFRAME.registerComponent('custom-box', {
-        schema: {
-          width: {type: 'number', default: 1},
-          height: {type: 'number', default: 1},
-          depth: {type: 'number', default: 1},
-          color: {type: 'color', default: '#AAA'}
-        },
-        init: function () {
-          var data = this.data;
-          var el = this.el;
-          this.geometry = new THREE.BoxGeometry(data.width, data.height, data.depth);
-          this.material = new THREE.MeshStandardMaterial({color: data.color});
-          this.mesh = new THREE.Mesh(this.geometry, this.material);
-          el.setObject3D('mesh', this.mesh);
-        },
-        update: function (oldData) {
-          var data = this.data;
-          var el = this.el;
-          if (Object.keys(oldData).length === 0) return;
-          if (data.width !== oldData.width ||
-              data.height !== oldData.height ||
-              data.depth !== oldData.depth) {
-            el.getObject3D('mesh').geometry = new THREE.BoxGeometry(data.width, data.height, data.depth);
-          }
-          if (data.color !== oldData.color) {
-            el.getObject3D('mesh').material.color = new THREE.Color(data.color);
-          }
-        },
-        remove: function () {
-          this.el.removeObject3D('mesh');
-        }
-      });
-
-      // ====== 练习4: follow 组件（tick 持续行为）======
-      AFRAME.registerComponent('follow', {
-        schema: {
-          target: {type: 'selector'},
-          speed: {type: 'number'}
-        },
-        init: function () {
-          this.directionVec3 = new THREE.Vector3();
-        },
-        tick: function (time, timeDelta) {
-          var directionVec3 = this.directionVec3;
-          var targetPosition = this.data.target.object3D.position;
-          var currentPosition = this.el.object3D.position;
-          directionVec3.copy(targetPosition).sub(currentPosition);
-          var distance = directionVec3.length();
-          if (distance < 1) return;
-          var factor = this.data.speed / distance;
-          ['x', 'y', 'z'].forEach(function (axis) {
-            directionVec3[axis] *= factor * (timeDelta / 1000);
-          });
-          this.el.setAttribute('position', {
-            x: currentPosition.x + directionVec3.x,
-            y: currentPosition.y + directionVec3.y,
-            z: currentPosition.z + directionVec3.z
-          });
-        }
-      });
-
-      // ====== 练习5: cursor-listener 组件（颜色切换）======
-      AFRAME.registerComponent('cursor-listener', {
-        init: function () {
-          var lastIndex = -1;
-          var COLORS = ['#E74C3C', '#2ECC71', '#3498DB', '#F39C12', '#9B59B6', '#1ABC9C'];
-          this.el.addEventListener('click', function (evt) {
-            lastIndex = (lastIndex + 1) % COLORS.length;
-            this.setAttribute('material', 'color', COLORS[lastIndex]);
-            console.log('点击位置: ', evt.detail.intersection.point);
-          });
-        }
-      });
-
-      // ====== 练习6: 自定义粒子组件（不用社区库）======
-      AFRAME.registerComponent('floating-particles', {
-        schema: {
-          count: {type: 'number', default: 50},
-          spread: {type: 'number', default: 10},
-          size: {type: 'number', default: 0.05},
-          speed: {type: 'number', default: 1},
-          color: {type: 'color', default: '#E8A87C'}
-        },
-        init: function () {
-          this.particles = [];
-          this.velocities = [];
-          var data = this.data;
-          
-          for (var i = 0; i < data.count; i++) {
-            var particleGeo = new THREE.SphereGeometry(data.size, 6, 6);
-            var particleMat = new THREE.MeshBasicMaterial({
-              color: data.color,
-              transparent: true,
-              opacity: 0.3 + Math.random() * 0.5
-            });
-            var particle = new THREE.Mesh(particleGeo, particleMat);
-            particle.position.set(
-              (Math.random() - 0.5) * data.spread,
-              Math.random() * data.spread * 0.5,
-              (Math.random() - 0.5) * data.spread
-            );
-            this.el.object3D.add(particle);
-            this.particles.push(particle);
-            this.velocities.push({
-              x: (Math.random() - 0.5) * data.speed * 0.01,
-              y: (Math.random() - 0.5) * data.speed * 0.005,
-              z: (Math.random() - 0.5) * data.speed * 0.01
-            });
-          }
-        },
-        tick: function (time, timeDelta) {
-          var spread = this.data.spread;
-          for (var i = 0; i < this.particles.length; i++) {
-            var p = this.particles[i];
-            var v = this.velocities[i];
-            p.position.x += v.x * timeDelta;
-            p.position.y += v.y * timeDelta;
-            p.position.z += v.z * timeDelta;
-            // 边界弹回
-            if (Math.abs(p.position.x) > spread / 2) v.x *= -1;
-            if (p.position.y > spread * 0.5 || p.position.y < 0) v.y *= -1;
-            if (Math.abs(p.position.z) > spread / 2) v.z *= -1;
-          }
-        }
-      });
-    </script>
   </head>
   <body>
-    <a-scene>
-      <!-- 使用 hello-world 组件 -->
-      <a-entity hello-world></a-entity>
+    <a-scene renderer="antialias: true; colorManagement: true">
+      <a-sky color="#0a0a1a"></a-sky>
+      <a-plane position="0 0 0" rotation="-90 0 0" width="20" height="20" color="#111122" shadow="receive: true"></a-plane>
+      <a-light type="ambient" color="#303050" intensity="0.5"></a-light>
+      <a-light type="directional" color="#E8A87C" intensity="0.7" position="2 8 3" castShadow="true"></a-light>
 
-      <!-- 使用 log 组件（多实例） -->
-      <a-entity log__welcome="message: 欢迎来到绒球 A-Frame 练习场！"
-                log__tip="event: click; message: 你点击了场景！"></a-entity>
+      <!-- 1. hello-world 组件 -->
+      <a-entity hello-world position="-3 1.5 -5"></a-entity>
 
-      <!-- 天空和环境 -->
-      <a-sky color="#1a1a2e"></a-sky>
-      <a-plane position="0 0 0" rotation="-90 0 0" width="30" height="30" 
-               color="#16213e" shadow="receive: true"></a-plane>
+      <!-- 2. log 多实例 -->
+      <a-entity log="msg: box1; color: #E8A87C" position="0 1.5 -5"
+        geometry="primitive: box; width: 0.8; height: 0.8; depth: 0.8"
+        material="color: #E8A87C" shadow="cast: true"
+        animation="property: rotation; to: 0 360 0; dur: 5000; loop: true; easing: linear"></a-entity>
 
-      <!-- 光照 -->
-      <a-light type="ambient" color="#404060" intensity="0.4"></a-light>
-      <a-light type="point" color="#E8A87C" intensity="0.8" position="0 5 0" distance="15"></a-light>
-      <a-light type="directional" color="#7BC8A4" intensity="0.3" position="-5 8 -5" castShadow="true"></a-light>
+      <!-- 3. three.js box -->
+      <a-entity three-box position="3 1.5 -5"></a-entity>
 
-      <!-- 练习3: 自定义 box 组件 -->
-      <a-entity custom-box="width: 1; height: 1; depth: 1; color: #E8A87C" position="-3 0.5 -5"></a-entity>
+      <!-- 4. follow 组件 -->
+      <a-entity id="target" position="0 1.5 -5"
+        geometry="primitive: sphere; radius: 0.3" material="color: #F7DC6F"
+        animation="property: position; to: 3 2 -5; dur: 3000; dir: alternate; loop: true; easing: easeInOutQuad"></a-entity>
+      <a-entity follow="target: #target; speed: 2; offset: 0 0 1"
+        geometry="primitive: sphere; radius: 0.15" material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 0.3"
+        animation="property: scale; from: 1 1 1; to: 1.2 1.2 1.2; dur: 800; dir: alternate; loop: true"></a-entity>
 
-      <!-- 练习5: cursor-listener 可点击变色的球 -->
-      <a-sphere cursor-listener radius="0.5" color="#4CC3D9" position="0 1.5 -5" shadow></a-sphere>
-      <a-sphere cursor-listener radius="0.4" color="#EF2D5E" position="2 1 -4" shadow></a-sphere>
-      <a-sphere cursor-listener radius="0.35" color="#FFC65D" position="-2 1.2 -6" shadow></a-sphere>
+      <!-- 5. cursor-listener 变色球 -->
+      <a-entity class="clickable"
+        position="-2 1.2 -3"
+        geometry="primitive: sphere; radius: 0.4"
+        material="color: #3498DB; shader: standard"
+        cursor-listener shadow="cast: true"
+        animation="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; dur: 1200; dir: alternate; loop: true; easing: easeInOutQuad"></a-entity>
 
-      <!-- 练习4: follow 组件 - 小球跟随目标 -->
-      <a-box id="follow-target" color="#2ECC71" position="0 1 -8" width="0.3" height="0.3" depth="0.3"
-             animation="property: position; to: 3 1 -5; dur: 3000; dir: alternate; loop: true; easing: easeInOutSine">
-      </a-box>
-      <a-sphere follow="target: #follow-target; speed: 2" radius="0.2" color="#9B59B6" position="-3 1 -8"
-                material="emissive: #9B59B6; emissiveIntensity: 0.3">
-      </a-sphere>
+      <!-- 6. 浮动粒子 -->
+      <a-entity id="particles"></a-entity>
 
-      <!-- 练习6: 自定义粒子组件 -->
-      <a-entity floating-particles="count: 80; spread: 12; size: 0.04; speed: 0.8; color: #E8A87C" position="0 0 -5"></a-entity>
-
-      <!-- 光标 -->
-      <a-entity camera look-controls wasd-controls position="0 1.6 0">
-        <a-cursor color="#E8A87C" fuse="true" fuse-timeout="1500"
-                  animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.1 0.1 0.1; to: 1 1 1"
-                  animation__fusing="property: scale; startEvents: fusing; easing: easeInCubic; dur: 1500; from: 1 1 1; to: 0.1 0.1 0.1"
-                  animation__mouseleave="property: scale; startEvents: mouseleave; easing: easeInCubic; dur: 500; to: 1 1 1">
-        </a-cursor>
+      <!-- 相机 + VR 手柄 -->
+      <a-entity id="camera-rig" position="0 1.6 2" movement-controls="speed: 0.1">
+        <a-camera look-controls wasd-controls="enabled: false">
+          <a-cursor color="#E8A87C" raycaster="objects: .clickable; far: 20"></a-cursor>
+        </a-camera>
+        <a-entity laser-controls="hand: left; model: true; defaultModelColor: #7BC8A4"
+          raycaster="objects: .clickable; far: 20; showLine: true" line="color: #7BC8A4; opacity: 0.5"></a-entity>
+        <a-entity laser-controls="hand: right; model: true; defaultModelColor: #E8A87C"
+          raycaster="objects: .clickable; far: 20; showLine: true" line="color: #E8A87C; opacity: 0.5"></a-entity>
       </a-entity>
-
-      <!-- 说明文字 -->
-      <a-text value="🧶 A-Frame 自定义组件练习\n\n• 点击球体变色 (cursor-listener)\n• 紫色球跟随绿色方块 (follow)\n• 左方盒 (custom-box)\n• 浮动粒子 (floating-particles)" 
-              align="center" position="0 3.5 -8" color="#E8A87C" width="8" font="mozillavr"></a-text>
     </a-scene>
+
+    <script>
+      // 1. hello-world
+      AFRAME.registerComponent('hello-world', {
+        init: function () {
+          const el = document.createElement('a-text');
+          el.setAttribute('value', '你好，A-Frame! 🧶');
+          el.setAttribute('color', '#7BC8A4');
+          el.setAttribute('width', '3');
+          el.setAttribute('align', 'center');
+          this.el.appendChild(el);
+          console.log('hello-world initialized');
+        }
+      });
+
+      // 2. log（支持多实例）
+      AFRAME.registerComponent('log', {
+        schema: {
+          msg: { type: 'string', default: 'log' },
+          color: { type: 'color', default: '#fff' }
+        },
+        init: function () {
+          console.log(`[log] ${this.data.msg} | color: ${this.data.color}`);
+        }
+      });
+
+      // 3. three.js 直接操作
+      AFRAME.registerComponent('three-box', {
+        init: function () {
+          const geo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+          const mat = new THREE.MeshStandardMaterial({ color: 0x3498DB, metalness: 0.3, roughness: 0.6 });
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.castShadow = true;
+          this.el.setObject3D('mesh', mesh);
+        }
+      });
+
+      // 4. follow 组件
+      AFRAME.registerComponent('follow', {
+        schema: {
+          target: { type: 'selector' },
+          speed: { type: 'number', default: 2 },
+          offset: { type: 'vec3', default: { x: 0, y: 0, z: 0 } }
+        },
+        tick: function (time, delta) {
+          if (!this.data.target) return;
+          const targetPos = new THREE.Vector3();
+          this.data.target.object3D.getWorldPosition(targetPos);
+          const offset = this.data.offset;
+          const desired = targetPos.clone().add(new THREE.Vector3(offset.x, offset.y, offset.z));
+          const current = this.el.object3D.position;
+          current.lerp(desired, this.data.speed * (delta / 1000));
+          this.el.object3D.position.copy(current);
+        }
+      });
+
+      // 5. cursor-listener（点击变色）
+      AFRAME.registerComponent('cursor-listener', {
+        init: function () {
+          const colors = ['#E74C3C', '#3498DB', '#2ECC71', '#F7DC6F', '#E8A87C', '#9B59B6'];
+          let idx = 0;
+          this.el.addEventListener('click', () => {
+            idx = (idx + 1) % colors.length;
+            this.el.setAttribute('material', 'color', colors[idx]);
+            console.log(`Color changed to ${colors[idx]}`);
+          });
+          this.el.addEventListener('triggerdown', () => {
+            idx = (idx + 1) % colors.length;
+            this.el.setAttribute('material', 'color', colors[idx]);
+          });
+          // 悬停反馈
+          this.el.addEventListener('mouseenter', () => {
+            this.el.setAttribute('material', 'emissive', '#222');
+            this.el.setAttribute('material', 'emissiveIntensity', '0.3');
+          });
+          this.el.addEventListener('mouseleave', () => {
+            this.el.setAttribute('material', 'emissive', '#000');
+            this.el.setAttribute('material', 'emissiveIntensity', '0');
+          });
+        }
+      });
+
+      // 6. 浮动粒子
+      function createParticles() {
+        const container = document.getElementById('particles');
+        const colors = ['#E8A87C', '#7BC8A4', '#3498DB', '#F7DC6F'];
+        for (let i = 0; i < 20; i++) {
+          const x = (Math.random() - 0.5) * 12;
+          const y = 0.5 + Math.random() * 4;
+          const z = -2 - Math.random() * 12;
+          const el = document.createElement('a-sphere');
+          el.setAttribute('radius', 0.02 + Math.random() * 0.04);
+          el.setAttribute('color', colors[Math.floor(Math.random() * colors.length)]);
+          el.setAttribute('opacity', 0.2 + Math.random() * 0.3);
+          el.setAttribute('position', `${x} ${y} ${z}`);
+          el.setAttribute('animation', `property: position; to: ${x+(Math.random()-0.5)*2} ${y+(Math.random()-0.5)*2} ${z}; dur: ${3000+Math.random()*5000}; dir: alternate; loop: true; easing: easeInOutQuad`);
+          container.appendChild(el);
+        }
+      }
+
+      document.querySelector('a-scene').addEventListener('loaded', () => {
+        createParticles();
+        console.log('🧶 组件练习场景加载完成');
+      });
+    </script>
   </body>
 </html>

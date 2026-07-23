@@ -2,527 +2,399 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>VR Soundscape Demo - 绒球 A-Frame 实验</title>
-    <meta name="description" content="空间音频创作 VR 原型 - 绒球为 VR Soundscape 项目制作的 A-Frame demo">
-    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+    <title>VR Soundscape Demo - 绒球 XR 实验室</title>
+    <meta name="description" content="空间音频创作 VR 原型 — 支持 VR 手柄交互">
+    <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
     <style>
       .info-panel {
-        position: fixed;
-        top: 20px;
-        left: 20px;
-        background: rgba(0,0,0,0.7);
-        color: #fff;
-        padding: 16px 20px;
-        border-radius: 12px;
-        font-family: system-ui, sans-serif;
-        font-size: 14px;
-        line-height: 1.6;
-        max-width: 320px;
-        z-index: 999;
-        backdrop-filter: blur(10px);
+        position: fixed; top: 20px; left: 20px;
+        background: rgba(0,0,0,0.75); color: #fff;
+        padding: 16px 20px; border-radius: 12px;
+        font-family: system-ui, sans-serif; font-size: 14px;
+        line-height: 1.6; max-width: 340px; z-index: 999;
+        backdrop-filter: blur(10px); border: 1px solid rgba(123,200,164,0.15);
       }
-      .info-panel h3 { margin-bottom: 8px; color: #E8A87C; font-size: 16px; }
-      .info-panel p { margin: 4px 0; opacity: 0.9; }
-      .info-panel .key { color: #7BC8A4; font-weight: bold; }
-      .badge {
-        display: inline-block;
-        background: #E8A87C;
-        color: #fff;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 11px;
-        margin-left: 6px;
-      }
+      .info-panel h3 { margin-bottom: 8px; color: #7BC8A4; font-size: 15px; }
+      .info-panel p { margin: 3px 0; opacity: 0.85; }
+      .info-panel .key { font-weight: 600; }
+      .red { color: #E74C3C; } .blue { color: #3498DB; } .green { color: #2ECC71; }
+      .badge { display: inline-block; background: rgba(232,168,124,0.2); color: #E8A87C; padding: 1px 7px; border-radius: 8px; font-size: 11px; margin-left: 4px; }
+      .hint { margin-top: 10px; font-size: 11px; opacity: 0.5; }
     </style>
   </head>
   <body>
 
     <div class="info-panel" id="infoPanel">
       <h3>🧶 VR Soundscape 空间音频原型</h3>
-      <p>点击场景中的球体来放置声源</p>
-      <p><span class="key">红球</span> 雨声 <span class="badge">环境音</span></p>
-      <p><span class="key">蓝球</span> 铃声 <span class="badge">点声源</span></p>
-      <p><span class="key">绿球</span> 风声 <span class="badge">氛围音</span></p>
-      <p style="margin-top:8px; font-size:12px; opacity:0.6;">按 VR 按钮进入沉浸式体验</p>
+      <p>用 <span class="key">手柄射线</span> 指向球体，扣扳机切换声源</p>
+      <p><span class="key red">红球</span> 雨声 <span class="badge">环境音</span></p>
+      <p><span class="key blue">蓝球</span> 铃声 <span class="badge">点声源</span></p>
+      <p><span class="key green">绿球</span> 风声 <span class="badge">氛围音</span></p>
+      <p class="hint">桌面端：鼠标点击球体 | VR 端：手柄射线 + 扳机</p>
     </div>
 
     <a-scene 
-      renderer="antialias: true; colorManagement: true"
+      renderer="antialias: true; colorManagement: true; sortObjects: true"
       vr-mode-ui="enabled: true"
       device-orientation-permission-ui="enabled: true"
     >
-      <!-- ====== 资源预加载 ====== -->
-      <a-assets>
-        <!-- 使用程序化生成的纹理 -->
-      </a-assets>
-
       <!-- ====== 环境 ====== -->
-      <!-- 渐变天空 -->
-      <a-sky color="#1a1a2e"></a-sky>
+      <a-sky color="#0a0a1a"></a-sky>
       
-      <!-- 地面 - 网格风格 -->
+      <!-- 地面 -->
       <a-plane 
-        position="0 0 0" 
-        rotation="-90 0 0" 
-        width="30" height="30" 
-        color="#16213e"
+        position="0 0 0" rotation="-90 0 0" 
+        width="40" height="40" 
+        color="#111122"
         shadow="receive: true"
       ></a-plane>
 
-      <!-- 网格线效果 -->
-      <a-grid 
-        id="grid"
-        geometry="primitive: plane; width: 30; height: 30"
-        material="color: #1a3a5c; opacity: 0.3; transparent: true; shader: flat"
-        rotation="-90 0 0" 
-        position="0 0.01 0"
-      ></a-grid>
+      <!-- 网格地面 -->
+      <a-entity
+        geometry="primitive: plane; width: 40; height: 40; segmentsWidth: 40; segmentsHeight: 40"
+        material="color: #1a2a3e; opacity: 0.25; transparent: true; wireframe: true; wireframeLinewidth: 1"
+        rotation="-90 0 0" position="0 0.01 0"
+      ></a-entity>
 
       <!-- ====== 灯光 ====== -->
-      <a-light type="ambient" color="#404060" intensity="0.4"></a-light>
-      <a-light type="point" color="#E8A87C" intensity="0.8" position="0 5 0" distance="15" decay="2"></a-light>
-      <a-light type="directional" color="#7BC8A4" intensity="0.3" position="-5 8 -5" castShadow="true"></a-light>
+      <a-light type="ambient" color="#303050" intensity="0.5"></a-light>
+      <a-light type="point" color="#E8A87C" intensity="0.6" position="0 6 0" distance="20" decay="2"></a-light>
+      <a-light type="directional" color="#7BC8A4" intensity="0.3" position="-5 10 -5" castShadow="true"></a-light>
 
       <!-- ====== 中央交互台 ====== -->
-      <a-entity id="center-platform" position="0 0 -5">
+      <a-entity id="center-platform" position="0 0 -4">
         <!-- 平台基座 -->
         <a-cylinder 
-          position="0 0.1 0" 
-          radius="3" height="0.2" 
-          color="#2a2a4a"
-          segments-radial="32"
-          shadow="receive: true"
+          position="0 0.05 0" radius="3.5" height="0.1" 
+          color="#1a1a3a" segments-radial="48" shadow="receive: true"
         ></a-cylinder>
         
         <!-- 平台光环 -->
         <a-torus 
-          position="0 0.2 0" 
-          rotation="-90 0 0"
-          radius="3" 
-          radius-tubular="0.03"
-          color="#E8A87C"
-          opacity="0.6"
-          segments-tubular="64"
-        >
-          <a-animation 
-            attribute="rotation" 
-            from="-90 0 0" to="-90 360 0" 
-            dur="20000" 
-            repeat="indefinite" 
-            easing="linear"
-          ></a-animation>
-        </a-torus>
+          position="0 0.12 0" rotation="-90 0 0"
+          radius="3.5" radius-tubular="0.025"
+          color="#7BC8A4" opacity="0.5" segments-tubular="64"
+          animation="property: rotation; from: -90 0 0; to: -90 360 0; dur: 25000; loop: true; easing: linear"
+        ></a-torus>
 
-        <!-- ====== 声源球体 ====== -->
+        <!-- 内圈光环 -->
+        <a-torus 
+          position="0 0.12 0" rotation="-90 0 0"
+          radius="2" radius-tubular="0.015"
+          color="#E8A87C" opacity="0.3" segments-tubular="48"
+          animation="property: rotation; from: -90 0 0; to: -90 -360 0; dur: 18000; loop: true; easing: linear"
+        ></a-torus>
+
+        <!-- ====== 声源球体（可交互） ====== -->
+        
         <!-- 雨声源 -->
-        <a-entity class="sound-source" 
-          position="-1.5 0.8 -1"
-          onclick="toggleSound(this, 'rain')"
+        <a-entity id="source-rain" class="clickable"
+          position="-2 1 -1"
+          sound-toggle="type: rain"
         >
           <a-sphere 
-            radius="0.3" 
-            color="#E74C3C" 
-            opacity="0.8"
-            shader="standard"
-            metalness="0.2"
-            roughness="0.5"
-            shadow
-          >
-            <a-animation 
-              attribute="scale" 
-              from="1 1 1" to="1.15 1.15 1.15" 
-              dur="1500" 
-              direction="alternate" 
-              repeat="indefinite" 
-              easing="ease-in-out"
-            ></a-animation>
-          </a-sphere>
-          <!-- 声源可视化环 -->
-          <a-ring 
-            radius-inner="0.35" radius-outer="0.4"
-            color="#E74C3C" 
-            opacity="0.3"
-            side="double"
-          >
-            <a-animation 
-              attribute="scale"
-              from="1 1 1" to="2 2 2"
-              dur="2000"
-              repeat="indefinite"
-              easing="ease-out"
-            ></a-animation>
-            <a-animation 
-              attribute="material.opacity"
-              from="0.4" to="0"
-              dur="2000"
-              repeat="indefinite"
-            ></a-animation>
-          </a-ring>
-          <a-text value="雨声" align="center" position="0 0.6 0" color="#E74C3C" width="2" font="mozillavr"></a-text>
+            radius="0.28" color="#E74C3C" opacity="0.85"
+            shader="standard" metalness="0.2" roughness="0.5" shadow
+            animation="property: scale; from: 1 1 1; to: 1.12 1.12 1.12; dur: 1500; dir: alternate; loop: true; easing: easeInOutQuad"
+          ></a-sphere>
+          <!-- 声源波纹 -->
+          <a-ring radius-inner="0.33" radius-outer="0.37" color="#E74C3C" opacity="0.3" side="double"
+            animation="property: scale; from: 1 1 1; to: 2.2 2.2 2.2; dur: 2000; loop: true; easing: easeOutQuad"
+            animation__opacity="property: material.opacity; from: 0.35; to: 0; dur: 2000; loop: true; easing: linear"
+          ></a-ring>
+          <!-- 标签（面向相机） -->
+          <a-text value="雨声" align="center" position="0 0.55 0" color="#E74C3C" width="2.5"></a-text>
+          <!-- 状态指示 -->
+          <a-text class="status-label" value="●" align="center" position="0 -0.5 0" color="#555" width="1.5"></a-text>
         </a-entity>
 
         <!-- 铃声源 -->
-        <a-entity class="sound-source" 
-          position="0 1.2 -1"
-          onclick="toggleSound(this, 'bell')"
+        <a-entity id="source-bell" class="clickable"
+          position="0 1.4 -1"
+          sound-toggle="type: bell"
         >
           <a-sphere 
-            radius="0.3" 
-            color="#3498DB" 
-            opacity="0.8"
-            shader="standard"
-            metalness="0.4"
-            roughness="0.3"
-            shadow
-          >
-            <a-animation 
-              attribute="scale" 
-              from="1 1 1" to="1.2 1.2 1.2" 
-              dur="1000" 
-              direction="alternate" 
-              repeat="indefinite" 
-              easing="ease-in-out"
-            ></a-animation>
-          </a-sphere>
-          <a-ring 
-            radius-inner="0.35" radius-outer="0.4"
-            color="#3498DB" 
-            opacity="0.3"
-            side="double"
-          >
-            <a-animation 
-              attribute="scale"
-              from="1 1 1" to="2.5 2.5 2.5"
-              dur="2500"
-              repeat="indefinite"
-              easing="ease-out"
-            ></a-animation>
-            <a-animation 
-              attribute="material.opacity"
-              from="0.5" to="0"
-              dur="2500"
-              repeat="indefinite"
-            ></a-animation>
-          </a-ring>
-          <a-text value="铃声" align="center" position="0 0.6 0" color="#3498DB" width="2" font="mozillavr"></a-text>
+            radius="0.28" color="#3498DB" opacity="0.85"
+            shader="standard" metalness="0.4" roughness="0.3" shadow
+            animation="property: scale; from: 1 1 1; to: 1.18 1.18 1.18; dur: 1000; dir: alternate; loop: true; easing: easeInOutQuad"
+          ></a-sphere>
+          <a-ring radius-inner="0.33" radius-outer="0.37" color="#3498DB" opacity="0.3" side="double"
+            animation="property: scale; from: 1 1 1; to: 2.8 2.8 2.8; dur: 2500; loop: true; easing: easeOutQuad"
+            animation__opacity="property: material.opacity; from: 0.4; to: 0; dur: 2500; loop: true; easing: linear"
+          ></a-ring>
+          <a-text value="铃声" align="center" position="0 0.55 0" color="#3498DB" width="2.5"></a-text>
+          <a-text class="status-label" value="●" align="center" position="0 -0.5 0" color="#555" width="1.5"></a-text>
         </a-entity>
 
         <!-- 风声源 -->
-        <a-entity class="sound-source" 
-          position="1.5 0.6 -1"
-          onclick="toggleSound(this, 'wind')"
+        <a-entity id="source-wind" class="clickable"
+          position="2 0.8 -1"
+          sound-toggle="type: wind"
         >
           <a-sphere 
-            radius="0.3" 
-            color="#2ECC71" 
-            opacity="0.8"
-            shader="standard"
-            metalness="0.1"
-            roughness="0.7"
-            shadow
-          >
-            <a-animation 
-              attribute="scale" 
-              from="1 1 1" to="1.1 1.1 1.1" 
-              dur="2000" 
-              direction="alternate" 
-              repeat="indefinite" 
-              easing="ease-in-out"
-            ></a-animation>
-          </a-sphere>
-          <a-ring 
-            radius-inner="0.35" radius-outer="0.4"
-            color="#2ECC71" 
-            opacity="0.3"
-            side="double"
-          >
-            <a-animation 
-              attribute="scale"
-              from="1 1 1" to="1.8 1.8 1.8"
-              dur="3000"
-              repeat="indefinite"
-              easing="ease-out"
-            ></a-animation>
-            <a-animation 
-              attribute="material.opacity"
-              from="0.3" to="0"
-              dur="3000"
-              repeat="indefinite"
-            ></a-animation>
-          </a-ring>
-          <a-text value="风声" align="center" position="0 0.6 0" color="#2ECC71" width="2" font="mozillavr"></a-text>
+            radius="0.28" color="#2ECC71" opacity="0.85"
+            shader="standard" metalness="0.1" roughness="0.7" shadow
+            animation="property: scale; from: 1 1 1; to: 1.1 1.1 1.1; dur: 2000; dir: alternate; loop: true; easing: easeInOutQuad"
+          ></a-sphere>
+          <a-ring radius-inner="0.33" radius-outer="0.37" color="#2ECC71" opacity="0.3" side="double"
+            animation="property: scale; from: 1 1 1; to: 2 2 2; dur: 3000; loop: true; easing: easeOutQuad"
+            animation__opacity="property: material.opacity; from: 0.3; to: 0; dur: 3000; loop: true; easing: linear"
+          ></a-ring>
+          <a-text value="风声" align="center" position="0 0.55 0" color="#2ECC71" width="2.5"></a-text>
+          <a-text class="status-label" value="●" align="center" position="0 -0.5 0" color="#555" width="1.5"></a-text>
         </a-entity>
       </a-entity>
 
-      <!-- ====== 环境装饰粒子 ====== -->
-      <a-entity id="particles" position="0 2 -5">
-        <!-- 用多个小球模拟粒子效果 -->
-      </a-entity>
-
       <!-- ====== 远处装饰 ====== -->
-      <a-entity position="-8 2 -12">
-        <a-sphere radius="0.5" color="#E8A87C" opacity="0.3">
-          <a-animation attribute="position" from="0 0 0" to="0 2 0" dur="4000" direction="alternate" repeat="indefinite" easing="ease-in-out"></a-animation>
-        </a-sphere>
+      <a-entity position="-8 3 -14">
+        <a-sphere radius="0.4" color="#E8A87C" opacity="0.2"
+          animation="property: position; from: -8 3 -14; to: -8 5 -14; dur: 5000; dir: alternate; loop: true; easing: easeInOutQuad"
+        ></a-sphere>
       </a-entity>
-      <a-entity position="8 3 -10">
-        <a-sphere radius="0.3" color="#7BC8A4" opacity="0.3">
-          <a-animation attribute="position" from="0 0 0" to="0 -1.5 0" dur="3500" direction="alternate" repeat="indefinite" easing="ease-in-out"></a-animation>
-        </a-sphere>
+      <a-entity position="9 4 -12">
+        <a-sphere radius="0.25" color="#7BC8A4" opacity="0.2"
+          animation="property: position; from: 9 4 -12; to: 9 2.5 -12; dur: 4000; dir: alternate; loop: true; easing: easeInOutQuad"
+        ></a-sphere>
       </a-entity>
-      <a-entity position="5 1.5 -15">
-        <a-sphere radius="0.4" color="#3498DB" opacity="0.2">
-          <a-animation attribute="position" from="0 0 0" to="2 1 0" dur="5000" direction="alternate" repeat="indefinite" easing="ease-in-out"></a-animation>
-        </a-sphere>
+      <a-entity position="6 2 -18">
+        <a-sphere radius="0.35" color="#3498DB" opacity="0.15"
+          animation="property: position; from: 6 2 -18; to: 8 3.5 -18; dur: 6000; dir: alternate; loop: true; easing: easeInOutQuad"
+        ></a-sphere>
       </a-entity>
 
-      <!-- ====== 相机 ====== -->
-      <a-entity id="camera-rig" position="0 1.6 0">
+      <!-- ====== 浮动粒子 ====== -->
+      <a-entity id="particles"></a-entity>
+
+      <!-- ====== 相机 + 手柄 ====== -->
+      <a-entity id="camera-rig" position="0 1.6 2" movement-controls="speed: 0.1">
         <a-camera 
-          look-controls 
-          wasd-controls="acceleration: 20"
+          look-controls="magicWindowTrackingElement: true"
+          wasd-controls="enabled: false"
         >
+          <!-- 桌面端注视光标（仅非VR模式） -->
           <a-cursor 
+            id="desktop-cursor"
             color="#E8A87C" 
-            fuse="true" 
-            fuse-timeout="1500"
-            raycaster="objects: .clickable"
-          >
-            <a-animation 
-              attribute="scale" 
-              from="1 1 1" to="0.5 0.5 0.5" 
-              begin="cursor-fusing" 
-              dur="1500" 
-              easing="ease-in"
-            ></a-animation>
-          </a-cursor>
+            raycaster="objects: .clickable; far: 20"
+            animation__click="property: scale; from: 1 1 1; to: 0.3 0.3 0.3; startEvents: click; dur: 150; easing: easeOutQuad"
+            animation__restore="property: scale; to: 1 1 1; startEvents: animationcomplete__click; dur: 150; easing: easeOutQuad"
+          ></a-cursor>
         </a-camera>
+
+        <!-- ====== VR 左手柄 ====== -->
+        <a-entity 
+          id="left-hand"
+          laser-controls="hand: left; model: true; defaultModelColor: #7BC8A4"
+          raycaster="objects: .clickable; far: 20; showLine: true"
+          line="color: #7BC8A4; opacity: 0.6"
+        ></a-entity>
+
+        <!-- ====== VR 右手柄 ====== -->
+        <a-entity 
+          id="right-hand"
+          laser-controls="hand: right; model: true; defaultModelColor: #E8A87C"
+          raycaster="objects: .clickable; far: 20; showLine: true"
+          line="color: #E8A87C; opacity: 0.6"
+        ></a-entity>
       </a-entity>
+
     </a-scene>
 
     <script>
-      // ====== 空间音频交互逻辑 ======
-      
-      // 使用 Web Audio API 生成程序化音频
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      
-      // 音频生成器
-      const sounds = {
-        rain: { playing: false, nodes: null },
-        bell: { playing: false, nodes: null },
-        wind: { playing: false, nodes: null }
-      };
+      // ====== 自定义组件：声音切换 ======
+      AFRAME.registerComponent('sound-toggle', {
+        schema: { type: { default: 'rain' } },
 
-      // 白噪声生成（雨声模拟）
-      function createRainSound() {
-        const bufferSize = 2 * audioCtx.sampleRate;
-        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = (Math.random() * 2 - 1) * 0.15;
-        }
-        const source = audioCtx.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
-        
-        // 滤波器让白噪声更像雨声
-        const filter = audioCtx.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.value = 1000;
-        filter.Q.value = 0.5;
-        
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.3;
-        
-        source.connect(filter);
-        filter.connect(gain);
-        
-        // 空间音频 - Panner
-        const panner = audioCtx.createPanner();
-        panner.panningModel = 'HRTF';
-        panner.distanceModel = 'inverse';
-        panner.refDistance = 1;
-        panner.maxDistance = 10;
-        panner.rolloffFactor = 1;
-        panner.setPosition(-1.5, 2.4, -6); // 对应红球的世界坐标
-        
-        gain.connect(panner);
-        panner.connect(audioCtx.destination);
-        
-        return { source, filter, gain, panner };
-      }
+        init: function () {
+          this.isPlaying = false;
+          this.audioCtx = null;
+          this.nodes = null;
+          this.statusLabel = this.el.querySelector('.status-label');
+          
+          // 绑定交互事件 — 同时支持鼠标和手柄
+          this.el.addEventListener('click', () => this.toggle());
+          
+          // 手柄扳机事件
+          this.el.addEventListener('triggerdown', () => this.toggle());
+          
+          // 悬停高亮
+          this.el.addEventListener('mouseenter', () => {
+            const sphere = this.el.querySelector('a-sphere');
+            if (sphere) sphere.setAttribute('opacity', '1');
+          });
+          this.el.addEventListener('mouseleave', () => {
+            const sphere = this.el.querySelector('a-sphere');
+            if (sphere) sphere.setAttribute('opacity', '0.85');
+          });
+        },
 
-      // 铃声模拟
-      function createBellSound() {
-        const osc1 = audioCtx.createOscillator();
-        osc1.type = 'sine';
-        osc1.frequency.value = 880;
-        
-        const osc2 = audioCtx.createOscillator();
-        osc2.type = 'sine';
-        osc2.frequency.value = 1320;
-        
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.15;
-        
-        // LFO 让铃声有颤音效果
-        const lfo = audioCtx.createOscillator();
-        lfo.frequency.value = 6;
-        const lfoGain = audioCtx.createGain();
-        lfoGain.gain.value = 0.05;
-        lfo.connect(lfoGain);
-        lfoGain.connect(gain.gain);
-        
-        const panner = audioCtx.createPanner();
-        panner.panningModel = 'HRTF';
-        panner.distanceModel = 'inverse';
-        panner.refDistance = 1;
-        panner.maxDistance = 10;
-        panner.rolloffFactor = 1;
-        panner.setPosition(0, 2.8, -6);
-        
-        osc1.connect(gain);
-        osc2.connect(gain);
-        gain.connect(panner);
-        panner.connect(audioCtx.destination);
-        
-        return { sources: [osc1, osc2], gain, panner, lfo };
-      }
-
-      // 风声模拟
-      function createWindSound() {
-        const bufferSize = 2 * audioCtx.sampleRate;
-        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-          data[i] = (Math.random() * 2 - 1) * 0.1;
-        }
-        const source = audioCtx.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
-        
-        const filter = audioCtx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 400;
-        filter.Q.value = 1;
-        
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.25;
-        
-        // LFO 模拟风声起伏
-        const lfo = audioCtx.createOscillator();
-        lfo.frequency.value = 0.3;
-        const lfoGain = audioCtx.createGain();
-        lfoGain.gain.value = 0.1;
-        lfo.connect(lfoGain);
-        lfoGain.connect(gain.gain);
-        
-        const panner = audioCtx.createPanner();
-        panner.panningModel = 'HRTF';
-        panner.distanceModel = 'inverse';
-        panner.refDistance = 1;
-        panner.maxDistance = 10;
-        panner.rolloffFactor = 1;
-        panner.setPosition(1.5, 2.2, -6);
-        
-        source.connect(filter);
-        filter.connect(gain);
-        gain.connect(panner);
-        panner.connect(audioCtx.destination);
-        
-        return { source, filter, gain, panner, lfo };
-      }
-
-      // 切换声音
-      function toggleSound(element, soundType) {
-        // 确保 AudioContext 已激活
-        if (audioCtx.state === 'suspended') {
-          audioCtx.resume();
-        }
-
-        if (sounds[soundType].playing) {
-          // 停止
-          if (soundType === 'bell') {
-            sounds[soundType].nodes.sources.forEach(s => s.stop());
-            sounds[soundType].nodes.lfo.stop();
-          } else {
-            sounds[soundType].nodes.source.stop();
+        toggle: function () {
+          if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           }
-          sounds[soundType].playing = false;
-          element.querySelector('a-sphere').setAttribute('opacity', '0.8');
-          console.log(`Stopped: ${soundType}`);
-        } else {
-          // 开始
+          if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+          }
+
+          if (this.isPlaying) {
+            this.stop();
+          } else {
+            this.play();
+          }
+        },
+
+        play: function () {
+          const type = this.data.type;
+          const pos = new THREE.Vector3();
+          this.el.object3D.getWorldPosition(pos);
+          
           let nodes;
-          if (soundType === 'rain') nodes = createRainSound();
-          else if (soundType === 'bell') nodes = createBellSound();
-          else if (soundType === 'wind') nodes = createWindSound();
+          if (type === 'rain') nodes = this.createRain(pos);
+          else if (type === 'bell') nodes = this.createBell(pos);
+          else if (type === 'wind') nodes = this.createWind(pos);
           
-          if (soundType === 'bell') {
-            nodes.sources.forEach(s => s.start());
-            nodes.lfo.start();
-          } else {
-            nodes.source.start();
-            if (nodes.lfo) nodes.lfo.start();
+          this.nodes = nodes;
+          this.isPlaying = true;
+          
+          if (this.statusLabel) {
+            this.statusLabel.setAttribute('value', '▶');
+            this.statusLabel.setAttribute('color', '#7BC8A4');
           }
+          console.log(`🧶 Playing: ${type}`);
+        },
+
+        stop: function () {
+          if (!this.nodes) return;
+          const type = this.data.type;
           
-          sounds[soundType] = { playing: true, nodes };
-          element.querySelector('a-sphere').setAttribute('opacity', '1');
-          console.log(`Playing: ${soundType}`);
+          try {
+            if (type === 'bell') {
+              this.nodes.sources.forEach(s => { try { s.stop(); } catch(e){} });
+              this.nodes.lfo.stop();
+            } else {
+              this.nodes.source.stop();
+              if (this.nodes.lfo) this.nodes.lfo.stop();
+            }
+          } catch(e) { console.warn('stop error:', e); }
+          
+          this.isPlaying = false;
+          this.nodes = null;
+          
+          if (this.statusLabel) {
+            this.statusLabel.setAttribute('value', '●');
+            this.statusLabel.setAttribute('color', '#555');
+          }
+          console.log(`🧶 Stopped: ${type}`);
+        },
+
+        createPanner: function (pos) {
+          const panner = this.audioCtx.createPanner();
+          panner.panningModel = 'HRTF';
+          panner.distanceModel = 'inverse';
+          panner.refDistance = 1;
+          panner.maxDistance = 15;
+          panner.rolloffFactor = 1;
+          panner.coneInnerAngle = 360;
+          panner.coneOuterAngle = 360;
+          panner.setPosition(pos.x, pos.y, pos.z);
+          return panner;
+        },
+
+        createRain: function (pos) {
+          const ctx = this.audioCtx;
+          const bufferSize = 2 * ctx.sampleRate;
+          const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.12;
+          
+          const source = ctx.createBufferSource();
+          source.buffer = buffer; source.loop = true;
+          
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'bandpass'; filter.frequency.value = 1000; filter.Q.value = 0.5;
+          
+          const gain = ctx.createGain(); gain.gain.value = 0.3;
+          const panner = this.createPanner(pos);
+          
+          source.connect(filter).connect(gain).connect(panner).connect(ctx.destination);
+          source.start();
+          return { source, panner };
+        },
+
+        createBell: function (pos) {
+          const ctx = this.audioCtx;
+          const osc1 = ctx.createOscillator(); osc1.type = 'sine'; osc1.frequency.value = 880;
+          const osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = 1320;
+          
+          const gain = ctx.createGain(); gain.gain.value = 0.12;
+          
+          const lfo = ctx.createOscillator(); lfo.frequency.value = 6;
+          const lfoGain = ctx.createGain(); lfoGain.gain.value = 0.04;
+          lfo.connect(lfoGain).connect(gain.gain);
+          
+          const panner = this.createPanner(pos);
+          osc1.connect(gain).connect(panner).connect(ctx.destination);
+          osc2.connect(gain);
+          
+          osc1.start(); osc2.start(); lfo.start();
+          return { sources: [osc1, osc2], lfo, panner };
+        },
+
+        createWind: function (pos) {
+          const ctx = this.audioCtx;
+          const bufferSize = 2 * ctx.sampleRate;
+          const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.08;
+          
+          const source = ctx.createBufferSource();
+          source.buffer = buffer; source.loop = true;
+          
+          const filter = ctx.createBiquadFilter();
+          filter.type = 'lowpass'; filter.frequency.value = 400; filter.Q.value = 1;
+          
+          const gain = ctx.createGain(); gain.gain.value = 0.25;
+          
+          const lfo = ctx.createOscillator(); lfo.frequency.value = 0.3;
+          const lfoGain = ctx.createGain(); lfoGain.gain.value = 0.08;
+          lfo.connect(lfoGain).connect(gain.gain);
+          
+          const panner = this.createPanner(pos);
+          source.connect(filter).connect(gain).connect(panner).connect(ctx.destination);
+          source.start(); lfo.start();
+          return { source, panner, lfo };
         }
-      }
-
-      // 让球体可点击
-      document.querySelectorAll('.sound-source').forEach(el => {
-        el.classList.add('clickable');
-        el.setAttribute('cursor-listener', '');
       });
 
-      // 点击事件
-      document.querySelectorAll('.sound-source').forEach(el => {
-        el.addEventListener('click', function() {
-          const text = this.querySelector('a-text').getAttribute('value');
-          const typeMap = { '雨声': 'rain', '铃声': 'bell', '风声': 'wind' };
-          toggleSound(this, typeMap[text]);
-        });
-      });
-
-      // 创建浮动粒子效果
+      // ====== 浮动粒子 ======
       function createParticles() {
         const container = document.getElementById('particles');
-        for (let i = 0; i < 30; i++) {
-          const particle = document.createElement('a-sphere');
-          const x = (Math.random() - 0.5) * 15;
-          const y = Math.random() * 5;
-          const z = -3 - Math.random() * 15;
-          const size = 0.02 + Math.random() * 0.06;
-          const colors = ['#E8A87C', '#7BC8A4', '#3498DB', '#F7DC6F', '#D4726A'];
+        const colors = ['#E8A87C', '#7BC8A4', '#3498DB', '#F7DC6F'];
+        for (let i = 0; i < 25; i++) {
+          const x = (Math.random() - 0.5) * 20;
+          const y = 0.5 + Math.random() * 5;
+          const z = -2 - Math.random() * 20;
+          const size = 0.02 + Math.random() * 0.05;
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          const dur = 4000 + Math.random() * 6000;
           
-          particle.setAttribute('radius', size);
-          particle.setAttribute('position', `${x} ${y} ${z}`);
-          particle.setAttribute('color', colors[Math.floor(Math.random() * colors.length)]);
-          particle.setAttribute('opacity', 0.3 + Math.random() * 0.4);
-          
-          const dur = 3000 + Math.random() * 5000;
-          particle.innerHTML = `
-            <a-animation attribute="position" 
-              from="${x} ${y} ${z}" 
-              to="${x + (Math.random()-0.5)*2} ${y + (Math.random()-0.5)*2} ${z}" 
-              dur="${dur}" direction="alternate" repeat="indefinite" easing="ease-in-out">
-            </a-animation>
-          `;
-          
-          container.appendChild(particle);
+          const el = document.createElement('a-sphere');
+          el.setAttribute('radius', size);
+          el.setAttribute('color', color);
+          el.setAttribute('opacity', 0.2 + Math.random() * 0.3);
+          el.setAttribute('position', `${x} ${y} ${z}`);
+          el.setAttribute('animation', `property: position; to: ${x + (Math.random()-0.5)*3} ${y + (Math.random()-0.5)*2} ${z}; dur: ${dur}; dir: alternate; loop: true; easing: easeInOutQuad`);
+          container.appendChild(el);
         }
       }
 
-      // 场景加载完成后创建粒子
+      // ====== 场景加载 ======
       document.querySelector('a-scene').addEventListener('loaded', () => {
         createParticles();
-        console.log('🧶 VR Soundscape Demo loaded!');
+        console.log('🧶 VR Soundscape Demo loaded — 手柄已就绪');
       });
 
-      // 隐藏信息面板（进入VR时）
+      // 进入/退出 VR 时切换 UI
       document.querySelector('a-scene').addEventListener('enter-vr', () => {
         document.getElementById('infoPanel').style.display = 'none';
       });
