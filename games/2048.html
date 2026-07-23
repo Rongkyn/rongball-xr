@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2048 - 绒球游戏厅 🧶</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #FFF8F0;
+      color: #4A3728;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      user-select: none;
+    }
+
+    .nav {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .nav a {
+      color: #D4726A;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+
+    .nav a:hover { text-decoration: underline; }
+
+    h1 {
+      font-size: 1.5rem;
+      color: #D4726A;
+      margin-bottom: 8px;
+    }
+
+    .score-bar {
+      width: 100%;
+      max-width: 420px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .score-bar .score-box {
+      background: #E8A87C;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      text-align: center;
+      min-width: 80px;
+    }
+
+    .score-box .label { font-size: 0.7rem; text-transform: uppercase; opacity: 0.8; }
+    .score-box .value { font-size: 1.3rem; font-weight: 700; }
+
+    .score-bar .btn-new {
+      padding: 10px 20px;
+      background: #D4726A;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .score-bar .btn-new:hover { background: #c0615a; }
+
+    #board {
+      background: #E8A87C;
+      border-radius: 12px;
+      padding: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 420px;
+      aspect-ratio: 1;
+      touch-action: none;
+    }
+
+    .cell {
+      background: rgba(255,255,255,0.35);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
+      transition: all 0.1s ease;
+    }
+
+    .cell[data-value="2"]    { background: #FFF3E0; color: #4A3728; }
+    .cell[data-value="4"]    { background: #FFE0B2; color: #4A3728; }
+    .cell[data-value="8"]    { background: #FFCC80; color: #fff; }
+    .cell[data-value="16"]   { background: #FFB74D; color: #fff; }
+    .cell[data-value="32"]   { background: #FFA726; color: #fff; }
+    .cell[data-value="64"]   { background: #FF9800; color: #fff; }
+    .cell[data-value="128"]  { background: #F57C00; color: #fff; font-size: 1.8rem; }
+    .cell[data-value="256"]  { background: #EF6C00; color: #fff; font-size: 1.8rem; }
+    .cell[data-value="512"]  { background: #D4726A; color: #fff; font-size: 1.8rem; }
+    .cell[data-value="1024"] { background: #C0392B; color: #fff; font-size: 1.4rem; }
+    .cell[data-value="2048"] { background: #8E44AD; color: #fff; font-size: 1.4rem; }
+    .cell[data-value="4096"] { background: #2C3E50; color: #fff; font-size: 1.4rem; }
+
+    .cell.pop {
+      animation: popIn 0.15s ease;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.8); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .controls {
+      margin-top: 20px;
+      text-align: center;
+      color: #8B7355;
+      font-size: 0.85rem;
+    }
+
+    .game-over-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 248, 240, 0.92);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .game-over-overlay.show { display: flex; }
+
+    .game-over-overlay h2 {
+      font-size: 2rem;
+      color: #D4726A;
+      margin-bottom: 12px;
+    }
+
+    .game-over-overlay p {
+      font-size: 1.2rem;
+      margin-bottom: 24px;
+    }
+
+    .game-over-overlay .btn {
+      padding: 12px 32px;
+      background: #E8A87C;
+      color: white;
+      border: none;
+      border-radius: 24px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    .game-over-overlay .btn:hover { background: #D4726A; }
+
+    @media (max-width: 460px) {
+      .cell { font-size: 1.4rem; }
+      .cell[data-value="128"], .cell[data-value="256"], .cell[data-value="512"] { font-size: 1.2rem; }
+      .cell[data-value="1024"], .cell[data-value="2048"], .cell[data-value="4096"] { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="nav">
+    <a href="../index.html">← 返回游戏厅</a>
+  </div>
+
+  <h1>🔢 2048</h1>
+
+  <div class="score-bar">
+    <div class="score-box">
+      <div class="label">得分</div>
+      <div class="value" id="score">0</div>
+    </div>
+    <div class="score-box">
+      <div class="label">最高</div>
+      <div class="value" id="highScore">0</div>
+    </div>
+    <button class="btn-new" onclick="newGame()">新游戏</button>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="controls">
+    <p>方向键 / 滑动 控制方向</p>
+  </div>
+
+  <div class="game-over-overlay" id="gameOverScreen">
+    <h2 id="endTitle">游戏结束</h2>
+    <p>得分: <span id="finalScore">0</span></p>
+    <button class="btn" onclick="newGame()">再来一局</button>
+  </div>
+
+  <script>
+    const SIZE = 4;
+    let grid, score, highScore, won;
+
+    highScore = parseInt(localStorage.getItem('2048_high') || '0');
+    document.getElementById('highScore').textContent = highScore;
+
+    const boardEl = document.getElementById('board');
+
+    function newGame() {
+      grid = Array.from({ length: SIZE }, () => Array(SIZE).fill(0));
+      score = 0;
+      won = false;
+      document.getElementById('score').textContent = '0';
+      document.getElementById('gameOverScreen').classList.remove('show');
+      addRandom();
+      addRandom();
+      render();
+    }
+
+    function addRandom() {
+      const empty = [];
+      for (let r = 0; r < SIZE; r++)
+        for (let c = 0; c < SIZE; c++)
+          if (grid[r][c] === 0) empty.push({ r, c });
+      if (empty.length === 0) return;
+      const { r, c } = empty[Math.floor(Math.random() * empty.length)];
+      grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+    }
+
+    function render() {
+      boardEl.innerHTML = '';
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          const val = grid[r][c];
+          if (val) {
+            cell.textContent = val;
+            cell.dataset.value = val;
+          }
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    function slide(row) {
+      let arr = row.filter(v => v !== 0);
+      let newArr = [];
+      let i = 0;
+      while (i < arr.length) {
+        if (i + 1 < arr.length && arr[i] === arr[i + 1]) {
+          const merged = arr[i] * 2;
+          newArr.push(merged);
+          score += merged;
+          if (merged === 2048) won = true;
+          i += 2;
+        } else {
+          newArr.push(arr[i]);
+          i++;
+        }
+      }
+      while (newArr.length < SIZE) newArr.push(0);
+      return newArr;
+    }
+
+    function move(dir) {
+      const prev = JSON.stringify(grid);
+
+      if (dir === 'left') {
+        for (let r = 0; r < SIZE; r++) grid[r] = slide(grid[r]);
+      } else if (dir === 'right') {
+        for (let r = 0; r < SIZE; r++) grid[r] = slide(grid[r].reverse()).reverse();
+      } else if (dir === 'up') {
+        for (let c = 0; c < SIZE; c++) {
+          let col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]];
+          col = slide(col);
+          for (let r = 0; r < SIZE; r++) grid[r][c] = col[r];
+        }
+      } else if (dir === 'down') {
+        for (let c = 0; c < SIZE; c++) {
+          let col = [grid[3][c], grid[2][c], grid[1][c], grid[0][c]];
+          col = slide(col);
+          for (let r = 0; r < SIZE; r++) grid[SIZE - 1 - r][c] = col[r];
+        }
+      }
+
+      if (JSON.stringify(grid) !== prev) {
+        addRandom();
+        document.getElementById('score').textContent = score;
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem('2048_high', highScore);
+          document.getElementById('highScore').textContent = highScore;
+        }
+        render();
+
+        if (won) {
+          document.getElementById('endTitle').textContent = '🎉 你赢了！';
+          document.getElementById('finalScore').textContent = score;
+          document.getElementById('gameOverScreen').classList.add('show');
+          won = false; // allow continue
+          return;
+        }
+
+        if (isGameOver()) {
+          document.getElementById('endTitle').textContent = '游戏结束';
+          document.getElementById('finalScore').textContent = score;
+          document.getElementById('gameOverScreen').classList.add('show');
+        }
+      }
+    }
+
+    function isGameOver() {
+      for (let r = 0; r < SIZE; r++)
+        for (let c = 0; c < SIZE; c++) {
+          if (grid[r][c] === 0) return false;
+          if (c + 1 < SIZE && grid[r][c] === grid[r][c + 1]) return false;
+          if (r + 1 < SIZE && grid[r][c] === grid[r + 1][c]) return false;
+        }
+      return true;
+    }
+
+    // 键盘
+    document.addEventListener('keydown', e => {
+      switch (e.key) {
+        case 'ArrowLeft': move('left'); e.preventDefault(); break;
+        case 'ArrowRight': move('right'); e.preventDefault(); break;
+        case 'ArrowUp': move('up'); e.preventDefault(); break;
+        case 'ArrowDown': move('down'); e.preventDefault(); break;
+      }
+    });
+
+    // 触摸滑动
+    let touchStart = null;
+    boardEl.addEventListener('touchstart', e => {
+      touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    });
+    boardEl.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    boardEl.addEventListener('touchend', e => {
+      if (!touchStart) return;
+      const dx = e.changedTouches[0].clientX - touchStart.x;
+      const dy = e.changedTouches[0].clientY - touchStart.y;
+      const absDx = Math.abs(dx), absDy = Math.abs(dy);
+      if (Math.max(absDx, absDy) < 30) return;
+      if (absDx > absDy) {
+        move(dx > 0 ? 'right' : 'left');
+      } else {
+        move(dy > 0 ? 'down' : 'up');
+      }
+      touchStart = null;
+    });
+
+    newGame();
+  </script>
+</body>
+</html>

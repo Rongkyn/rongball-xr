@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>绒球游戏厅 🧶</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #FFF8F0;
+      --card-bg: #FFFFFF;
+      --primary: #E8A87C;
+      --secondary: #D4726A;
+      --accent: #F7DC6F;
+      --text: #4A3728;
+      --text-light: #8B7355;
+      --shadow: rgba(74, 55, 40, 0.08);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 顶部标题区 */
+    .header {
+      text-align: center;
+      padding: 50px 20px 30px;
+      position: relative;
+    }
+
+    .header h1 {
+      font-family: 'Press Start 2P', monospace;
+      font-size: 2rem;
+      color: var(--secondary);
+      text-shadow: 3px 3px 0 var(--accent);
+      margin-bottom: 12px;
+      letter-spacing: 2px;
+    }
+
+    .header p {
+      color: var(--text-light);
+      font-size: 1rem;
+      font-weight: 300;
+    }
+
+    /* 装饰性像素元素 */
+    .pixel-deco {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: var(--primary);
+      opacity: 0.3;
+    }
+
+    /* 游戏网格 */
+    .games-grid {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 24px;
+    }
+
+    .game-card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px var(--shadow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .game-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(74, 55, 40, 0.15);
+    }
+
+    .game-card .thumb {
+      width: 100%;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .game-card .thumb::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0.08;
+      background-image: 
+        linear-gradient(45deg, #000 25%, transparent 25%),
+        linear-gradient(-45deg, #000 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #000 75%),
+        linear-gradient(-45deg, transparent 75%, #000 75%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+    }
+
+    .game-card .info {
+      padding: 16px 20px;
+    }
+
+    .game-card .info h3 {
+      font-size: 1.1rem;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+
+    .game-card .info p {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      line-height: 1.5;
+    }
+
+    .game-card .tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: var(--bg);
+      color: var(--text-light);
+      margin-top: 8px;
+      font-weight: 500;
+    }
+
+    /* 各游戏封面配色 */
+    .thumb-snake { background: linear-gradient(135deg, #a8e6cf, #88d8a8); }
+    .thumb-2048 { background: linear-gradient(135deg, #ffd3b6, #ffaaa5); }
+    .thumb-minesweeper { background: linear-gradient(135deg, #b8d0eb, #96b3d7); }
+    .thumb-tetris { background: linear-gradient(135deg, #d4a5ff, #b088f9); }
+    .thumb-pacman { background: linear-gradient(135deg, #fff3b0, #ffd54f); }
+    .thumb-memory { background: linear-gradient(135deg, #f8b4c8, #e891a8); }
+
+    /* 底部 */
+    .footer {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+      font-size: 0.85rem;
+    }
+
+    .footer a {
+      color: var(--secondary);
+      text-decoration: none;
+    }
+
+    /* "即将推出" 卡片 */
+    .game-card.coming-soon {
+      opacity: 0.5;
+      cursor: default;
+    }
+    .game-card.coming-soon:hover {
+      transform: none;
+      box-shadow: 0 4px 20px var(--shadow);
+    }
+    .game-card.coming-soon .thumb {
+      filter: grayscale(0.5);
+    }
+
+    /* 响应式 */
+    @media (max-width: 600px) {
+      .header h1 { font-size: 1.3rem; }
+      .games-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; }
+      .game-card .thumb { height: 120px; font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>绒球游戏厅</h1>
+    <p>🧶 毛茸茸的经典小游戏合集 🌸</p>
+  </div>
+
+  <div class="games-grid">
+
+    <a class="game-card" href="games/snake.html">
+      <div class="thumb thumb-snake">🐍</div>
+      <div class="info">
+        <h3>贪吃蛇</h3>
+        <p>经典中的经典，吃豆豆长身体</p>
+        <span class="tag">休闲</span>
+      </div>
+    </a>
+
+    <a class="game-card" href="games/2048.html">
+      <div class="thumb thumb-2048">🔢</div>
+      <div class="info">
+        <h3>2048</h3>
+        <p>滑动合并，挑战最高分</p>
+        <span class="tag">益智</span>
+      </div>
+    </a>
+
+    <a class="game-card" href="games/minesweeper.html">
+      <div class="thumb thumb-minesweeper">💣</div>
+      <div class="info">
+        <h3>扫雷</h3>
+        <p>小心翼翼，步步为营</p>
+        <span class="tag">策略</span>
+      </div>
+    </a>
+
+    <a class="game-card coming-soon">
+      <div class="thumb thumb-tetris">🧱</div>
+      <div class="info">
+        <h3>俄罗斯方块</h3>
+        <p>即将推出...</p>
+        <span class="tag">即将推出</span>
+      </div>
+    </a>
+
+    <a class="game-card coming-soon">
+      <div class="thumb thumb-pacman">👾</div>
+      <div class="info">
+        <h3>吃豆人</h3>
+        <p>即将推出...</p>
+        <span class="tag">即将推出</span>
+      </div>
+    </a>
+
+    <a class="game-card coming-soon">
+      <div class="thumb thumb-memory">🃏</div>
+      <div class="info">
+        <h3>记忆翻牌</h3>
+        <p>即将推出...</p>
+        <span class="tag">即将推出</span>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="footer">
+    <p>Made with 🧶 by <a href="https://rongkyn.github.io/rongball-room/">绒球</a></p>
+  </div>
+
+</body>
+</html>
