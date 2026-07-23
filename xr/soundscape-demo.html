@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>VR Soundscape Demo - 绒球 XR 实验室</title>
-    <meta name="description" content="空间音频创作 VR 原型 — 支持 VR 手柄交互">
+    <meta name="description" content="空间音频创作 VR 原型 — 支持手势追踪 + 手柄交互">
     <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
     <style>
       .info-panel {
@@ -206,9 +206,9 @@
         schema: { type: { default: 'rain' } },
 
         init: function () {
-          this.isPlaying = false;
+          this.isSoundPlaying = false;
           this.audioCtx = null;
-          this.nodes = null;
+          this.audioNodes = null;
           this.statusLabel = this.el.querySelector('.status-label');
           
           // 绑定交互事件 — 同时支持鼠标和手柄
@@ -236,14 +236,14 @@
             this.audioCtx.resume();
           }
 
-          if (this.isPlaying) {
-            this.stop();
+          if (this.isSoundPlaying) {
+            this.stopSound();
           } else {
-            this.play();
+            this.startSound();
           }
         },
 
-        play: function () {
+        startSound: function () {
           const type = this.data.type;
           const pos = new THREE.Vector3();
           this.el.object3D.getWorldPosition(pos);
@@ -253,8 +253,8 @@
           else if (type === 'bell') nodes = this.createBell(pos);
           else if (type === 'wind') nodes = this.createWind(pos);
           
-          this.nodes = nodes;
-          this.isPlaying = true;
+          this.audioNodes = nodes;
+          this.isSoundPlaying = true;
           
           if (this.statusLabel) {
             this.statusLabel.setAttribute('value', '▶');
@@ -263,22 +263,22 @@
           console.log(`🧶 Playing: ${type}`);
         },
 
-        stop: function () {
-          if (!this.nodes) return;
+        stopSound: function () {
+          if (!this.audioNodes) return;
           const type = this.data.type;
           
           try {
             if (type === 'bell') {
-              this.nodes.sources.forEach(s => { try { s.stop(); } catch(e){} });
-              this.nodes.lfo.stop();
+              this.audioNodes.sources.forEach(s => { try { s.stop(); } catch(e){} });
+              this.audioNodes.lfo.stop();
             } else {
-              this.nodes.source.stop();
-              if (this.nodes.lfo) this.nodes.lfo.stop();
+              this.audioNodes.source.stop();
+              if (this.audioNodes.lfo) this.audioNodes.lfo.stop();
             }
           } catch(e) { console.warn('stop error:', e); }
           
-          this.isPlaying = false;
-          this.nodes = null;
+          this.isSoundPlaying = false;
+          this.audioNodes = null;
           
           if (this.statusLabel) {
             this.statusLabel.setAttribute('value', '●');
