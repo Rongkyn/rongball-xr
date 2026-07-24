@@ -331,7 +331,7 @@
             baseFrequency: 200,
             octaves: 4
           }).start();
-          const lp = new Tone.LowpassFilter({ frequency: 800, Q: 0.5 });
+          const lp = new Tone.Filter({ type: 'lowpass', frequency: 800, Q: 0.5 });
           const gain = new Tone.Gain(0.4);
 
           noise.chain(autoFilter, lp, gain, reverb);
@@ -358,8 +358,8 @@
         start() {
           // 层1：基底雨声 - 过滤噪声
           const baseNoise = new Tone.Noise('white').start();
-          const baseHP = new Tone.HighpassFilter({ frequency: 2000, Q: 0.3 });
-          const baseLP = new Tone.LowpassFilter({ frequency: 10000 });
+          const baseHP = new Tone.Filter({ type: 'highpass', frequency: 2000, Q: 0.3 });
+          const baseLP = new Tone.Filter({ type: 'lowpass', frequency: 10000 });
           const baseGain = new Tone.Gain(0.15);
           baseNoise.chain(baseHP, baseLP, baseGain, reverb);
 
@@ -372,7 +372,7 @@
 
           // 层3：雨声调制 - 节奏感
           const modNoise = new Tone.Noise('pink').start();
-          const modBP = new Tone.BandpassFilter({ frequency: 4000, Q: 2 });
+          const modBP = new Tone.Filter({ type: 'bandpass', frequency: 4000, Q: 2 });
           const modGain = new Tone.Gain(0.08);
           const modLFO = new Tone.LFO({ frequency: 6, min: 0, max: 0.1 }).start();
           modNoise.chain(modBP, modGain, reverb);
@@ -416,7 +416,7 @@
             noise: { type: 'brown' },
             envelope: { attack: 0.5, decay: 2, sustain: 0.3, release: 3 }
           });
-          const lp = new Tone.LowpassFilter({ frequency: 120, Q: 1 });
+          const lp = new Tone.Filter({ type: 'lowpass', frequency: 120, Q: 1 });
           const gain = new Tone.Gain(0.6);
           synth.chain(lp, gain, reverb);
 
@@ -445,8 +445,8 @@
       stream: {
         start() {
           const noise = new Tone.Noise('pink').start();
-          const bp = new Tone.BandpassFilter({ frequency: 1200, Q: 1.5 });
-          const hp = new Tone.HighpassFilter({ frequency: 300 });
+          const bp = new Tone.Filter({ type: 'bandpass', frequency: 1200, Q: 1.5 });
+          const hp = new Tone.Filter({ type: 'highpass', frequency: 300 });
           const gain = new Tone.Gain(0.25);
           
           // 水流波动
@@ -477,7 +477,7 @@
         start() {
           // 基底火焰声
           const noise = new Tone.Noise('brown').start();
-          const bp = new Tone.BandpassFilter({ frequency: 400, Q: 0.8 });
+          const bp = new Tone.Filter({ type: 'bandpass', frequency: 400, Q: 0.8 });
           const gain = new Tone.Gain(0.18);
           noise.chain(bp, gain, reverb);
 
@@ -613,7 +613,7 @@
             envelope: { attack: 0.005, decay: 0.08, sustain: 0, release: 0.03 }
           });
           
-          const bp = new Tone.BandpassFilter({ frequency: 200, Q: 2 });
+          const bp = new Tone.Filter({ type: 'bandpass', frequency: 200, Q: 2 });
           const noiseGain = new Tone.Gain(0.2);
           
           step.connect(reverb);
