@@ -653,6 +653,7 @@
         } else {
           // 开始
           try {
+            activeSounds[name] = { stop() {} }; // 先占位，防止 start() 内部检查时找不到
             activeSounds[name] = sounds[name].start();
             card.classList.add('playing');
           } catch(e) {

@@ -236,14 +236,278 @@
   </a-scene>
 
   <script>
+    // ========== 程序化音频引擎 ==========
+    // 使用 Web Audio API 合成环境音，无需外部音频文件
+    class InkLandscapeAudio {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.isPlaying = false;
+        this.nodes = {};
+      }
+
+      init() {
+        if (this.ctx) return;
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.35;
+        this.masterGain.connect(this.ctx.destination);
+        this.startAmbience();
+        this.isPlaying = true;
+      }
+
+      // 生成白噪声 buffer
+      createNoiseBuffer(duration = 2, type = 'white') {
+        const sampleRate = this.ctx.sampleRate;
+        const length = sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, length, sampleRate);
+        const data = buffer.getChannelData(0);
+        
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        
+        for (let i = 0; i < length; i++) {
+          const white = Math.random() * 2 - 1;
+          
+          if (type === 'pink') {
+            // pink noise approximation
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99332 * b1 + white * 0.0750759;
+            b2 = 0.96900 * b2 + white * 0.1538520;
+            b3 = 0.86650 * b3 + white * 0.3104856;
+            b4 = 0.55000 * b4 + white * 0.5329522;
+            b5 = -0.7616 * b5 - white * 0.0168980;
+            data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+            b6 = white * 0.115926;
+          } else if (type === 'brown') {
+            // brown noise
+            b0 = (b0 + (0.02 * white)) / 1.02;
+            data[i] = b0 * 3.5;
+          } else {
+            data[i] = white;
+          }
+        }
+        return buffer;
+      }
+
+      // 风声 - 过滤白噪声 + 缓慢调制
+      startWind() {
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = this.createNoiseBuffer(4, 'pink');
+        noise.loop = true;
+
+        // 带通滤波器模拟风
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 400;
+        filter.Q.value = 0.5;
+
+        // 低通滤波器柔化
+        const lp = this.ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 800;
+
+        // 音量控制
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.15;
+
+        // LFO 调制风速变化
+        const lfo = this.ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.08; // 非常缓慢
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.value = 0.06;
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+        lfo.start();
+
+        noise.connect(filter);
+        filter.connect(lp);
+        lp.connect(gain);
+        gain.connect(this.masterGain);
+        noise.start();
+
+        this.nodes.wind = { noise, filter, lp, gain, lfo, lfoGain };
+      }
+
+      // 水声 - 粉噪声 + 带通 + 调制
+      startWater() {
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = this.createNoiseBuffer(3, 'brown');
+        noise.loop = true;
+
+        // 带通滤波模拟水流
+        const bp = this.ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 250;
+        bp.Q.value = 1.2;
+
+        // 高频滤波
+        const hp = this.ctx.createBiquadFilter();
+        hp.type = 'highpass';
+        hp.frequency.value = 80;
+
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.12;
+
+        // 水流节奏变化
+        const lfo = this.ctx.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.15;
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.value = 0.04;
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+        lfo.start();
+
+        noise.connect(bp);
+        bp.connect(hp);
+        hp.connect(gain);
+        gain.connect(this.masterGain);
+        noise.start();
+
+        this.nodes.water = { noise, bp, hp, gain, lfo, lfoGain };
+      }
+
+      // 远处的钟声/磬声 - 偶尔响起
+      startChime() {
+        const playChime = () => {
+          if (!this.isPlaying) return;
+          
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          osc.type = 'sine';
+          // 五声音阶频率 (C D E G A)
+          const pentatonic = [523.25, 587.33, 659.25, 783.99, 880.00];
+          osc.frequency.value = pentatonic[Math.floor(Math.random() * pentatonic.length)] * (Math.random() > 0.5 ? 0.5 : 1);
+          
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.04, now + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 4);
+          
+          // 泛音
+          const osc2 = this.ctx.createOscillator();
+          osc2.type = 'sine';
+          osc2.frequency.value = osc.frequency.value * 2.01;
+          const gain2 = this.ctx.createGain();
+          gain2.gain.setValueAtTime(0, now);
+          gain2.gain.linearRampToValueAtTime(0.015, now + 0.05);
+          gain2.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+          
+          osc.connect(gain);
+          osc2.connect(gain2);
+          gain.connect(this.masterGain);
+          gain2.connect(this.masterGain);
+          
+          osc.start(now);
+          osc2.start(now);
+          osc.stop(now + 4.5);
+          osc2.stop(now + 3);
+          
+          // 随机间隔 8-20 秒
+          const nextDelay = 8000 + Math.random() * 12000;
+          setTimeout(playChime, nextDelay);
+        };
+        
+        // 初始延迟 3-8 秒
+        setTimeout(playChime, 3000 + Math.random() * 5000);
+      }
+
+      // 偶尔的鸟鸣
+      startBirds() {
+        const chirp = () => {
+          if (!this.isPlaying) return;
+          
+          const now = this.ctx.currentTime;
+          const baseFreq = 2000 + Math.random() * 2000;
+          
+          for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) {
+            const t = now + i * 0.12;
+            const osc = this.ctx.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(baseFreq + Math.random() * 500, t);
+            osc.frequency.linearRampToValueAtTime(baseFreq - 200 + Math.random() * 400, t + 0.08);
+            
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.015, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            
+            osc.connect(gain);
+            gain.connect(this.masterGain);
+            osc.start(t);
+            osc.stop(t + 0.12);
+          }
+          
+          // 随机间隔 12-30 秒
+          const nextDelay = 12000 + Math.random() * 18000;
+          setTimeout(chirp, nextDelay);
+        };
+        
+        setTimeout(chirp, 5000 + Math.random() * 8000);
+      }
+
+      startAmbience() {
+        this.startWind();
+        this.startWater();
+        this.startChime();
+        this.startBirds();
+      }
+
+      // 点击水面的涟漪音效
+      playRipple() {
+        if (!this.ctx) this.init();
+        const now = this.ctx.currentTime;
+        
+        // 水滴声
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+        
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      }
+
+      stop() {
+        this.isPlaying = false;
+        Object.values(this.nodes).forEach(n => {
+          try { n.noise.stop(); } catch(e) {}
+          try { n.lfo.stop(); } catch(e) {}
+        });
+        if (this.ctx) this.ctx.close();
+      }
+    }
+
+    // 初始化音频（需要用户交互触发）
+    const audio = new InkLandscapeAudio();
+    let audioStarted = false;
+
+    function startAudio() {
+      if (!audioStarted) {
+        audio.init();
+        audioStarted = true;
+        console.log('🎵 水墨山水音效已启动');
+      }
+    }
+
     // 场景加载完成后显示提示
     document.querySelector('a-scene').addEventListener('loaded', () => {
       console.log('水墨山水场景已加载');
     });
     
-    // 点击山石触发涟漪效果
+    // 点击山石触发涟漪效果 + 水滴音效
     document.querySelectorAll('.clickable').forEach(el => {
       el.addEventListener('click', () => {
+        // 播放水滴音效
+        audio.playRipple();
+        
         // 创建涟漪动画
         const ripple = document.createElement('a-ring');
         ripple.setAttribute('position', el.getAttribute('position'));
@@ -259,6 +523,11 @@
         
         setTimeout(() => ripple.remove(), 2000);
       });
+    });
+
+    // 用户首次交互时启动音频
+    ['click', 'touchstart', 'keydown'].forEach(evt => {
+      document.addEventListener(evt, startAudio, { once: true });
     });
   </script>
 </body>
