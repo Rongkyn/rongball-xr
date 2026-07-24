@@ -130,6 +130,13 @@
   <div class="header">
     <h1>程序化音效</h1>
     <p>点击卡片聆听 · 全部由 Web Audio API 实时合成 · 无外部音频文件</p>
+    <div class="status" style="margin-top:12px;font-size:0.8rem;color:#8bc8a0;font-family:monospace;">点击任意卡片启动音频引擎</div>
+    <div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:10px;">
+      <span style="font-size:0.8rem;color:#7a7a8a;">🔈</span>
+      <input type="range" id="volume" min="0" max="100" value="50" style="width:160px;accent-color:#8bc8a0;">
+      <span style="font-size:0.8rem;color:#7a7a8a;">🔊</span>
+      <button id="testBtn" style="margin-left:12px;padding:6px 16px;background:rgba(139,200,160,0.2);border:1px solid rgba(139,200,160,0.4);border-radius:6px;color:#8bc8a0;cursor:pointer;font-family:inherit;font-size:0.8rem;">🔔 测试</button>
+    </div>
   </div>
 
   <div class="category">自然环境</div>
@@ -257,9 +264,13 @@
     let activeSounds = {};
     let reverbNode = null;
 
-    function initAudio() {
-      if (audioCtx) return;
+    async function initAudio() {
+      if (audioCtx) {
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        return;
+      }
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
       masterGain = audioCtx.createGain();
       masterGain.gain.value = 0.5;
       masterGain.connect(audioCtx.destination);
@@ -276,6 +287,7 @@
         }
       }
       reverbNode.buffer = impulse;
+      console.log('AudioContext ready, state:', audioCtx.state);
     }
 
     // 噪声生成器
@@ -629,8 +641,8 @@
 
     // 卡片交互
     document.querySelectorAll('.sound-card').forEach(card => {
-      card.addEventListener('click', () => {
-        initAudio();
+      card.addEventListener('click', async () => {
+        await initAudio();
         const name = card.dataset.sound;
         
         if (activeSounds[name]) {
@@ -640,10 +652,50 @@
           card.classList.remove('playing');
         } else {
           // 开始
-          activeSounds[name] = sounds[name].start();
-          card.classList.add('playing');
+          try {
+            activeSounds[name] = sounds[name].start();
+            card.classList.add('playing');
+          } catch(e) {
+            console.error('音效启动失败:', name, e);
+            alert('音频启动失败: ' + e.message + '\n请尝试使用 Chrome/Edge 浏览器，并确保未静音。');
+          }
         }
       });
+    });
+    
+    // 显示音频状态
+    function updateStatus() {
+      const status = document.querySelector('.status');
+      if (audioCtx) {
+        status.textContent = '音频状态: ' + audioCtx.state + ' | 音量: ' + (masterGain.gain.value * 100).toFixed(0) + '%';
+        status.style.color = audioCtx.state === 'running' ? '#8bc8a0' : '#e8a87c';
+      }
+    }
+    setInterval(updateStatus, 500);
+
+    // 音量控制
+    document.getElementById('volume').addEventListener('input', (e) => {
+      if (masterGain) {
+        masterGain.gain.value = e.target.value / 100;
+        updateStatus();
+      }
+    });
+
+    // 测试按钮 - 播放一个简单的叮声
+    document.getElementById('testBtn').addEventListener('click', async () => {
+      await initAudio();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      const g = audioCtx.createGain();
+      g.gain.setValueAtTime(0.3, now);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 1);
+      osc.connect(g);
+      g.connect(masterGain);
+      osc.start(now);
+      osc.stop(now + 1.1);
+      updateStatus();
     });
   </script>
 </body>
