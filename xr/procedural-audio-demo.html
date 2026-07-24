@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>程序化音效展示 | 绒球 XR 实验室</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: #1a1a2e;
+      color: #e8e6e3;
+      font-family: 'Noto Serif SC', serif;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      color: #f0ece4;
+      margin-bottom: 12px;
+    }
+    
+    .header p {
+      font-size: 0.9rem;
+      color: #8a8a9a;
+      letter-spacing: 0.1em;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .sound-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .sound-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+    
+    .sound-card.playing {
+      border-color: rgba(139, 200, 160, 0.5);
+      box-shadow: 0 0 30px rgba(139, 200, 160, 0.1);
+    }
+    
+    .sound-card .icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+    
+    .sound-card h3 {
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: #f0ece4;
+      margin-bottom: 8px;
+      letter-spacing: 0.1em;
+    }
+    
+    .sound-card p {
+      font-size: 0.8rem;
+      color: #7a7a8a;
+      line-height: 1.6;
+    }
+    
+    .sound-card .tech {
+      margin-top: 12px;
+      font-size: 0.7rem;
+      color: #5a5a6a;
+      font-family: monospace;
+      letter-spacing: 0.05em;
+    }
+    
+    .visualizer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    
+    .sound-card.playing .visualizer {
+      opacity: 1;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      color: #5a5a6a;
+      font-size: 0.8rem;
+    }
+    
+    .category {
+      max-width: 1000px;
+      margin: 0 auto 20px;
+      font-size: 0.85rem;
+      color: #6a6a7a;
+      letter-spacing: 0.15em;
+      padding-left: 4px;
+      border-left: 2px solid rgba(139, 200, 160, 0.3);
+      padding: 4px 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>程序化音效</h1>
+    <p>点击卡片聆听 · 全部由 Web Audio API 实时合成 · 无外部音频文件</p>
+  </div>
+
+  <div class="category">自然环境</div>
+  <div class="grid">
+    <div class="sound-card" data-sound="wind">
+      <div class="icon">🌬️</div>
+      <h3>风</h3>
+      <p>穿过山谷的微风，时强时弱</p>
+      <div class="tech">粉噪声 → 带通滤波 → LFO 调制</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="rain">
+      <div class="icon">🌧️</div>
+      <h3>雨</h3>
+      <p>中雨落在树叶和地面上的声音</p>
+      <div class="tech">白噪声 → 高通滤波 → 脉冲调制</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="thunder">
+      <div class="icon">⛈️</div>
+      <h3>雷声</h3>
+      <p>远处的闷雷滚滚而来</p>
+      <div class="tech">棕噪声 → 低通滤波 → 慢包络</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="stream">
+      <div class="icon">💧</div>
+      <h3>溪流</h3>
+      <p>山间小溪潺潺流淌</p>
+      <div class="tech">粉噪声 → 带通 + 梳状滤波</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="fire">
+      <div class="icon">🔥</div>
+      <h3>篝火</h3>
+      <p>木柴噼啪作响</p>
+      <div class="tech">棕噪声 + 随机脉冲爆发</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+  </div>
+
+  <div class="category" style="margin-top: 30px;">声音效果</div>
+  <div class="grid">
+    <div class="sound-card" data-sound="chime">
+      <div class="icon">🔔</div>
+      <h3>磬声</h3>
+      <p>远处寺庙传来的磬声，余音袅袅</p>
+      <div class="tech">正弦波 + 泛音 → 长衰减包络</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="bird">
+      <div class="icon">🐦</div>
+      <h3>鸟鸣</h3>
+      <p>清晨林间的鸟叫声</p>
+      <div class="tech">正弦波 → 频率滑音 → 短包络</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="drop">
+      <div class="icon">💦</div>
+      <h3>水滴</h3>
+      <p>水滴落入深潭</p>
+      <div class="tech">正弦波 → 频率快速下滑</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="footstep">
+      <div class="icon">👣</div>
+      <h3>脚步声</h3>
+      <p>踩在木地板上的脚步</p>
+      <div class="tech">噪声脉冲 + 共振滤波</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+  </div>
+
+  <div class="category" style="margin-top: 30px;">科幻 / 交互</div>
+  <div class="grid">
+    <div class="sound-card" data-sound="laser">
+      <div class="icon">⚡</div>
+      <h3>激光</h3>
+      <p>经典的科幻激光射击声</p>
+      <div class="tech">方波 → 频率从高频快速滑落</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="powerup">
+      <div class="icon">✨</div>
+      <h3>能量提升</h3>
+      <p>游戏里的升级/拾取音效</p>
+      <div class="tech">正弦波 → 频率阶梯上升 + 混响</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="ambient">
+      <div class="icon">🌌</div>
+      <h3>太空氛围</h3>
+      <p>深邃的太空环境音</p>
+      <div class="tech">多正弦波 → 缓慢频率漂移 + 混响</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+    
+    <div class="sound-card" data-sound="glitch">
+      <div class="icon">🤖</div>
+      <h3>故障</h3>
+      <p>数字系统出错的声音</p>
+      <div class="tech">方波 + 随机频率跳变 + 位破碎</div>
+      <canvas class="visualizer"></canvas>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>绒球 XR 实验室 · 2026 · 全部音效由 Web Audio API 实时合成</p>
+    <p style="margin-top: 8px;">零外部文件 · 零加载时间 · 无限变化</p>
+  </div>
+
+  <script>
+    // 全局音频上下文
+    let audioCtx = null;
+    let masterGain = null;
+    let activeSounds = {};
+    let reverbNode = null;
+
+    function initAudio() {
+      if (audioCtx) return;
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.5;
+      masterGain.connect(audioCtx.destination);
+      
+      // 创建简单混响
+      reverbNode = audioCtx.createConvolver();
+      const rate = audioCtx.sampleRate;
+      const length = rate * 2;
+      const impulse = audioCtx.createBuffer(2, length, rate);
+      for (let ch = 0; ch < 2; ch++) {
+        const data = impulse.getChannelData(ch);
+        for (let i = 0; i < length; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
+        }
+      }
+      reverbNode.buffer = impulse;
+    }
+
+    // 噪声生成器
+    function createNoise(type = 'white', duration = 2) {
+      const sr = audioCtx.sampleRate;
+      const len = sr * duration;
+      const buf = audioCtx.createBuffer(1, len, sr);
+      const d = buf.getChannelData(0);
+      let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+      
+      for (let i = 0; i < len; i++) {
+        const w = Math.random() * 2 - 1;
+        if (type === 'pink') {
+          b0=0.99886*b0+w*0.0555179; b1=0.99332*b1+w*0.0750759;
+          b2=0.96900*b2+w*0.1538520; b3=0.86650*b3+w*0.3104856;
+          b4=0.55000*b4+w*0.5329522; b5=-0.7616*b5-w*0.0168980;
+          d[i]=(b0+b1+b2+b3+b4+b5+b6+w*0.5362)*0.11; b6=w*0.115926;
+        } else if (type === 'brown') {
+          b0=(b0+0.02*w)/1.02; d[i]=b0*3.5;
+        } else {
+          d[i]=w;
+        }
+      }
+      return buf;
+    }
+
+    // ===== 各种音效实现 =====
+    const sounds = {
+      
+      wind: {
+        start() {
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = createNoise('pink', 4);
+          noise.loop = true;
+          const bp = audioCtx.createBiquadFilter();
+          bp.type='bandpass'; bp.frequency.value=400; bp.Q.value=0.5;
+          const lp = audioCtx.createBiquadFilter();
+          lp.type='lowpass'; lp.frequency.value=800;
+          const gain = audioCtx.createGain();
+          gain.gain.value=0.4;
+          const lfo = audioCtx.createOscillator();
+          lfo.frequency.value=0.1;
+          const lfoG = audioCtx.createGain();
+          lfoG.gain.value=0.15;
+          lfo.connect(lfoG); lfoG.connect(gain.gain); lfo.start();
+          noise.connect(bp); bp.connect(lp); lp.connect(gain); gain.connect(masterGain);
+          noise.start();
+          return { stop() { noise.stop(); lfo.stop(); } };
+        }
+      },
+
+      rain: {
+        start() {
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = createNoise('white', 3);
+          noise.loop = true;
+          const hp = audioCtx.createBiquadFilter();
+          hp.type='highpass'; hp.frequency.value=1000;
+          const lp = audioCtx.createBiquadFilter();
+          lp.type='lowpass'; lp.frequency.value=8000;
+          const gain = audioCtx.createGain();
+          gain.gain.value=0.25;
+          // 雨滴节奏感
+          const lfo = audioCtx.createOscillator();
+          lfo.frequency.value=3;
+          const lfoG = audioCtx.createGain();
+          lfoG.gain.value=0.08;
+          lfo.connect(lfoG); lfoG.connect(gain.gain); lfo.start();
+          noise.connect(hp); hp.connect(lp); lp.connect(gain); gain.connect(masterGain);
+          noise.start();
+          return { stop() { noise.stop(); lfo.stop(); } };
+        }
+      },
+
+      thunder: {
+        start() {
+          const playThunder = () => {
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = createNoise('brown', 5);
+            const lp = audioCtx.createBiquadFilter();
+            lp.type='lowpass'; lp.frequency.value=150;
+            const gain = audioCtx.createGain();
+            const now = audioCtx.currentTime;
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.6, now+0.5);
+            gain.gain.linearRampToValueAtTime(0.3, now+1.5);
+            gain.gain.linearRampToValueAtTime(0.5, now+2);
+            gain.gain.exponentialRampToValueAtTime(0.01, now+4.5);
+            noise.connect(lp); lp.connect(gain); gain.connect(masterGain);
+            noise.start(); noise.stop(now+5);
+          };
+          playThunder();
+          const interval = setInterval(() => {
+            if (!activeSounds.thunder) { clearInterval(interval); return; }
+            playThunder();
+          }, 5000 + Math.random()*5000);
+          return { stop() { clearInterval(interval); } };
+        }
+      },
+
+      stream: {
+        start() {
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = createNoise('pink', 3);
+          noise.loop = true;
+          const bp = audioCtx.createBiquadFilter();
+          bp.type='bandpass'; bp.frequency.value=800; bp.Q.value=2;
+          const hp = audioCtx.createBiquadFilter();
+          hp.type='highpass'; hp.frequency.value=200;
+          const gain = audioCtx.createGain();
+          gain.gain.value=0.3;
+          const lfo = audioCtx.createOscillator();
+          lfo.frequency.value=0.3;
+          const lfoG = audioCtx.createGain();
+          lfoG.gain.value=0.1;
+          lfo.connect(lfoG); lfoG.connect(gain.gain); lfo.start();
+          noise.connect(bp); bp.connect(hp); hp.connect(gain); gain.connect(masterGain);
+          noise.start();
+          return { stop() { noise.stop(); lfo.stop(); } };
+        }
+      },
+
+      fire: {
+        start() {
+          const noise = audioCtx.createBufferSource();
+          noise.buffer = createNoise('brown', 4);
+          noise.loop = true;
+          const bp = audioCtx.createBiquadFilter();
+          bp.type='bandpass'; bp.frequency.value=300; bp.Q.value=1;
+          const gain = audioCtx.createGain();
+          gain.gain.value=0.2;
+          noise.connect(bp); bp.connect(gain); gain.connect(masterGain);
+          noise.start();
+          // 噼啪声
+          const crackle = () => {
+            if (!activeSounds.fire) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            osc.frequency.value = 100 + Math.random()*200;
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0.15, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now+0.05);
+            osc.connect(g); g.connect(masterGain);
+            osc.start(now); osc.stop(now+0.06);
+            setTimeout(crackle, 50 + Math.random()*200);
+          };
+          crackle();
+          return { stop() { noise.stop(); } };
+        }
+      },
+
+      chime: {
+        start() {
+          const playChime = () => {
+            if (!activeSounds.chime) return;
+            const now = audioCtx.currentTime;
+            const pent = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+            const freq = pent[Math.floor(Math.random()*pent.length)];
+            
+            const osc = audioCtx.createOscillator();
+            osc.type='sine'; osc.frequency.value=freq;
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0,now);
+            g.gain.linearRampToValueAtTime(0.3,now+0.05);
+            g.gain.exponentialRampToValueAtTime(0.001,now+5);
+            
+            const osc2 = audioCtx.createOscillator();
+            osc2.type='sine'; osc2.frequency.value=freq*2.01;
+            const g2 = audioCtx.createGain();
+            g2.gain.setValueAtTime(0,now);
+            g2.gain.linearRampToValueAtTime(0.1,now+0.03);
+            g2.gain.exponentialRampToValueAtTime(0.001,now+3);
+            
+            osc.connect(g); osc2.connect(g2);
+            g.connect(reverbNode); g2.connect(reverbNode);
+            reverbNode.connect(masterGain);
+            g.connect(masterGain); g2.connect(masterGain);
+            osc.start(now); osc.stop(now+5.5);
+            osc2.start(now); osc2.stop(now+3.5);
+            
+            setTimeout(playChime, 3000+Math.random()*4000);
+          };
+          playChime();
+          return { stop() {} };
+        }
+      },
+
+      bird: {
+        start() {
+          const chirp = () => {
+            if (!activeSounds.bird) return;
+            const now = audioCtx.currentTime;
+            const base = 2000+Math.random()*3000;
+            const count = 2+Math.floor(Math.random()*4);
+            for (let i=0;i<count;i++) {
+              const t = now+i*0.1;
+              const o = audioCtx.createOscillator();
+              o.type='sine';
+              o.frequency.setValueAtTime(base+Math.random()*800, t);
+              o.frequency.linearRampToValueAtTime(base-300+Math.random()*500, t+0.08);
+              const g = audioCtx.createGain();
+              g.gain.setValueAtTime(0,t);
+              g.gain.linearRampToValueAtTime(0.12,t+0.02);
+              g.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+              o.connect(g); g.connect(masterGain);
+              o.start(t); o.stop(t+0.12);
+            }
+            setTimeout(chirp, 1500+Math.random()*3000);
+          };
+          chirp();
+          return { stop() {} };
+        }
+      },
+
+      drop: {
+        start() {
+          const drop = () => {
+            if (!activeSounds.drop) return;
+            const now = audioCtx.currentTime;
+            const o = audioCtx.createOscillator();
+            o.type='sine';
+            o.frequency.setValueAtTime(1200+Math.random()*600, now);
+            o.frequency.exponentialRampToValueAtTime(150, now+0.4);
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0.25, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now+0.6);
+            o.connect(g); g.connect(reverbNode); reverbNode.connect(masterGain);
+            g.connect(masterGain);
+            o.start(now); o.stop(now+0.7);
+            setTimeout(drop, 1500+Math.random()*2500);
+          };
+          drop();
+          return { stop() {} };
+        }
+      },
+
+      footstep: {
+        start() {
+          const step = () => {
+            if (!activeSounds.footstep) return;
+            const now = audioCtx.currentTime;
+            const noise = audioCtx.createBufferSource();
+            const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*0.1, audioCtx.sampleRate);
+            const d = buf.getChannelData(0);
+            for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
+            noise.buffer = buf;
+            const bp = audioCtx.createBiquadFilter();
+            bp.type='bandpass'; bp.frequency.value=150+Math.random()*100; bp.Q.value=3;
+            const g = audioCtx.createGain();
+            g.gain.value=0.4;
+            noise.connect(bp); bp.connect(g); g.connect(masterGain);
+            noise.start(now); noise.stop(now+0.1);
+            setTimeout(step, 400+Math.random()*200);
+          };
+          step();
+          return { stop() {} };
+        }
+      },
+
+      laser: {
+        start() {
+          const fire = () => {
+            if (!activeSounds.laser) return;
+            const now = audioCtx.currentTime;
+            const o = audioCtx.createOscillator();
+            o.type='square';
+            o.frequency.setValueAtTime(1500, now);
+            o.frequency.exponentialRampToValueAtTime(100, now+0.3);
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0.2, now);
+            g.gain.exponentialRampToValueAtTime(0.001, now+0.35);
+            o.connect(g); g.connect(masterGain);
+            o.start(now); o.stop(now+0.4);
+            setTimeout(fire, 800+Math.random()*1200);
+          };
+          fire();
+          return { stop() {} };
+        }
+      },
+
+      powerup: {
+        start() {
+          const play = () => {
+            if (!activeSounds.powerup) return;
+            const now = audioCtx.currentTime;
+            const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
+            notes.forEach((freq, i) => {
+              const t = now+i*0.12;
+              const o = audioCtx.createOscillator();
+              o.type='sine'; o.frequency.value=freq;
+              const g = audioCtx.createGain();
+              g.gain.setValueAtTime(0,t);
+              g.gain.linearRampToValueAtTime(0.2,t+0.03);
+              g.gain.exponentialRampToValueAtTime(0.001,t+0.3);
+              o.connect(g); g.connect(reverbNode); reverbNode.connect(masterGain);
+              o.start(t); o.stop(t+0.35);
+            });
+            setTimeout(play, 2000+Math.random()*2000);
+          };
+          play();
+          return { stop() {} };
+        }
+      },
+
+      ambient: {
+        start() {
+          const freqs = [55, 82.41, 110, 164.81];
+          const oscs = freqs.map(f => {
+            const o = audioCtx.createOscillator();
+            o.type='sine'; o.frequency.value=f;
+            const g = audioCtx.createGain();
+            g.gain.value=0.08;
+            // 缓慢漂移
+            const lfo = audioCtx.createOscillator();
+            lfo.frequency.value=0.02+Math.random()*0.05;
+            const lfoG = audioCtx.createGain();
+            lfoG.gain.value=2;
+            lfo.connect(lfoG); lfoG.connect(o.frequency); lfo.start();
+            o.connect(g); g.connect(reverbNode); reverbNode.connect(masterGain);
+            o.start();
+            return { o, g, lfo };
+          });
+          return { stop() { oscs.forEach(s => { s.o.stop(); s.lfo.stop(); }); } };
+        }
+      },
+
+      glitch: {
+        start() {
+          const glitch = () => {
+            if (!activeSounds.glitch) return;
+            const now = audioCtx.currentTime;
+            const bursts = 3+Math.floor(Math.random()*5);
+            for (let i=0;i<bursts;i++) {
+              const t = now+i*0.05;
+              const o = audioCtx.createOscillator();
+              o.type = Math.random()>0.5?'square':'sawtooth';
+              o.frequency.value = 100+Math.random()*3000;
+              const g = audioCtx.createGain();
+              g.gain.setValueAtTime(0.15,t);
+              g.gain.setValueAtTime(0,t+0.04);
+              o.connect(g); g.connect(masterGain);
+              o.start(t); o.stop(t+0.05);
+            }
+            setTimeout(glitch, 300+Math.random()*800);
+          };
+          glitch();
+          return { stop() {} };
+        }
+      }
+    };
+
+    // 卡片交互
+    document.querySelectorAll('.sound-card').forEach(card => {
+      card.addEventListener('click', () => {
+        initAudio();
+        const name = card.dataset.sound;
+        
+        if (activeSounds[name]) {
+          // 停止
+          activeSounds[name].stop();
+          delete activeSounds[name];
+          card.classList.remove('playing');
+        } else {
+          // 开始
+          activeSounds[name] = sounds[name].start();
+          card.classList.add('playing');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
