@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>水墨山水 | 绒球 XR 实验室</title>
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; }
+    
+    .ui-overlay {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 100;
+      font-family: 'Noto Serif SC', 'STSong', serif;
+    }
+    
+    .title-card {
+      background: rgba(255, 253, 245, 0.92);
+      padding: 18px 28px;
+      border-radius: 2px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      border-left: 3px solid #8b7355;
+      max-width: 280px;
+      opacity: 0;
+      animation: fadeIn 1.5s ease-out 0.5s forwards;
+    }
+    
+    .title-card h1 {
+      font-size: 1.4rem;
+      color: #3d3d3d;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      margin-bottom: 8px;
+    }
+    
+    .title-card p {
+      font-size: 0.85rem;
+      color: #7a7a7a;
+      line-height: 1.6;
+      letter-spacing: 0.05em;
+    }
+    
+    .hint {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(60, 60, 60, 0.75);
+      color: rgba(255, 253, 245, 0.95);
+      padding: 10px 24px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      font-family: 'Noto Serif SC', serif;
+      opacity: 0;
+      animation: fadeIn 1s ease-out 2s forwards;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .title-card h1 {
+      animation: slideIn 1s ease-out 0.5s both;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="ui-overlay">
+    <div class="title-card">
+      <h1>水墨山水</h1>
+      <p>留白之处，皆是意境<br>动静之间，皆是禅意</p>
+    </div>
+  </div>
+  
+  <div class="hint">点击画面或使用 WASD 漫游 · VR 中使用手柄移动</div>
+
+  <a-scene 
+    fog="type: exponential; color: #f5f3ef; density: 0.025"
+    renderer="antialias: true; colorManagement: true; sortObjects: true"
+    vr-mode-ui="enabled: true"
+  >
+    <!-- 资产管理 -->
+    <a-assets>
+      <img id="ink-texture" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E">
+    </a-assets>
+
+    <!-- 相机控制器 -->
+    <a-entity id="rig" position="0 1.6 8">
+      <a-camera 
+        wasd-controls="acceleration: 15; fly: false"
+        look-controls="pointerLockEnabled: true"
+      >
+        <a-cursor 
+          color="#8b7355" 
+          opacity="0.7"
+          fuse="false"
+          raycaster="objects: .clickable"
+        ></a-cursor>
+      </a-camera>
+    </a-entity>
+
+    <!-- 天空 - 宣纸质感 -->
+    <a-sky color="#f8f6f1"></a-sky>
+
+    <!-- 远山层次 - 墨色渐淡 -->
+    <a-entity id="mountains-far">
+      <!-- 最远山 -->
+      <a-cone 
+        position="-8 2.5 -25" 
+        radius-bottom="6" radius-top="0.2" 
+        height="5" 
+        color="#d4cfc7" 
+        segments-radial="8"
+        material="shader: standard; flatShading: true; opacity: 0.7"
+      ></a-cone>
+      <a-cone position="4 2 -28" radius-bottom="7" radius-top="0.3" height="4.5" color="#cfc9c0" segments-radial="8" material="opacity: 0.65"></a-cone>
+      <a-cone position="12 2.8 -22" radius-bottom="5" radius-top="0.2" height="5.5" color="#d4cfc7" segments-radial="8" material="opacity: 0.6"></a-cone>
+    </a-entity>
+
+    <!-- 中景山 -->
+    <a-entity id="mountains-mid">
+      <a-cone position="-12 1.5 -15" radius-bottom="5" radius-top="0.4" height="6" color="#a8a095" segments-radial="6" material="flatShading: true; opacity: 0.85"></a-cone>
+      <a-cone position="0 2 -18" radius-bottom="6" radius-top="0.5" height="7" color="#9c968b" segments-radial="6" material="flatShading: true; opacity: 0.9"></a-cone>
+      <a-cone position="10 1.2 -14" radius-bottom="4" radius-top="0.3" height="5" color="#a8a095" segments-radial="6" material="flatShading: true"></a-cone>
+      <a-cone position="-5 1.8 -12" radius-bottom="4.5" radius-top="0.4" height="5.5" color="#b0a898" segments-radial="6" material="flatShading: true; opacity: 0.95"></a-cone>
+    </a-entity>
+
+    <!-- 近景山石 -->
+    <a-entity id="rocks">
+      <!-- 左侧主石 -->
+      <a-cone position="-3 0.8 -5" radius-bottom="2.5" radius-top="0.6" height="3.5" color="#6b6358" segments-radial="5" material="flatShading: true; roughness: 0.9"></a-cone>
+      <a-cone position="-1.5 0.5 -4" radius-bottom="1.8" radius-top="0.4" height="2.5" color="#7a7268" segments-radial="5" material="flatShading: true; roughness: 0.85"></a-cone>
+      
+      <!-- 右侧山石 -->
+      <a-cone position="4 0.6 -6" radius-bottom="2" radius-top="0.5" height="2.8" color="#6b6358" segments-radial="5" material="flatShading: true; roughness: 0.9"></a-cone>
+      <a-cone position="5.5 0.4 -4.5" radius-bottom="1.5" radius-top="0.35" height="2" color="#7a7268" segments-radial="5" material="flatShading: true; roughness: 0.85"></a-cone>
+      
+      <!-- 前景点缀 -->
+      <a-cone position="-2 0.3 -2" radius-bottom="0.8" radius-top="0.2" height="1.2" color="#8a8278" segments-radial="4" material="flatShading: true"></a-cone>
+      <a-cone position="2 0.25 -2.5" radius-bottom="0.6" radius-top="0.15" height="1" color="#8a8278" segments-radial="4" material="flatShading: true"></a-cone>
+    </a-entity>
+
+    <!-- 水面 - 留白意境 -->
+    <a-circle 
+      position="0 0.01 -8" 
+      radius="12" 
+      rotation="-90 0 0" 
+      color="#e8e4db"
+      material="shader: standard; metalness: 0.1; roughness: 0.6; opacity: 0.9"
+    ></a-circle>
+    
+    <!-- 水面波纹装饰 -->
+    <a-ring position="0 0.02 -6" radius-inner="1.5" radius-outer="1.6" rotation="-90 0 0" color="#d4cfc7" material="opacity: 0.4"></a-ring>
+    <a-ring position="0.5 0.02 -7" radius-inner="2" radius-outer="2.1" rotation="-90 0 0" color="#d4cfc7" material="opacity: 0.3"></a-ring>
+    <a-ring position="-0.3 0.02 -5.5" radius-inner="0.8" radius-outer="0.85" rotation="-90 0 0" color="#d4cfc7" material="opacity: 0.35"></a-ring>
+
+    <!-- 松树 - 经典水墨意象 -->
+    <a-entity id="trees" position="0 0 0">
+      <!-- 主松 - 左侧 -->
+      <a-entity position="-2.5 0 -3" rotation="0 15 0">
+        <!-- 树干 -->
+        <a-cylinder height="1.8" radius="0.08" color="#4a4035" material="roughness: 0.95"></a-cylinder>
+        <!-- 树冠层 -->
+        <a-cone position="0 1.2 0" radius-bottom="0.9" radius-top="0.1" height="1.2" color="#3d4a3a" material="flatShading: true; opacity: 0.92"></a-cone>
+        <a-cone position="0 1.8 0" radius-bottom="0.65" radius-top="0.08" height="0.9" color="#3d4a3a" material="flatShading: true; opacity: 0.88"></a-cone>
+        <a-cone position="0 2.3 0" radius-bottom="0.4" radius-top="0.05" height="0.7" color="#3d4a3a" material="flatShading: true; opacity: 0.85"></a-cone>
+      </a-entity>
+      
+      <!-- 次松 - 右侧 -->
+      <a-entity position="3 0 -4" rotation="0 -10 0">
+        <a-cylinder height="1.4" radius="0.06" color="#4a4035" material="roughness: 0.95"></a-cylinder>
+        <a-cone position="0 1 0" radius-bottom="0.7" radius-top="0.08" height="1" color="#4a5a48" material="flatShading: true; opacity: 0.9"></a-cone>
+        <a-cone position="0 1.5 0" radius-bottom="0.5" radius-top="0.05" height="0.75" color="#4a5a48" material="flatShading: true; opacity: 0.85"></a-cone>
+      </a-entity>
+      
+      <!-- 远松 -->
+      <a-entity position="6 0 -10" rotation="0 -20 0">
+        <a-cylinder height="1" radius="0.04" color="#5a5045" material="roughness: 0.95"></a-cylinder>
+        <a-cone position="0 0.7 0" radius-bottom="0.5" radius-top="0.06" height="0.8" color="#3d4a3a" material="flatShading: true; opacity: 0.75"></a-cone>
+        <a-cone position="0 1.15 0" radius-bottom="0.35" radius-top="0.04" height="0.6" color="#3d4a3a" material="flatShading: true; opacity: 0.7"></a-cone>
+      </a-entity>
+    </a-entity>
+
+    <!-- 飘雾效果 - 禅意氛围 -->
+    <a-entity id="fog-layers">
+      <a-plane 
+        position="-4 1.2 -8" 
+        width="8" height="1.5" 
+        rotation="-90 0 0"
+        color="#ffffff"
+        material="shader: standard; opacity: 0.12; transparent: true; side: double"
+      ></a-plane>
+      <a-plane 
+        position="3 1 -10" 
+        width="6" height="1.2" 
+        rotation="-90 0 0"
+        color="#ffffff"
+        material="shader: standard; opacity: 0.1; transparent: true; side: double"
+      ></a-plane>
+      <a-plane 
+        position="0 0.8 -5" 
+        width="10" height="1" 
+        rotation="-90 0 0"
+        color="#f5f3ef"
+        material="shader: standard; opacity: 0.15; transparent: true; side: double"
+      ></a-plane>
+    </a-entity>
+
+    <!-- 可交互元素：点击山石触发意境变化 -->
+    <a-entity 
+      class="clickable"
+      geometry="primitive: sphere; radius: 0.05"
+      position="-3 1.5 -5"
+      animation__click="property: scale; to: 1.5 1.5 1.5; dur: 300; startEvents: click"
+      animation__leave="property: scale; to: 1 1 1; dur: 300; startEvents: mouseleave"
+      sound="on: click; src: #click-sound; poolSize: 2"
+    ></a-entity>
+
+    <!-- 环境光 - 柔和水墨光 -->
+    <a-light type="ambient" color="#f5f0e8" intensity="0.6"></a-light>
+    <!-- 主光源 - 侧逆光营造水墨光影 -->
+    <a-light type="directional" color="#fff8f0" intensity="0.8" position="-1 3 1"></a-light>
+    <!-- 补光 - 柔化阴影 -->
+    <a-light type="hemisphere" color="#f5f3ef" groundColor="#a8a095" intensity="0.4"></a-light>
+
+  </a-scene>
+
+  <script>
+    // 场景加载完成后显示提示
+    document.querySelector('a-scene').addEventListener('loaded', () => {
+      console.log('水墨山水场景已加载');
+    });
+    
+    // 点击山石触发涟漪效果
+    document.querySelectorAll('.clickable').forEach(el => {
+      el.addEventListener('click', () => {
+        // 创建涟漪动画
+        const ripple = document.createElement('a-ring');
+        ripple.setAttribute('position', el.getAttribute('position'));
+        ripple.setAttribute('radius-inner', '0');
+        ripple.setAttribute('radius-outer', '0.1');
+        ripple.setAttribute('rotation', '-90 0 0');
+        ripple.setAttribute('color', '#8b7355');
+        ripple.setAttribute('material', 'opacity: 0.6; transparent: true');
+        ripple.setAttribute('animation', 'property: scale; to: 20 20 1; dur: 2000; easing: easeOutQuad');
+        ripple.setAttribute('animation__fade', 'property: material.opacity; to: 0; dur: 2000; easing: easeOutQuad');
+        
+        document.querySelector('a-scene').appendChild(ripple);
+        
+        setTimeout(() => ripple.remove(), 2000);
+      });
+    });
+  </script>
+</body>
+</html>
