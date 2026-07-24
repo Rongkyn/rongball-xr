@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>程序化音效 (Tone.js 版) | 绒球 XR 实验室</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: #1a1a2e;
+      color: #e8e6e3;
+      font-family: 'Noto Serif SC', serif;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .header h1 {
+      font-size: 2rem;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      color: #f0ece4;
+      margin-bottom: 12px;
+    }
+    
+    .header p {
+      font-size: 0.9rem;
+      color: #8a8a9a;
+      letter-spacing: 0.1em;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(139, 200, 160, 0.15);
+      border: 1px solid rgba(139, 200, 160, 0.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      color: #8bc8a0;
+      margin-top: 10px;
+      font-family: monospace;
+    }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .sound-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .sound-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+    
+    .sound-card.playing {
+      border-color: rgba(139, 200, 160, 0.5);
+      box-shadow: 0 0 30px rgba(139, 200, 160, 0.1);
+    }
+    
+    .sound-card .icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+    
+    .sound-card h3 {
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: #f0ece4;
+      margin-bottom: 8px;
+      letter-spacing: 0.1em;
+    }
+    
+    .sound-card p {
+      font-size: 0.8rem;
+      color: #7a7a8a;
+      line-height: 1.6;
+    }
+    
+    .sound-card .tech {
+      margin-top: 12px;
+      font-size: 0.7rem;
+      color: #5a5a6a;
+      font-family: monospace;
+      letter-spacing: 0.05em;
+    }
+
+    .sound-card .tech .tone-tag {
+      color: #8bc8a0;
+      background: rgba(139, 200, 160, 0.1);
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    
+    .footer {
+      text-align: center;
+      margin-top: 50px;
+      color: #5a5a6a;
+      font-size: 0.8rem;
+    }
+    
+    .category {
+      max-width: 1000px;
+      margin: 0 auto 20px;
+      font-size: 0.85rem;
+      color: #6a6a7a;
+      letter-spacing: 0.15em;
+      padding-left: 4px;
+      border-left: 2px solid rgba(139, 200, 160, 0.3);
+      padding: 4px 12px;
+    }
+
+    .compare-hint {
+      max-width: 1000px;
+      margin: 0 auto 30px;
+      padding: 16px 20px;
+      background: rgba(139, 200, 160, 0.05);
+      border: 1px solid rgba(139, 200, 160, 0.15);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: #8a9a8a;
+      line-height: 1.8;
+    }
+    .compare-hint strong { color: #8bc8a0; }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(26, 26, 46, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: opacity 0.5s;
+    }
+    .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    .loading-text { color: #8bc8a0; font-size: 1rem; letter-spacing: 0.1em; }
+  </style>
+</head>
+<body>
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-text">加载 Tone.js 引擎中...</div>
+  </div>
+
+  <div class="header">
+    <h1>程序化音效</h1>
+    <p>点击卡片聆听 · 全部由 Tone.js 实时合成</p>
+    <div class="badge">Tone.js v14 · Web Audio API</div>
+    <div style="margin-top:14px;display:flex;align-items:center;justify-content:center;gap:10px;">
+      <span style="font-size:0.8rem;color:#7a7a8a;">🔈</span>
+      <input type="range" id="volume" min="0" max="100" value="60" style="width:160px;accent-color:#8bc8a0;">
+      <span style="font-size:0.8rem;color:#7a7a8a;">🔊</span>
+    </div>
+  </div>
+
+  <div class="compare-hint">
+    <strong>🧶 对比说明：</strong>这个版本使用 <strong>Tone.js</strong> 框架，对比之前的纯 Web Audio API 版本。<br>
+    重点改进：<strong>雨声</strong>（多层颗粒合成）、<strong>脚步声</strong>（MembraneSynth 物理建模）、<strong>混响</strong>（Convolver 高质量脉冲响应）。
+  </div>
+
+  <div class="category">🌿 自然环境</div>
+  <div class="grid">
+    <div class="sound-card" data-sound="wind">
+      <div class="icon">🌬️</div>
+      <h3>风</h3>
+      <p>穿过山谷的微风，时强时弱</p>
+      <div class="tech"><span class="tone-tag">NoiseSynth</span> → AutoFilter LFO → Reverb</div>
+    </div>
+    
+    <div class="sound-card" data-sound="rain">
+      <div class="icon">🌧️</div>
+      <h3>雨</h3>
+      <p>中雨落在树叶和地面上的声音</p>
+      <div class="tech"><span class="tone-tag">GrainPlayer</span> 多层叠加 + <span class="tone-tag">Convolver</span></div>
+    </div>
+    
+    <div class="sound-card" data-sound="thunder">
+      <div class="icon">⛈️</div>
+      <h3>雷声</h3>
+      <p>远处的闷雷滚滚而来</p>
+      <div class="tech"><span class="tone-tag">NoiseSynth</span> → Lowpass + 慢包络</div>
+    </div>
+    
+    <div class="sound-card" data-sound="stream">
+      <div class="icon">💧</div>
+      <h3>溪流</h3>
+      <p>山间小溪潺潺流淌</p>
+      <div class="tech"><span class="tone-tag">NoiseSynth</span> → Bandpass + Chorus</div>
+    </div>
+    
+    <div class="sound-card" data-sound="fire">
+      <div class="icon">🔥</div>
+      <h3>篝火</h3>
+      <p>木柴噼啪作响</p>
+      <div class="tech"><span class="tone-tag">NoiseSynth</span> + <span class="tone-tag">MembraneSynth</span> 噼啪</div>
+    </div>
+  </div>
+
+  <div class="category" style="margin-top: 30px;">🎵 声音效果</div>
+  <div class="grid">
+    <div class="sound-card" data-sound="chime">
+      <div class="icon">🔔</div>
+      <h3>磬声</h3>
+      <p>远处寺庙传来的磬声，余音袅袅</p>
+      <div class="tech"><span class="tone-tag">FMSynth</span> → 长 Release → Reverb</div>
+    </div>
+    
+    <div class="sound-card" data-sound="bird">
+      <div class="icon">🐦</div>
+      <h3>鸟鸣</h3>
+      <p>清晨林间的鸟叫声</p>
+      <div class="tech"><span class="tone-tag">Synth</span> 频率滑音 + 短包络</div>
+    </div>
+    
+    <div class="sound-card" data-sound="drop">
+      <div class="icon">💦</div>
+      <h3>水滴</h3>
+      <p>水滴落入深潭</p>
+      <div class="tech"><span class="tone-tag">MetalSynth</span> → 频率下滑 + Reverb</div>
+    </div>
+    
+    <div class="sound-card" data-sound="footstep">
+      <div class="icon">👣</div>
+      <h3>脚步声</h3>
+      <p>踩在木地板上的脚步</p>
+      <div class="tech"><span class="tone-tag">MembraneSynth</span> 物理建模 + <span class="tone-tag">Reverb</span></div>
+    </div>
+  </div>
+
+  <div class="category" style="margin-top: 30px;">🚀 科幻 / 交互</div>
+  <div class="grid">
+    <div class="sound-card" data-sound="laser">
+      <div class="icon">⚡</div>
+      <h3>激光</h3>
+      <p>经典的科幻激光射击声</p>
+      <div class="tech"><span class="tone-tag">MonoSynth</span> → 频率快速滑落</div>
+    </div>
+    
+    <div class="sound-card" data-sound="powerup">
+      <div class="icon">✨</div>
+      <h3>能量提升</h3>
+      <p>游戏里的升级/拾取音效</p>
+      <div class="tech"><span class="tone-tag">PolySynth</span> 音阶上升 → Reverb</div>
+    </div>
+    
+    <div class="sound-card" data-sound="ambient">
+      <div class="icon">🌌</div>
+      <h3>太空氛围</h3>
+      <p>深邃的太空环境音</p>
+      <div class="tech"><span class="tone-tag">PolySynth</span> × 4 → Chorus → Reverb</div>
+    </div>
+    
+    <div class="sound-card" data-sound="glitch">
+      <div class="icon">🤖</div>
+      <h3>故障</h3>
+      <p>数字系统出错的声音</p>
+      <div class="tech"><span class="tone-tag">MonoSynth</span> 随机频率 + BitCrusher</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>绒球 XR 实验室 · 2026 · Tone.js 程序化音频引擎</p>
+    <p style="margin-top: 8px;">零外部音频文件 · 全部实时合成 · 无限变化</p>
+  </div>
+
+  <!-- Tone.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.js"></script>
+  <script>
+    // ===== 全局状态 =====
+    let audioReady = false;
+    const activeSounds = {};
+    const intervals = {};
+
+    // ===== 全局效果链 =====
+    let masterVol, reverb, chorus, delay;
+
+    async function initAudio() {
+      if (audioReady) {
+        await Tone.start();
+        return;
+      }
+      await Tone.start();
+
+      // 主音量
+      masterVol = new Tone.Volume(-6).toDestination();
+
+      // 混响 - 高质量 ConvolverReverb
+      reverb = new Tone.Reverb({ decay: 3, wet: 0.3 }).connect(masterVol);
+      await reverb.generate();
+
+      // 合唱效果
+      chorus = new Tone.Chorus({ frequency: 0.5, depth: 0.7, wet: 0.2 }).connect(masterVol);
+      chorus.start();
+
+      // 延迟
+      delay = new Tone.FeedbackDelay({ delayTime: 0.25, feedback: 0.2, wet: 0.1 }).connect(masterVol);
+
+      audioReady = true;
+      document.getElementById('loadingOverlay').classList.add('hidden');
+    }
+
+    // ===== 音效定义 =====
+    const sounds = {
+
+      // --- 风 ---
+      wind: {
+        start() {
+          const noise = new Tone.Noise('pink').start();
+          const autoFilter = new Tone.AutoFilter({
+            frequency: 0.15,
+            baseFrequency: 200,
+            octaves: 4
+          }).start();
+          const lp = new Tone.LowpassFilter({ frequency: 800, Q: 0.5 });
+          const gain = new Tone.Gain(0.4);
+
+          noise.chain(autoFilter, lp, gain, reverb);
+          
+          // 额外调制音量
+          const lfo = new Tone.LFO({ frequency: 0.08, min: 0.2, max: 0.5 }).start();
+          lfo.connect(gain.gain);
+
+          return {
+            stop() {
+              noise.stop();
+              autoFilter.stop();
+              lfo.stop();
+              noise.dispose();
+              autoFilter.dispose();
+              lfo.dispose();
+            }
+          };
+        }
+      },
+
+      // --- 雨（Tone.js 多层颗粒合成）---
+      rain: {
+        start() {
+          // 层1：基底雨声 - 过滤噪声
+          const baseNoise = new Tone.Noise('white').start();
+          const baseHP = new Tone.HighpassFilter({ frequency: 2000, Q: 0.3 });
+          const baseLP = new Tone.LowpassFilter({ frequency: 10000 });
+          const baseGain = new Tone.Gain(0.15);
+          baseNoise.chain(baseHP, baseLP, baseGain, reverb);
+
+          // 层2：雨滴打击感 - 短脉冲
+          const dropSynth = new Tone.NoiseSynth({
+            noise: { type: 'white' },
+            envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.02 }
+          }).connect(reverb);
+          dropSynth.volume.value = -12;
+
+          // 层3：雨声调制 - 节奏感
+          const modNoise = new Tone.Noise('pink').start();
+          const modBP = new Tone.BandpassFilter({ frequency: 4000, Q: 2 });
+          const modGain = new Tone.Gain(0.08);
+          const modLFO = new Tone.LFO({ frequency: 6, min: 0, max: 0.1 }).start();
+          modNoise.chain(modBP, modGain, reverb);
+          modLFO.connect(modGain.gain);
+
+          // 定时随机雨滴
+          const dropInterval = setInterval(() => {
+            const now = Tone.now();
+            const count = 2 + Math.floor(Math.random() * 4);
+            for (let i = 0; i < count; i++) {
+              const freq = 3000 + Math.random() * 6000;
+              dropSynth.triggerAttackRelease(0.02, now + i * 0.03);
+            }
+          }, 100);
+
+          // 音量波动模拟雨势变化
+          const rainLFO = new Tone.LFO({ frequency: 0.05, min: 0.1, max: 0.2 }).start();
+          rainLFO.connect(baseGain.gain);
+
+          return {
+            stop() {
+              clearInterval(dropInterval);
+              baseNoise.stop();
+              modNoise.stop();
+              modLFO.stop();
+              rainLFO.stop();
+              baseNoise.dispose();
+              modNoise.dispose();
+              dropSynth.dispose();
+              modLFO.dispose();
+              rainLFO.dispose();
+            }
+          };
+        }
+      },
+
+      // --- 雷声 ---
+      thunder: {
+        start() {
+          const synth = new Tone.NoiseSynth({
+            noise: { type: 'brown' },
+            envelope: { attack: 0.5, decay: 2, sustain: 0.3, release: 3 }
+          });
+          const lp = new Tone.LowpassFilter({ frequency: 120, Q: 1 });
+          const gain = new Tone.Gain(0.6);
+          synth.chain(lp, gain, reverb);
+
+          const playThunder = () => {
+            synth.triggerAttackRelease(4 + Math.random() * 2);
+          };
+
+          playThunder();
+          const interval = setInterval(() => {
+            if (!activeSounds.thunder) { clearInterval(interval); return; }
+            playThunder();
+          }, 6000 + Math.random() * 8000);
+
+          return {
+            stop() {
+              clearInterval(interval);
+              synth.dispose();
+              lp.dispose();
+              gain.dispose();
+            }
+          };
+        }
+      },
+
+      // --- 溪流 ---
+      stream: {
+        start() {
+          const noise = new Tone.Noise('pink').start();
+          const bp = new Tone.BandpassFilter({ frequency: 1200, Q: 1.5 });
+          const hp = new Tone.HighpassFilter({ frequency: 300 });
+          const gain = new Tone.Gain(0.25);
+          
+          // 水流波动
+          const lfo = new Tone.LFO({ frequency: 0.2, min: 0.15, max: 0.3 }).start();
+          lfo.connect(gain.gain);
+
+          // 频率漂移
+          const freqLFO = new Tone.LFO({ frequency: 0.07, min: 800, max: 1600 }).start();
+          freqLFO.connect(bp.frequency);
+
+          noise.chain(bp, hp, gain, chorus, reverb);
+
+          return {
+            stop() {
+              noise.stop();
+              lfo.stop();
+              freqLFO.stop();
+              noise.dispose();
+              lfo.dispose();
+              freqLFO.dispose();
+            }
+          };
+        }
+      },
+
+      // --- 篝火 ---
+      fire: {
+        start() {
+          // 基底火焰声
+          const noise = new Tone.Noise('brown').start();
+          const bp = new Tone.BandpassFilter({ frequency: 400, Q: 0.8 });
+          const gain = new Tone.Gain(0.18);
+          noise.chain(bp, gain, reverb);
+
+          // 噼啪声 - 用 MembraneSynth 模拟木柴爆裂
+          const crackle = new Tone.MembraneSynth({
+            pitchDecay: 0.01,
+            octaves: 4,
+            oscillator: { type: 'square' },
+            envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 }
+          }).connect(reverb);
+          crackle.volume.value = -18;
+
+          const crackleInterval = setInterval(() => {
+            if (!activeSounds.fire) { clearInterval(crackleInterval); return; }
+            const note = 30 + Math.random() * 80;
+            crackle.triggerAttackRelease(note, 0.03);
+          }, 60 + Math.random() * 250);
+
+          return {
+            stop() {
+              clearInterval(crackleInterval);
+              noise.stop();
+              noise.dispose();
+              crackle.dispose();
+            }
+          };
+        }
+      },
+
+      // --- 磬声 ---
+      chime: {
+        start() {
+          const synth = new Tone.FMSynth({
+            harmonicity: 3.01,
+            modulationIndex: 2,
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.01, decay: 2, sustain: 0.1, release: 6 },
+            modulation: { type: 'sine' },
+            modulationEnvelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 4 }
+          }).connect(reverb);
+          synth.volume.value = -10;
+
+          const pentatonic = ['C4', 'D4', 'E4', 'G4', 'A4', 'C5', 'D5'];
+          
+          const playChime = () => {
+            if (!activeSounds.chime) return;
+            const note = pentatonic[Math.floor(Math.random() * pentatonic.length)];
+            synth.triggerAttackRelease(note, '2n');
+            setTimeout(playChime, 3000 + Math.random() * 5000);
+          };
+          playChime();
+
+          return {
+            stop() { synth.dispose(); }
+          };
+        }
+      },
+
+      // --- 鸟鸣 ---
+      bird: {
+        start() {
+          const synth = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.01, decay: 0.05, sustain: 0.2, release: 0.1 }
+          }).connect(reverb);
+          synth.volume.value = -14;
+
+          const chirp = () => {
+            if (!activeSounds.bird) return;
+            const baseFreq = 2000 + Math.random() * 3000;
+            const notes = 2 + Math.floor(Math.random() * 4);
+            const now = Tone.now();
+            
+            for (let i = 0; i < notes; i++) {
+              const t = now + i * 0.08;
+              const freq = baseFreq + (Math.random() - 0.5) * 1000;
+              synth.portamento = 0.05;
+              synth.triggerAttackRelease(freq, 0.06, t);
+            }
+            setTimeout(chirp, 1200 + Math.random() * 3000);
+          };
+          chirp();
+
+          return {
+            stop() { synth.dispose(); }
+          };
+        }
+      },
+
+      // --- 水滴 ---
+      drop: {
+        start() {
+          const synth = new Tone.MetalSynth({
+            frequency: 200,
+            envelope: { attack: 0.001, decay: 0.4, release: 0.2 },
+            harmonicity: 5.1,
+            modulationIndex: 16,
+            resonance: 3000,
+            octaves: 1.5
+          });
+          synth.connect(reverb);
+          synth.volume.value = -18;
+
+          const drop = () => {
+            if (!activeSounds.drop) return;
+            const freq = 150 + Math.random() * 150;
+            synth.frequency.value = freq;
+            synth.triggerAttackRelease(0.3);
+            setTimeout(drop, 1200 + Math.random() * 2500);
+          };
+          drop();
+
+          return {
+            stop() { synth.dispose(); }
+          };
+        }
+      },
+
+      // --- 脚步声（MembraneSynth 物理建模）---
+      footstep: {
+        start() {
+          // MembraneSynth 模拟鼓膜/脚踩冲击
+          const step = new Tone.MembraneSynth({
+            pitchDecay: 0.05,
+            octaves: 6,
+            oscillator: { type: 'sine' },
+            envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.1 }
+          });
+          
+          // 噪声层 - 模拟材质摩擦
+          const noiseSynth = new Tone.NoiseSynth({
+            noise: { type: 'white' },
+            envelope: { attack: 0.005, decay: 0.08, sustain: 0, release: 0.03 }
+          });
+          
+          const bp = new Tone.BandpassFilter({ frequency: 200, Q: 2 });
+          const noiseGain = new Tone.Gain(0.2);
+          
+          step.connect(reverb);
+          noiseSynth.chain(bp, noiseGain, reverb);
+
+          const stepInterval = setInterval(() => {
+            if (!activeSounds.footstep) { clearInterval(stepInterval); return; }
+            const vel = 0.3 + Math.random() * 0.4; // 力度变化
+            const pitch = 40 + Math.random() * 30;   // 音高微调
+            step.triggerAttackRelease(pitch, '32n', undefined, vel);
+            noiseSynth.triggerAttackRelease(0.05);
+          }, 380 + Math.random() * 180);
+
+          return {
+            stop() {
+              clearInterval(stepInterval);
+              step.dispose();
+              noiseSynth.dispose();
+              bp.dispose();
+              noiseGain.dispose();
+            }
+          };
+        }
+      },
+
+      // --- 激光 ---
+      laser: {
+        start() {
+          const synth = new Tone.MonoSynth({
+            oscillator: { type: 'square' },
+            envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.1 },
+            filterEnvelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.1, baseFrequency: 8000, octaves: -4 }
+          }).connect(masterVol);
+          synth.volume.value = -8;
+
+          const fire = () => {
+            if (!activeSounds.laser) return;
+            const now = Tone.now();
+            synth.frequency.setValueAtTime(1800, now);
+            synth.frequency.exponentialRampToValueAtTime(80, now + 0.25);
+            synth.triggerAttackRelease('16n', now);
+            setTimeout(fire, 600 + Math.random() * 1000);
+          };
+          fire();
+
+          return {
+            stop() { synth.dispose(); }
+          };
+        }
+      },
+
+      // --- 能量提升 ---
+      powerup: {
+        start() {
+          const synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'triangle' },
+            envelope: { attack: 0.02, decay: 0.2, sustain: 0.3, release: 0.5 }
+          }).connect(reverb);
+          synth.volume.value = -10;
+
+          const play = () => {
+            if (!activeSounds.powerup) return;
+            const notes = ['C4', 'E4', 'G4', 'C5', 'E5'];
+            synth.triggerAttackRelease(notes, '8n');
+            setTimeout(play, 2000 + Math.random() * 2000);
+          };
+          play();
+
+          return {
+            stop() { synth.dispose(); }
+          };
+        }
+      },
+
+      // --- 太空氛围 ---
+      ambient: {
+        start() {
+          const synth = new Tone.PolySynth(Tone.Synth, {
+            oscillator: { type: 'sine' },
+            envelope: { attack: 4, decay: 2, sustain: 0.6, release: 8 }
+          });
+          synth.volume.value = -16;
+          synth.connect(chorus);
+
+          // 持续缓慢变化
+          const notes = ['C2', 'G2', 'C3', 'E3'];
+          synth.triggerAttack(notes);
+
+          // 随机微调
+          const driftInterval = setInterval(() => {
+            if (!activeSounds.ambient) { clearInterval(driftInterval); return; }
+            const idx = Math.floor(Math.random() * notes.length);
+            const variations = ['C2', 'D2', 'G2', 'A2', 'C3', 'D3', 'E3', 'F3'];
+            notes[idx] = variations[Math.floor(Math.random() * variations.length)];
+          }, 5000);
+
+          return {
+            stop() {
+              clearInterval(driftInterval);
+              synth.triggerRelease();
+              setTimeout(() => synth.dispose(), 8000);
+            }
+          };
+        }
+      },
+
+      // --- 故障 ---
+      glitch: {
+        start() {
+          const synth = new Tone.MonoSynth({
+            oscillator: { type: 'sawtooth' },
+            envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.02 },
+            filterEnvelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.01, baseFrequency: 200, octaves: 6 }
+          });
+          
+          const crusher = new Tone.BitCrusher(4).connect(masterVol);
+          synth.connect(crusher);
+          synth.volume.value = -10;
+
+          const glitch = () => {
+            if (!activeSounds.glitch) return;
+            const now = Tone.now();
+            const bursts = 3 + Math.floor(Math.random() * 6);
+            for (let i = 0; i < bursts; i++) {
+              const t = now + i * 0.04;
+              const freq = 80 + Math.random() * 4000;
+              synth.frequency.setValueAtTime(freq, t);
+              synth.triggerAttackRelease('64n', t);
+            }
+            setTimeout(glitch, 200 + Math.random() * 600);
+          };
+          glitch();
+
+          return {
+            stop() { synth.dispose(); crusher.dispose(); }
+          };
+        }
+      }
+    };
+
+    // ===== 卡片交互 =====
+    document.querySelectorAll('.sound-card').forEach(card => {
+      card.addEventListener('click', async () => {
+        await initAudio();
+        const name = card.dataset.sound;
+        
+        if (activeSounds[name]) {
+          // 停止
+          activeSounds[name].stop();
+          delete activeSounds[name];
+          card.classList.remove('playing');
+        } else {
+          // 开始
+          try {
+            activeSounds[name] = sounds[name].start();
+            card.classList.add('playing');
+          } catch(e) {
+            console.error('音效启动失败:', name, e);
+            alert('音频启动失败: ' + e.message);
+          }
+        }
+      });
+    });
+
+    // 音量控制
+    document.getElementById('volume').addEventListener('input', (e) => {
+      if (masterVol) {
+        // 转换为 dB
+        const vol = e.target.value / 100;
+        const db = vol > 0 ? 20 * Math.log10(vol) : -Infinity;
+        masterVol.volume.value = db;
+      }
+    });
+
+    // 初始化后隐藏 loading
+    window.addEventListener('load', () => {
+      // Tone.js 加载完成后等待用户点击
+      setTimeout(() => {
+        document.getElementById('loadingOverlay').classList.add('hidden');
+      }, 500);
+    });
+  </script>
+</body>
+</html>
