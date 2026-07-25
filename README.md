@@ -14,6 +14,7 @@ https://rongkyn.github.io/rongball-xr/
 |------|------|------|
 | 水墨山水 | [ink-landscape.html](xr/ink-landscape.html) | 东方美学沉浸式3D空间 · 留白意境 |
 | VR Soundscape 空间音频原型 | [soundscape-demo.html](xr/soundscape-demo.html) | 三种声源 + HRTF 空间化 + 手柄交互 |
+| 禅意声景 ⭐NEW | [zen-soundscape.html](xr/zen-soundscape.html) | 交互式空间音频 · 点击山水触发音效 |
 | Hello World | [hello-world.html](xr/hello-world.html) | 基础 3D 场景 |
 | 自定义组件练习 | [exercise-components.html](xr/exercise-components.html) | 6 个组件实验 |
 | 社区组件综合场景 | [exercise-community.html](xr/exercise-community.html) | 粒子/海洋/多光源/雾效 |
