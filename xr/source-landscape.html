@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>声源山水 | 绒球 XR 实验室</title>
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tone@14.7.77/build/Tone.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&family=Space+Grotesk:wght@300;400;500&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Noto Serif SC', serif;
+      overflow: hidden;
+      background: #f8f6f1;
+    }
+    
+    /* ===== 水墨背景 ===== */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: 
+        radial-gradient(ellipse 80% 50% at 20% 80%, rgba(107, 142, 107, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 80% 20%, rgba(212, 207, 199, 0.4) 0%, transparent 50%),
+        radial-gradient(ellipse 100% 60% at 50% 100%, rgba(168, 160, 149, 0.15) 0%, transparent 40%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    /* ===== 侧边控制面板 ===== */
+    .control-panel {
+      position: fixed;
+      left: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 280px;
+      background: rgba(255, 253, 245, 0.95);
+      border-radius: 4px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      z-index: 100;
+      border-left: 3px solid #6b8e6b;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    
+    .panel-title {
+      font-size: 1.1rem;
+      color: #3d3d3d;
+      letter-spacing: 0.3em;
+      margin-bottom: 20px;
+      text-align: center;
+      font-weight: 400;
+    }
+    
+    .source-item {
+      background: rgba(107, 142, 107, 0.08);
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      border: 1px solid transparent;
+    }
+    
+    .source-item:hover {
+      background: rgba(107, 142, 107, 0.15);
+      border-color: rgba(107, 142, 107, 0.2);
+    }
+    
+    .source-item.selected {
+      background: rgba(107, 142, 107, 0.2);
+      border-color: #6b8e6b;
+    }
+    
+    .source-item.active .source-status {
+      background: #6b8e6b;
+    }
+    
+    .source-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .source-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    
+    .icon-stone { background: rgba(107, 142, 107, 0.3); }
+    .icon-tree { background: rgba(61, 74, 58, 0.3); }
+    .icon-water { background: rgba(52, 152, 219, 0.25); }
+    .icon-mountain { background: rgba(212, 207, 199, 0.6); }
+    
+    .source-name {
+      font-size: 0.9rem;
+      color: #3d3d3d;
+      letter-spacing: 0.1em;
+    }
+    
+    .source-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ccc;
+      margin-left: auto;
+      transition: background 0.3s;
+    }
+    
+    .source-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .control-label {
+      font-size: 0.7rem;
+      color: #7a7a7a;
+      width: 32px;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    
+    .control-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      background: rgba(107, 142, 107, 0.2);
+      border-radius: 2px;
+      outline: none;
+    }
+    
+    .control-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #6b8e6b;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .control-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+    
+    .control-value {
+      font-size: 0.65rem;
+      color: #6b8e6b;
+      width: 32px;
+      text-align: right;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    
+    /* ===== 选中声源指示 ===== */
+    .selected-indicator {
+      position: fixed;
+      bottom: 24px;
+      left: 320px;
+      background: rgba(107, 142, 107, 0.9);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 100;
+    }
+    
+    .selected-indicator.show {
+      opacity: 1;
+    }
+    
+    /* ===== 提示 ===== */
+    .hint {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(60, 60, 60, 0.8);
+      color: rgba(255, 253, 245, 0.95);
+      padding: 10px 24px;
+      border-radius: 30px;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      opacity: 0;
+      animation: fadeIn 1s ease-out 1s forwards;
+      z-index: 100;
+    }
+    
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+    
+    /* ===== 音频就绪指示 ===== */
+    .audio-ready {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(107, 142, 107, 0.9);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      opacity: 0;
+      transition: opacity 0.5s;
+      z-index: 100;
+    }
+    .audio-ready.show { opacity: 1; }
+    
+    /* ===== A-Frame 场景样式覆盖 ===== */
+    .a-enter-vr-button {
+      background: rgba(107, 142, 107, 0.9) !important;
+      border-radius: 20px !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== 侧边控制面板 ===== -->
+  <div class="control-panel">
+    <div class="panel-title">· 声 源 ·</div>
+    
+    <!-- 山石 -->
+    <div class="source-item" data-source="stone" onclick="selectSource('stone')">
+      <div class="source-header">
+        <div class="source-icon icon-stone">⛰️</div>
+        <div class="source-name">山石</div>
+        <div class="source-status"></div>
+      </div>
+      <div class="source-controls">
+        <div class="control-row">
+          <span class="control-label">音量</span>
+          <input type="range" class="control-slider" min="0" max="100" value="60" 
+                 onchange="updateSource('stone', 'volume', this.value)">
+          <span class="control-value">60%</span>
+        </div>
+        <div class="control-row">
+          <span class="control-label">距离</span>
+          <input type="range" class="control-slider" min="1" max="20" value="8" 
+                 onchange="updateSource('stone', 'distance', this.value)">
+          <span class="control-value">8m</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 松风 -->
+    <div class="source-item" data-source="wind" onclick="selectSource('wind')">
+      <div class="source-header">
+        <div class="source-icon icon-tree">🌲</div>
+        <div class="source-name">松风</div>
+        <div class="source-status"></div>
+      </div>
+      <div class="source-controls">
+        <div class="control-row">
+          <span class="control-label">音量</span>
+          <input type="range" class="control-slider" min="0" max="100" value="50" 
+                 onchange="updateSource('wind', 'volume', this.value)">
+          <span class="control-value">50%</span>
+        </div>
+        <div class="control-row">
+          <span class="control-label">距离</span>
+          <input type="range" class="control-slider" min="1" max="20" value="6" 
+                 onchange="updateSource('wind', 'distance', this.value)">
+          <span class="control-value">6m</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 水流 -->
+    <div class="source-item" data-source="water" onclick="selectSource('water')">
+      <div class="source-header">
+        <div class="source-icon icon-water">💧</div>
+        <div class="source-name">水流</div>
+        <div class="source-status"></div>
+      </div>
+      <div class="source-controls">
+        <div class="control-row">
+          <span class="control-label">音量</span>
+          <input type="range" class="control-slider" min="0" max="100" value="55" 
+                 onchange="updateSource('water', 'volume', this.value)">
+          <span class="control-value">55%</span>
+        </div>
+        <div class="control-row">
+          <span class="control-label">距离</span>
+          <input type="range" class="control-slider" min="1" max="20" value="5" 
+                 onchange="updateSource('water', 'distance', this.value)">
+          <span class="control-value">5m</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 远山 -->
+    <div class="source-item" data-source="mountain" onclick="selectSource('mountain')">
+      <div class="source-header">
+        <div class="source-icon icon-mountain">🏔️</div>
+        <div class="source-name">远山</div>
+        <div class="source-status"></div>
+      </div>
+      <div class="source-controls">
+        <div class="control-row">
+          <span class="control-label">音量</span>
+          <input type="range" class="control-slider" min="0" max="100" value="45" 
+                 onchange="updateSource('mountain', 'volume', this.value)">
+          <span class="control-value">45%</span>
+        </div>
+        <div class="control-row">
+          <span class="control-label">距离</span>
+          <input type="range" class="control-slider" min="1" max="20" value="15" 
+                 onchange="updateSource('mountain', 'distance', this.value)">
+          <span class="control-value">15m</span>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="selected-indicator" id="selectedIndicator">选中：山石</div>
+  <div class="audio-ready" id="audioReady">♪ 音频已启动</div>
+  <div class="hint">点击场景中声源启用 · 拖拽调整位置 · 侧边栏调节参数</div>
+
+  <!-- ===== A-Frame 场景 ===== -->
+  <a-scene fog="type: exponential; color: #f8f6f1; density: 0.02" vr-mode-ui="enabled: true">
+  
+    <!-- ===== 相机 ===== -->
+    <a-entity id="rig" position="0 1.6 8">
+      <a-camera look-controls wasd-controls="acceleration: 20"></a-camera>
+    </a-entity>
+    
+    <!-- ===== 水面 ===== -->
+    <a-plane position="0 0 -20" rotation="-90 0 0" width="100" height="60" 
+             color="#f8f6f1" material="opacity: 0.9; roughness: 0.8"></a-plane>
+    
+    <!-- ===== 声源：山石（可拖拽）===== -->
+    <a-entity id="source-stone" position="-4 0 -5" class="draggable" 
+              sound-source="stone" data-name="山石">
+      <!-- 视觉标识 -->
+      <a-entity class="source-visual">
+        <a-cone radius-bottom="1.2" radius-top="0.1" height="2" 
+                color="#8b7355" segments-radial="6"
+                material="flatShading: true; opacity: 0.85"
+                animation="property: rotation; to: 0 360 0; dur: 20000; loop: true; easing: linear">
+        </a-cone>
+        <!-- 位置指示器 -->
+        <a-ring position="0 0.01 0" rotation="-90 0 0" radius-inner="1.5" radius-outer="1.6" 
+                color="#6b8e6b" material="opacity: 0.4; transparent: true"
+                animation="property: material.opacity; from: 0.4; to: 0.7; dur: 1500; dir: alternate; loop: true">
+        </a-ring>
+      </a-entity>
+      <!-- 文字标签 -->
+      <a-text value="山石" position="0 2.5 0" align="center" color="#6b8e6b" 
+              font="https://cdn.aframe.io/fonts/mozillavr.fnt" opacity="0.8"></a-text>
+    </a-entity>
+    
+    <!-- ===== 声源：松风 ===== -->
+    <a-entity id="source-wind" position="0 0 -8" class="draggable"
+              sound-source="wind" data-name="松风">
+      <a-entity class="source-visual">
+        <a-cylinder height="2" radius="0.1" color="#4a4035"></a-cylinder>
+        <a-cone position="0 1.4 0" radius-bottom="1" radius-top="0.1" height="1.4" 
+                color="#3d4a3a" material="flatShading: true; opacity: 0.9"
+                animation="property: scale; from: 1 1 1; to: 1.02 1.05 1.02; dur: 2000; dir: alternate; loop: true">
+        </a-cone>
+        <a-cone position="0 2.1 0" radius-bottom="0.7" radius-top="0.08" height="1" 
+                color="#4a5a48" material="flatShading: true; opacity: 0.85"></a-cone>
+        <a-ring position="0 0.01 0" rotation="-90 0 0" radius-inner="1.2" radius-outer="1.3" 
+                color="#6b8e6b" material="opacity: 0.4; transparent: true"
+                animation="property: material.opacity; from: 0.4; to: 0.7; dur: 1800; dir: alternate; loop: true">
+        </a-ring>
+      </a-entity>
+      <a-text value="松风" position="0 3 0" align="center" color="#6b8e6b"
+              font="https://cdn.aframe.io/fonts/mozillavr.fnt" opacity="0.8"></a-text>
+    </a-entity>
+    
+    <!-- ===== 声源：水流 ===== -->
+    <a-entity id="source-water" position="4 0 -6" class="draggable"
+              sound-source="water" data-name="水流">
+      <a-entity class="source-visual">
+        <!-- 水滴形状 -->
+        <a-sphere radius="0.6" color="#7fb3d5" material="opacity: 0.7; transparent: true"
+                  animation="property: position; from: 0 0 0; to: 0 0.3 0; dur: 800; dir: alternate; loop: true">
+        </a-sphere>
+        <a-sphere radius="0.4" color="#5d9bc7" material="opacity: 0.5; transparent: true"
+                  position="0.2 0.3 0.2"
+                  animation="property: position; from: 0.2 0.3 0.2; to: 0.2 0.6 0.2; dur: 1000; dir: alternate; loop: true; delay: 200">
+        </a-sphere>
+        <a-ring position="0 0.01 0" rotation="-90 0 0" radius-inner="0.8" radius-outer="0.9" 
+                color="#3498DB" material="opacity: 0.4; transparent: true"
+                animation="property: scale; from: 1 1 1; to: 1.3 1.3 1; dur: 1200; dir: alternate; loop: true">
+        </a-ring>
+      </a-entity>
+      <a-text value="水流" position="0 1.5 0" align="center" color="#3498DB"
+              font="https://cdn.aframe.io/fonts/mozillavr.fnt" opacity="0.8"></a-text>
+    </a-entity>
+    
+    <!-- ===== 声源：远山 ===== -->
+    <a-entity id="source-mountain" position="-10 1 -25" class="draggable"
+              sound-source="mountain" data-name="远山">
+      <a-entity class="source-visual">
+        <a-cone radius-bottom="5" radius-top="0.3" height="6" color="#d4cfc7" 
+                segments-radial="8" material="flatShading: true; opacity: 0.7"></a-cone>
+        <a-ring position="0 0.01 0" rotation="-90 0 0" radius-inner="5.5" radius-outer="5.7" 
+                color="#8b7355" material="opacity: 0.3; transparent: true"
+                animation="property: material.opacity; from: 0.3; to: 0.5; dur: 2500; dir: alternate; loop: true">
+        </a-ring>
+      </a-entity>
+      <a-text value="远山" position="0 4.5 0" align="center" color="#8b7355"
+              font="https://cdn.aframe.io/fonts/mozillavr.fnt" opacity="0.8"></a-text>
+    </a-entity>
+    
+    <!-- ===== 远山背景 ===== -->
+    <a-entity id="bg-mountains">
+      <a-cone position="-15 3 -40" radius-bottom="10" radius-top="0.5" height="8" 
+              color="#e8e4dd" segments-radial="6" material="flatShading: true; opacity: 0.5"></a-cone>
+      <a-cone position="10 4 -45" radius-bottom="12" radius-top="0.8" height="10" 
+              color="#d4cfc7" segments-radial="7" material="flatShading: true; opacity: 0.45"></a-cone>
+      <a-cone position="0 2 -50" radius-bottom="15" radius-top="1" height="6" 
+              color="#e8e4dd" segments-radial="8" material="flatShading: true; opacity: 0.35"></a-cone>
+    </a-entity>
+    
+    <!-- ===== 装饰松树 ===== -->
+    <a-entity id="decorative-trees">
+      <a-entity position="8 0 -12">
+        <a-cylinder height="1.5" radius="0.06" color="#4a4035"></a-cylinder>
+        <a-cone position="0 1 0" radius-bottom="0.8" radius-top="0.1" height="1.2" 
+                color="#3d4a3a" material="flatShading: true; opacity: 0.8"></a-cone>
+        <a-cone position="0 1.6 0" radius-bottom="0.55" radius-top="0.07" height="0.9" 
+                color="#4a5a48" material="flatShading: true; opacity: 0.75"></a-cone>
+      </a-entity>
+      <a-entity position="10 0 -15">
+        <a-cylinder height="1.2" radius="0.05" color="#4a4035"></a-cylinder>
+        <a-cone position="0 0.8 0" radius-bottom="0.6" radius-top="0.08" height="1" 
+                color="#3d4a3a" material="flatShading: true; opacity: 0.7"></a-cone>
+      </a-entity>
+    </a-entity>
+    
+    <!-- ===== 雾效 ===== -->
+    <a-plane position="-6 1.5 -10" width="12" height="2" rotation="-90 20 0" 
+            color="#ffffff" material="shader: standard; opacity: 0.15; transparent: true; side: double"></a-plane>
+    <a-plane position="5 1.2 -12" width="10" height="1.5" rotation="-90 -15 0" 
+            color="#ffffff" material="shader: standard; opacity: 0.12; transparent: true; side: double"></a-plane>
+    
+    <!-- ===== 光照 ===== -->
+    <a-light type="ambient" color="#f5f0e8" intensity="0.7"></a-light>
+    <a-light type="directional" color="#fff8f0" intensity="0.6" position="-2 4 2"></a-light>
+    <a-light type="hemisphere" color="#f5f3ef" groundColor="#a8a095" intensity="0.4"></a-light>
+    
+  </a-scene>
+
+  <script>
+    // ========== 音频引擎 ==========
+    class SoundSourceEditor {
+      constructor() {
+        this.sources = {
+          stone: {
+            name: '山石',
+            active: false,
+            volume: 0.6,
+            distance: 8,
+            position: { x: -4, y: 1, z: -5 },
+            synth: null,
+            gain: null,
+            panner: null
+          },
+          wind: {
+            name: '松风',
+            active: false,
+            volume: 0.5,
+            distance: 6,
+            position: { x: 0, y: 1, z: -8 },
+            synth: null,
+            gain: null,
+            panner: null
+          },
+          water: {
+            name: '水流',
+            active: false,
+            volume: 0.55,
+            distance: 5,
+            position: { x: 4, y: 1, z: -6 },
+            synth: null,
+            gain: null,
+            panner: null
+          },
+          mountain: {
+            name: '远山',
+            active: false,
+            volume: 0.45,
+            distance: 15,
+            position: { x: -10, y: 2, z: -25 },
+            synth: null,
+            gain: null,
+            panner: null
+          }
+        };
+        
+        this.selectedSource = null;
+        this.audioReady = false;
+        this.camera = null;
+      }
+
+      async init() {
+        await Tone.start();
+        this.audioReady = true;
+        
+        // 显示音频就绪提示
+        const indicator = document.getElementById('audioReady');
+        indicator.classList.add('show');
+        setTimeout(() => indicator.classList.remove('show'), 2000);
+        
+        // 初始化相机引用
+        this.camera = document.querySelector('#rig');
+      }
+
+      // 创建空间音频源
+      createSpatialAudio(sourceId) {
+        const source = this.sources[sourceId];
+        if (!source) return;
+
+        // 使用 Tone.js 创建合成器
+        switch (sourceId) {
+          case 'stone':
+            source.synth = new Tone.MembraneSynth({
+              pitchDecay: 0.05,
+              octaves: 4,
+              oscillator: { type: 'sine' },
+              envelope: {
+                attack: 0.001,
+                decay: 0.4,
+                sustain: 0.01,
+                release: 1.2
+              }
+            }).toDestination();
+            break;
+            
+          case 'wind':
+            // 风声：使用噪声 + 滤波器
+            const windNoise = new Tone.Noise('pink').start();
+            const windFilter = new Tone.Filter({
+              frequency: 400,
+              type: 'bandpass',
+              Q: 0.5
+            });
+            const windGain = new Tone.Gain(0.15);
+            windNoise.connect(windFilter);
+            windFilter.connect(windGain);
+            windGain.toDestination();
+            
+            // LFO 调制
+            const lfo = new Tone.LFO({
+              frequency: 0.3,
+              min: 200,
+              max: 600
+            }).start();
+            lfo.connect(windFilter.frequency);
+            
+            source.synth = { noise: windNoise, filter: windFilter, gain: windGain, lfo: lfo };
+            break;
+            
+          case 'water':
+            // 水声：高频噪声 + 调制
+            const waterNoise = new Tone.Noise('white').start();
+            const waterFilter = new Tone.Filter({
+              frequency: 2000,
+              type: 'highpass'
+            });
+            const waterGain = new Tone.Gain(0.1);
+            waterNoise.connect(waterFilter);
+            waterFilter.connect(waterGain);
+            waterGain.toDestination();
+            
+            // 随机触发水滴音效
+            this.waterLoop(sourceId);
+            
+            source.synth = { noise: waterNoise, filter: waterFilter, gain: waterGain };
+            break;
+            
+          case 'mountain':
+            // 远山钟声：FMSynth
+            source.synth = new Tone.FMSynth({
+              harmonicity: 8,
+              modulationIndex: 15,
+              oscillator: { type: 'sine' },
+              envelope: {
+                attack: 0.01,
+                decay: 2,
+                sustain: 0.1,
+                release: 4
+              },
+              modulation: { type: 'sine' },
+              modulationEnvelope: {
+                attack: 0.5,
+                decay: 2,
+                sustain: 0.2,
+                release: 3
+              }
+            }).toDestination();
+            break;
+        }
+
+        // 更新UI状态
+        const item = document.querySelector(`[data-source="${sourceId}"]`);
+        if (item) {
+          item.classList.add('active');
+          item.querySelector('.source-status').style.background = '#6b8e6b';
+        }
+      }
+
+      // 水滴循环
+      waterLoop(sourceId) {
+        const source = this.sources[sourceId];
+        if (!source.active) return;
+        
+        // 随机触发
+        const delay = 500 + Math.random() * 2000;
+        setTimeout(() => {
+          if (source.active && source.synth) {
+            // 播放短促的水滴音
+            const drop = new Tone.MembraneSynth({
+              pitchDecay: 0.02,
+              octaves: 2
+            }).toDestination();
+            drop.volume.value = -10;
+            drop.triggerAttackRelease('C5', '32n');
+            setTimeout(() => drop.dispose(), 500);
+          }
+          this.waterLoop(sourceId);
+        }, delay);
+      }
+
+      // 切换声源激活状态
+      toggleSource(sourceId) {
+        const source = this.sources[sourceId];
+        if (!source) return;
+
+        source.active = !source.active;
+
+        if (source.active) {
+          this.createSpatialAudio(sourceId);
+          this.triggerSound(sourceId);
+        } else {
+          this.stopSource(sourceId);
+        }
+      }
+
+      // 触发音效
+      triggerSound(sourceId) {
+        const source = this.sources[sourceId];
+        if (!source || !source.active) return;
+
+        const now = Tone.now();
+
+        switch (sourceId) {
+          case 'stone':
+            // 随机打击音
+            const notes = ['C2', 'D2', 'E2', 'G2'];
+            const note = notes[Math.floor(Math.random() * notes.length)];
+            source.synth.triggerAttackRelease(note, '8n', now);
+            break;
+            
+          case 'mountain':
+            // 钟声
+            const chimeNotes = ['C4', 'E4', 'G4', 'A4'];
+            const chimeNote = chimeNotes[Math.floor(Math.random() * chimeNotes.length)];
+            source.synth.triggerAttackRelease(chimeNote, '4n', now);
+            break;
+        }
+      }
+
+      // 停止声源
+      stopSource(sourceId) {
+        const source = this.sources[sourceId];
+        if (!source) return;
+
+        if (source.synth) {
+          if (source.synth.dispose) {
+            source.synth.dispose();
+          } else if (source.synth.noise) {
+            source.synth.noise.stop();
+            source.synth.noise.dispose();
+            source.synth.filter.dispose();
+            source.synth.gain.dispose();
+            if (source.synth.lfo) source.synth.lfo.dispose();
+          }
+          source.synth = null;
+        }
+
+        // 更新UI状态
+        const item = document.querySelector(`[data-source="${sourceId}"]`);
+        if (item) {
+          item.classList.remove('active');
+          item.querySelector('.source-status').style.background = '#ccc';
+        }
+      }
+
+      // 更新声源参数
+      updateParameter(sourceId, param, value) {
+        const source = this.sources[sourceId];
+        if (!source) return;
+
+        switch (param) {
+          case 'volume':
+            source.volume = value / 100;
+            if (source.synth) {
+              if (source.synth.volume) {
+                source.synth.volume.value = Tone.gainToDb(source.volume);
+              } else if (source.synth.gain) {
+                source.synth.gain.gain.value = source.volume * 0.3;
+              }
+            }
+            break;
+            
+          case 'distance':
+            source.distance = value;
+            // 更新3D位置
+            const entity = document.getElementById(`source-${sourceId}`);
+            if (entity) {
+              const pos = entity.getAttribute('position');
+              // 根据距离调整Y位置（越高越远）
+              const yOffset = Math.min(value * 0.15, 3);
+              entity.setAttribute('position', `${pos.x} ${yOffset} ${pos.z}`);
+            }
+            break;
+        }
+      }
+
+      // 更新听者位置
+      updateListener() {
+        if (!this.camera) {
+          this.camera = document.querySelector('#rig');
+        }
+        if (!this.camera) return;
+
+        const pos = this.camera.getAttribute('position');
+        
+        if (Tone.getContext().rawContext.listener.positionX) {
+          Tone.getContext().rawContext.listener.positionX.value = pos.x;
+          Tone.getContext().rawContext.listener.positionY.value = pos.y;
+          Tone.getContext().rawContext.listener.positionZ.value = pos.z;
+        }
+      }
+    }
+
+    // 全局实例
+    const editor = new SoundSourceEditor();
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', async () => {
+      await editor.init();
+      
+      // 绑定场景中的点击事件
+      const scene = document.querySelector('a-scene');
+      
+      scene.addEventListener('loaded', () => {
+        // 为每个可交互声源添加点击事件
+        document.querySelectorAll('.draggable').forEach(entity => {
+          entity.addEventListener('click', (e) => {
+            const sourceId = entity.getAttribute('sound-source');
+            editor.toggleSource(sourceId);
+          });
+        });
+        
+        // 拖拽功能
+        initDragging();
+        
+        // 相机位置更新
+        setInterval(() => editor.updateListener(), 100);
+      });
+    });
+
+    // 拖拽功能
+    function initDragging() {
+      let isDragging = false;
+      let currentEntity = null;
+      let plane;
+
+      document.querySelectorAll('.draggable').forEach(entity => {
+        entity.addEventListener('mousedown', (e) => {
+          isDragging = true;
+          currentEntity = entity;
+          // 创建拖拽平面
+          plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        });
+
+        entity.addEventListener('touchstart', (e) => {
+          isDragging = true;
+          currentEntity = entity;
+          plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+          e.preventDefault();
+        });
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging || !currentEntity) return;
+        // 简化的2D到3D映射
+        const rect = document.querySelector('a-scene').canvas.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 40 - 20;
+        const z = ((e.clientY - rect.top) / rect.height) * -30 - 5;
+        currentEntity.setAttribute('position', `${x} ${currentEntity.getAttribute('position').y} ${z}`);
+      });
+
+      document.addEventListener('mouseup', () => {
+        isDragging = false;
+        currentEntity = null;
+      });
+
+      document.addEventListener('touchmove', (e) => {
+        if (!isDragging || !currentEntity) return;
+        const touch = e.touches[0];
+        const rect = document.querySelector('a-scene').canvas.getBoundingClientRect();
+        const x = ((touch.clientX - rect.left) / rect.width) * 40 - 20;
+        const z = ((touch.clientY - rect.top) / rect.height) * -30 - 5;
+        currentEntity.setAttribute('position', `${x} ${currentEntity.getAttribute('position').y} ${z}`);
+        e.preventDefault();
+      });
+
+      document.addEventListener('touchend', () => {
+        isDragging = false;
+        currentEntity = null;
+      });
+    }
+
+    // 选择声源
+    function selectSource(sourceId) {
+      editor.selectedSource = sourceId;
+      
+      // 更新UI
+      document.querySelectorAll('.source-item').forEach(item => {
+        item.classList.remove('selected');
+      });
+      document.querySelector(`[data-source="${sourceId}"]`).classList.add('selected');
+      
+      // 显示选中提示
+      const indicator = document.getElementById('selectedIndicator');
+      indicator.textContent = `选中：${editor.sources[sourceId].name}`;
+      indicator.classList.add('show');
+      setTimeout(() => indicator.classList.remove('show'), 1500);
+    }
+
+    // 更新声源参数
+    function updateSource(sourceId, param, value) {
+      editor.updateParameter(sourceId, param, value);
+      
+      // 更新显示值
+      const unit = param === 'volume' ? '%' : 'm';
+      const item = document.querySelector(`[data-source="${sourceId}"]`);
+      const sliders = item.querySelectorAll('.control-slider');
+      const values = item.querySelectorAll('.control-value');
+      
+      sliders.forEach((slider, i) => {
+        if (param === 'volume' && i === 0) {
+          values[i].textContent = `${value}%`;
+        } else if (param === 'distance' && i === 1) {
+          values[i].textContent = `${value}m`;
+        }
+      });
+    }
+
+    // 全局暴露函数
+    window.selectSource = selectSource;
+    window.updateSource = updateSource;
+  </script>
+
+</body>
+</html>
