@@ -140,12 +140,17 @@
       <img id="stone-texture" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23505060' width='100' height='100'/%3E%3Crect x='10' y='10' width='35' height='35' fill='%23454555' rx='2'/%3E%3Crect x='55' y='10' width='35' height='35' fill='%23585868' rx='2'/%3E%3Crect x='10' y='55' width='35' height='35' fill='%23585868' rx='2'/%3E%3Crect x='55' y='55' width='35' height='35' fill='%23454555' rx='2'/%3E%3C/svg%3E">
     </a-assets>
 
-    <!-- 相机 Rig -->
+    <!-- 相机 Rig + VR 手柄控制器 -->
     <a-entity id="rig" position="0 0 0">
       <a-camera 
         position="0 1.6 8"
         look-controls="pointerLockEnabled: true"
         wasd-controls="acceleration: 30">
+        <!-- VR 手柄射线 -->
+        <a-entity 
+          raycaster="objects: .interactive, .collectible; far: 10"
+          vr-controls>
+        </a-entity>
       </a-camera>
     </a-entity>
 
@@ -397,10 +402,53 @@
       });
     });
     
+    // VR 手柄射线交互
+    AFRAME.registerComponent('vr-interactive', {
+      init: function() {
+        // 桌面端点击
+        this.el.addEventListener('click', this.onInteract.bind(this));
+        
+        // VR 手柄射线悬停
+        this.el.addEventListener('raycaster-intersected', () => {
+          this.el.setAttribute('material', 'emissiveIntensity', 0.6);
+        });
+        this.el.addEventListener('raycaster-intersected-cleared', () => {
+          this.el.setAttribute('material', 'emissiveIntensity', 0.3);
+        });
+      },
+      
+      onInteract: function() {
+        // 视觉效果
+        this.el.setAttribute('animation__scale', {
+          property: 'scale',
+          to: '1.5 1.5 1.5',
+          dur: 200,
+          easing: 'easeOutElastic'
+        });
+        
+        setTimeout(() => {
+          this.el.setAttribute('animation__scale', {
+            property: 'scale',
+            to: '1 1 1',
+            dur: 500,
+            easing: 'easeOutElastic'
+          });
+        }, 300);
+        
+        // 发光效果
+        this.el.setAttribute('material', 'emissiveIntensity', 1);
+        setTimeout(() => {
+          this.el.setAttribute('material', 'emissiveIntensity', 0.3);
+        }, 500);
+        
+        console.log('VR交互:', this.el.id || this.el.tagName);
+      }
+    });
+    
     // 场景加载完成
     document.querySelector('a-scene').addEventListener('loaded', () => {
       console.log('🧶 VR 空间搭建场景加载完成');
-      console.log('💡 提示: 点击发光物体进行交互');
+      console.log('💡 提示: 点击发光物体进行交互，VR中用手柄射线指向并扳机触发');
     });
   </script>
 </body>
