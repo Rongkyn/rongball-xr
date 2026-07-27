@@ -148,17 +148,19 @@
         wasd-controls="acceleration: 30">
       </a-camera>
       
-      <!-- 左手柄 -->
+      <!-- 左手柄 - 修复：添加 cursor 组件使射线能触发 click 事件 -->
       <a-entity id="left-hand" 
         laser-controls="hand: left; model: true"
         raycaster="objects: .interactive, .collectible; far: 10; showLine: true"
+        cursor="rayOrigin: entity; fuse: false"
         line="color: #7BC8A4; opacity: 0.5">
       </a-entity>
       
-      <!-- 右手柄 -->
+      <!-- 右手柄 - 修复：添加 cursor 组件使射线能触发 click 事件 -->
       <a-entity id="right-hand" 
         laser-controls="hand: right; model: true"
         raycaster="objects: .interactive, .collectible; far: 10; showLine: true"
+        cursor="rayOrigin: entity; fuse: false"
         line="color: #7BC8A4; opacity: 0.5">
       </a-entity>
     </a-entity>
@@ -186,7 +188,7 @@
         material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 0.5; transparent: true; opacity: 0.6">
       </a-torus>
       
-      <!-- 中心能量球 -->
+      <!-- 中心能量球 - 修复：添加 vr-interactive 组件 -->
       <a-sphere 
         id="orb-center"
         position="0 2 0" 
@@ -194,7 +196,7 @@
         material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 0.8; transparent: true; opacity: 0.9"
         animation="property: position; to: 0 2.3 0; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate"
         class="interactive"
-        event-set__click="material.emissiveIntensity: 1.2"
+        vr-interactive
         light="type: point; color: #7BC8A4; intensity: 0.8; distance: 8">
       </a-sphere>
       
@@ -225,13 +227,14 @@
       <!-- 镜子（模拟） -->
       <a-plane position="0 2.5 -4.9" width="8" height="5" material="color: #2a3a4a; metalness: 0.9; roughness: 0.1; transparent: true; opacity: 0.7"></a-plane>
       
-      <!-- 可拾取能量球 -->
+      <!-- 可拾取能量球 - 修复：添加 vr-interactive 组件 -->
       <a-sphere 
         position="-3 1 0" 
         radius="0.2"
         material="color: #E8A87C; emissive: #E8A87C; emissiveIntensity: 0.6"
         animation="property: rotation; to: 0 360 0; dur: 4000; easing: linear; loop: true"
         class="collectible"
+        vr-interactive
         light="type: point; color: #E8A87C; intensity: 0.3; distance: 3">
       </a-sphere>
       <a-sphere 
@@ -240,6 +243,7 @@
         material="color: #3498DB; emissive: #3498DB; emissiveIntensity: 0.6"
         animation="property: rotation; to: 0 -360 0; dur: 5000; easing: linear; loop: true"
         class="collectible"
+        vr-interactive
         light="type: point; color: #3498DB; intensity: 0.3; distance: 3">
       </a-sphere>
       
@@ -345,89 +349,45 @@
   </a-scene>
 
   <script>
-    // VR 进入按钮
-    document.getElementById('enterVR').addEventListener('click', () => {
-      document.querySelector('a-scene').enterVR();
-    });
-    
-    // 可交互物体点击效果
-    document.querySelectorAll('.interactive').forEach(el => {
-      el.addEventListener('click', () => {
-        // 视觉效果
-        el.setAttribute('animation__scale', {
-          property: 'scale',
-          to: '1.5 1.5 1.5',
-          dur: 200,
-          easing: 'easeOutElastic',
-          loop: false
-        });
-        
-        setTimeout(() => {
-          el.setAttribute('animation__scale', {
-            property: 'scale',
-            to: '1 1 1',
-            dur: 500,
-            easing: 'easeOutElastic'
-          });
-        }, 300);
-        
-        // 发光效果
-        const currentIntensity = el.getAttribute('material').emissiveIntensity || 0.3;
-        el.setAttribute('material', 'emissiveIntensity', currentIntensity + 0.5);
-        setTimeout(() => {
-          el.setAttribute('material', 'emissiveIntensity', currentIntensity);
-        }, 500);
-        
-        // 控制台日志（便于调试）
-        console.log('点击了:', el.id || el.tagName, '位置:', el.getAttribute('position'));
-      });
-    });
-    
-    // 可拾取物体
-    document.querySelectorAll('.collectible').forEach(el => {
-      el.addEventListener('click', () => {
-        // 收集动画
-        el.setAttribute('animation__collect', {
-          property: 'scale',
-          to: '0 0 0',
-          dur: 300,
-          easing: 'easeInBack'
-        });
-        
-        el.setAttribute('animation__fly', {
-          property: 'position',
-          to: '0 5 0',
-          dur: 300
-        });
-        
-        console.log('收集了能量球:', el.getAttribute('position'));
-        
-        // 2秒后重置（模拟可重复收集）
-        setTimeout(() => {
-          const originalY = el.getAttribute('position').y;
-          el.setAttribute('position', `${el.getAttribute('position').x} ${originalY} ${el.getAttribute('position').z}`);
-          el.setAttribute('scale', '1 1 1');
-        }, 2000);
-      });
-    });
-    
-    // VR 手柄射线交互
+    // ========== 关键修复：组件必须在场景处理前注册 ==========
+    // 将 vr-interactive 组件注册放在最前面，确保 A-Frame 处理实体时组件已就绪
     AFRAME.registerComponent('vr-interactive', {
+      schema: {
+        hoverIntensity: { type: 'number', default: 0.6 },
+        clickIntensity: { type: 'number', default: 1.0 },
+        baseIntensity: { type: 'number', default: 0.3 }
+      },
+      
       init: function() {
-        // 桌面端点击
+        console.log('🎮 vr-interactive 组件初始化:', this.el.id || this.el.tagName);
+        
+        // 桌面端 / 通用点击事件
         this.el.addEventListener('click', this.onInteract.bind(this));
         
-        // VR 手柄射线悬停
-        this.el.addEventListener('raycaster-intersected', () => {
-          this.el.setAttribute('material', 'emissiveIntensity', 0.6);
-        });
-        this.el.addEventListener('raycaster-intersected-cleared', () => {
-          this.el.setAttribute('material', 'emissiveIntensity', 0.3);
-        });
+        // VR 手柄射线悬停高亮
+        this.el.addEventListener('raycaster-intersected', this.onHover.bind(this));
+        this.el.addEventListener('raycaster-intersected-cleared', this.onHoverClear.bind(this));
+        
+        // 鼠标悬停（桌面端）
+        this.el.addEventListener('mouseenter', this.onHover.bind(this));
+        this.el.addEventListener('mouseleave', this.onHoverClear.bind(this));
+      },
+      
+      onHover: function() {
+        this.el.setAttribute('material', 'emissiveIntensity', this.data.hoverIntensity);
+        // 改变光标样式（如果有）
+        document.body.style.cursor = 'pointer';
+      },
+      
+      onHoverClear: function() {
+        this.el.setAttribute('material', 'emissiveIntensity', this.data.baseIntensity);
+        document.body.style.cursor = 'default';
       },
       
       onInteract: function() {
-        // 视觉效果
+        console.log('✨ VR交互触发:', this.el.id || this.el.tagName, '位置:', this.el.getAttribute('position'));
+        
+        // 缩放动画
         this.el.setAttribute('animation__scale', {
           property: 'scale',
           to: '1.5 1.5 1.5',
@@ -445,19 +405,51 @@
         }, 300);
         
         // 发光效果
-        this.el.setAttribute('material', 'emissiveIntensity', 1);
+        this.el.setAttribute('material', 'emissiveIntensity', this.data.clickIntensity);
         setTimeout(() => {
-          this.el.setAttribute('material', 'emissiveIntensity', 0.3);
+          this.el.setAttribute('material', 'emissiveIntensity', this.data.baseIntensity);
         }, 500);
-        
-        console.log('VR交互:', this.el.id || this.el.tagName);
       }
+    });
+    
+    // VR 进入按钮
+    document.getElementById('enterVR').addEventListener('click', () => {
+      document.querySelector('a-scene').enterVR();
+    });
+    
+    // 可拾取物体处理
+    document.querySelectorAll('.collectible').forEach(el => {
+      el.addEventListener('click', function() {
+        // 收集动画
+        this.setAttribute('animation__collect', {
+          property: 'scale',
+          to: '0 0 0',
+          dur: 300,
+          easing: 'easeInBack'
+        });
+        
+        this.setAttribute('animation__fly', {
+          property: 'position',
+          to: '0 5 0',
+          dur: 300
+        });
+        
+        console.log('💎 收集了能量球:', this.getAttribute('position'));
+        
+        // 2秒后重置（模拟可重复收集）
+        const origPos = this.getAttribute('position');
+        setTimeout(() => {
+          this.setAttribute('position', `${origPos.x} ${origPos.y} ${origPos.z}`);
+          this.setAttribute('scale', '1 1 1');
+        }, 2000);
+      });
     });
     
     // 场景加载完成
     document.querySelector('a-scene').addEventListener('loaded', () => {
       console.log('🧶 VR 空间搭建场景加载完成');
       console.log('💡 提示: 点击发光物体进行交互，VR中用手柄射线指向并扳机触发');
+      console.log('📋 交互对象数量:', document.querySelectorAll('.interactive, .collectible').length);
     });
   </script>
 </body>

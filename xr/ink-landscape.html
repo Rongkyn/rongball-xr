@@ -56,12 +56,55 @@
       letter-spacing: 0.1em;
       font-family: 'Noto Serif SC', serif;
       opacity: 0;
-      animation: fadeIn 1s ease-out 2s forwards;
+      animation: hintFadeIn 1s ease-out 2s forwards;
+      cursor: pointer;
+      z-index: 200;
     }
     
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes hintFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    /* 点击开始的遮罩层 */
+    .start-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(248, 246, 241, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      cursor: pointer;
+      font-family: 'Noto Serif SC', serif;
+      transition: opacity 0.8s ease;
+    }
+    .start-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .start-overlay h2 {
+      font-size: 1.6rem;
+      color: #3d3d3d;
+      font-weight: 400;
+      letter-spacing: 0.2em;
+      margin-bottom: 16px;
+    }
+    .start-overlay p {
+      font-size: 0.9rem;
+      color: #7a7a7a;
+      letter-spacing: 0.1em;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
     }
     
     .title-card h1 {
@@ -83,6 +126,12 @@
   </div>
   
   <div class="hint" id="hint">🔇 点击画面开启音效 · 使用 WASD 漫游 · VR 中使用手柄移动</div>
+
+  <!-- 点击开始遮罩层 - 确保用户手势触发音频 -->
+  <div class="start-overlay" id="startOverlay">
+    <h2>水墨山水</h2>
+    <p>点击任意处 · 开启意境之旅</p>
+  </div>
 
   <a-scene 
     fog="type: exponential; color: #f5f3ef; density: 0.025"
@@ -248,11 +297,18 @@
       init() {
         if (this.ctx) return;
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // 关键修复：显式恢复 AudioContext，解决浏览器自动播放策略限制
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume().then(() => {
+            console.log('🎵 AudioContext 已恢复，状态:', this.ctx.state);
+          });
+        }
         this.masterGain = this.ctx.createGain();
-        this.masterGain.gain.value = 0.35;
+        this.masterGain.gain.value = 0.5;
         this.masterGain.connect(this.ctx.destination);
         this.startAmbience();
         this.isPlaying = true;
+        console.log('🎵 音频引擎初始化完成，AudioContext 状态:', this.ctx.state);
       }
 
       // 生成白噪声 buffer
@@ -489,14 +545,31 @@
     let audioStarted = false;
 
     function startAudio() {
-      if (!audioStarted) {
-        audio.init();
-        audioStarted = true;
-        console.log('🎵 水墨山水音效已启动');
-        // 更新提示文字
-        const hint = document.getElementById('hint');
-        if (hint) hint.textContent = '🎵 音效已开启 · 使用 WASD 漫游 · VR 中使用手柄移动';
+      if (audioStarted) return;
+      
+      // 确保在用户手势中创建并恢复 AudioContext
+      audio.init();
+      
+      // 双重保险：如果 AudioContext 仍处于 suspended，再次尝试 resume
+      if (audio.ctx && audio.ctx.state === 'suspended') {
+        audio.ctx.resume().then(() => {
+          console.log('🎵 AudioContext resume 成功');
+        });
       }
+      
+      audioStarted = true;
+      console.log('🎵 水墨山水音效已启动，AudioContext 状态:', audio.ctx ? audio.ctx.state : 'null');
+      
+      // 隐藏开始遮罩层
+      const overlay = document.getElementById('startOverlay');
+      if (overlay) {
+        overlay.classList.add('hidden');
+        setTimeout(() => overlay.remove(), 1000);
+      }
+      
+      // 更新提示文字
+      const hint = document.getElementById('hint');
+      if (hint) hint.textContent = '🎵 音效已开启 · 使用 WASD 漫游 · VR 中使用手柄移动';
     }
 
     // 场景加载完成后显示提示
@@ -507,6 +580,9 @@
     // 点击山石触发涟漪效果 + 水滴音效
     document.querySelectorAll('.clickable').forEach(el => {
       el.addEventListener('click', () => {
+        // 先确保音频已启动
+        startAudio();
+        
         // 播放水滴音效
         audio.playRipple();
         
@@ -527,9 +603,17 @@
       });
     });
 
-    // 用户首次交互时启动音频
+    // 关键修复：用显眼的遮罩层确保用户点击触发音频
+    // 遮罩层覆盖了整个页面，确保第一次点击一定是有效的用户手势
+    const startOverlay = document.getElementById('startOverlay');
+    if (startOverlay) {
+      startOverlay.addEventListener('click', startAudio);
+      startOverlay.addEventListener('touchstart', startAudio);
+    }
+    
+    // 兜底：任何用户交互都尝试启动音频
     ['click', 'touchstart', 'keydown'].forEach(evt => {
-      document.addEventListener(evt, startAudio, { once: true });
+      document.addEventListener(evt, startAudio);
     });
   </script>
 </body>
