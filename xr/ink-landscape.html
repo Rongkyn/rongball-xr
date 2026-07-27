@@ -82,7 +82,7 @@
     </div>
   </div>
   
-  <div class="hint">点击画面或使用 WASD 漫游 · VR 中使用手柄移动</div>
+  <div class="hint" id="hint">🔇 点击画面开启音效 · 使用 WASD 漫游 · VR 中使用手柄移动</div>
 
   <a-scene 
     fog="type: exponential; color: #f5f3ef; density: 0.025"
@@ -223,7 +223,6 @@
       position="-3 1.5 -5"
       animation__click="property: scale; to: 1.5 1.5 1.5; dur: 300; startEvents: click"
       animation__leave="property: scale; to: 1 1 1; dur: 300; startEvents: mouseleave"
-      sound="on: click; src: #click-sound; poolSize: 2"
     ></a-entity>
 
     <!-- 环境光 - 柔和水墨光 -->
@@ -494,6 +493,9 @@
         audio.init();
         audioStarted = true;
         console.log('🎵 水墨山水音效已启动');
+        // 更新提示文字
+        const hint = document.getElementById('hint');
+        if (hint) hint.textContent = '🎵 音效已开启 · 使用 WASD 漫游 · VR 中使用手柄移动';
       }
     }
 

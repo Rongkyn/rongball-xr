@@ -146,12 +146,21 @@
         position="0 1.6 8"
         look-controls="pointerLockEnabled: true"
         wasd-controls="acceleration: 30">
-        <!-- VR 手柄射线 -->
-        <a-entity 
-          raycaster="objects: .interactive, .collectible; far: 10"
-          vr-controls>
-        </a-entity>
       </a-camera>
+      
+      <!-- 左手柄 -->
+      <a-entity id="left-hand" 
+        laser-controls="hand: left; model: true"
+        raycaster="objects: .interactive, .collectible; far: 10; showLine: true"
+        line="color: #7BC8A4; opacity: 0.5">
+      </a-entity>
+      
+      <!-- 右手柄 -->
+      <a-entity id="right-hand" 
+        laser-controls="hand: right; model: true"
+        raycaster="objects: .interactive, .collectible; far: 10; showLine: true"
+        line="color: #7BC8A4; opacity: 0.5">
+      </a-entity>
     </a-entity>
 
     <!-- 环境光照 -->
