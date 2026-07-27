@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VR 空间搭建练习 | 绒球 XR Lab</title>
+  <meta name="description" content="WebXR 环境搭建与导航练习 - VR开发入门实战">
+  <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    
+    /* HUD 界面 */
+    .hud {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 10, 26, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 12px 24px;
+      border-radius: 30px;
+      border: 1px solid rgba(123, 200, 164, 0.3);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #e8e6e3;
+      font-size: 14px;
+      z-index: 999;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    
+    .hud-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .hud-key {
+      background: rgba(123, 200, 164, 0.2);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+      color: #7BC8A4;
+    }
+    
+    .hud-title {
+      color: #7BC8A4;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    
+    /* 提示面板 */
+    .tips-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(10, 10, 26, 0.9);
+      backdrop-filter: blur(10px);
+      padding: 16px 20px;
+      border-radius: 12px;
+      border: 1px solid rgba(123, 200, 164, 0.2);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #e8e6e3;
+      font-size: 13px;
+      z-index: 999;
+      max-width: 280px;
+      line-height: 1.6;
+    }
+    
+    .tips-panel h4 {
+      color: #7BC8A4;
+      margin: 0 0 10px 0;
+      font-size: 14px;
+    }
+    
+    .tips-panel ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+    
+    .tips-panel li {
+      margin-bottom: 6px;
+    }
+    
+    /* VR按钮 */
+    .vr-button {
+      background: linear-gradient(135deg, #7BC8A4, #5BA882);
+      color: #0a0a1a;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 14px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .vr-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(123, 200, 164, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <!-- HUD -->
+  <div class="hud">
+    <span class="hud-title">🏠 VR 空间搭建</span>
+    <div class="hud-item">
+      <span class="hud-key">WASD</span>
+      <span>移动</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-key">鼠标</span>
+      <span>环顾</span>
+    </div>
+    <button class="vr-button" id="enterVR">进入 VR</button>
+  </div>
+  
+  <!-- 提示面板 -->
+  <div class="tips-panel">
+    <h4>💡 空间搭建要点</h4>
+    <ul>
+      <li>点击<strong>发光物体</strong>触发交互</li>
+      <li>收集<strong>能量球</strong>解锁区域</li>
+      <li>观察不同材质地面的反射</li>
+      <li>VR中注意眩晕感，适时休息</li>
+    </ul>
+  </div>
+
+  <!-- A-Frame 场景 -->
+  <a-scene 
+    vr-mode-ui="enabled: true"
+    renderer="antialias: true; colorManagement: true; physicallyCorrectLights: true"
+    fog="type: exponential; color: #0a0a1a; density: 0.015">
+    
+    <!-- 资源预加载 -->
+    <a-assets>
+      <img id="grid-texture" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%230a0a1a' width='100' height='100'/%3E%3Cpath d='M0 0h100v1H0zM0 0v100h1V0z' fill='%237BC8A4' fill-opacity='0.1'/%3E%3C/svg%3E">
+      <img id="wood-texture" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%234a3728' width='200' height='200'/%3E%3Cpath d='M0 50h200M0 100h200M0 150h200' stroke='%233d2e20' stroke-width='2'/%3E%3C/svg%3E">
+      <img id="stone-texture" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23505060' width='100' height='100'/%3E%3Crect x='10' y='10' width='35' height='35' fill='%23454555' rx='2'/%3E%3Crect x='55' y='10' width='35' height='35' fill='%23585868' rx='2'/%3E%3Crect x='10' y='55' width='35' height='35' fill='%23585868' rx='2'/%3E%3Crect x='55' y='55' width='35' height='35' fill='%23454555' rx='2'/%3E%3C/svg%3E">
+    </a-assets>
+
+    <!-- 相机 Rig -->
+    <a-entity id="rig" position="0 0 0">
+      <a-camera 
+        position="0 1.6 8"
+        look-controls="pointerLockEnabled: true"
+        wasd-controls="acceleration: 30">
+      </a-camera>
+    </a-entity>
+
+    <!-- 环境光照 -->
+    <a-entity light="type: ambient; color: #4a4a6a; intensity: 0.4"></a-entity>
+    <a-entity light="type: directional; color: #fff; intensity: 0.8" position="5 10 5"></a-entity>
+    <a-entity light="type: point; color: #7BC8A4; intensity: 0.5; distance: 15" position="0 4 0"></a-entity>
+
+    <!-- ========== 区域1: 入口大厅 ========== -->
+    <a-entity id="zone-entrance" position="0 0 0">
+      <!-- 地面 - 网格风格 -->
+      <a-plane 
+        position="0 0 0" 
+        rotation="-90 0 0" 
+        width="20" height="20"
+        material="src: #grid-texture; repeat: 10 10; metalness: 0.3; roughness: 0.7">
+      </a-plane>
+      
+      <!-- 发光圆环装饰 -->
+      <a-torus 
+        position="0 0.01 0" 
+        rotation="90 0 0" 
+        radius="6" radius-tubular="0.02"
+        material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 0.5; transparent: true; opacity: 0.6">
+      </a-torus>
+      
+      <!-- 中心能量球 -->
+      <a-sphere 
+        id="orb-center"
+        position="0 2 0" 
+        radius="0.3"
+        material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 0.8; transparent: true; opacity: 0.9"
+        animation="property: position; to: 0 2.3 0; dur: 2000; easing: easeInOutSine; loop: true; dir: alternate"
+        class="interactive"
+        event-set__click="material.emissiveIntensity: 1.2"
+        light="type: point; color: #7BC8A4; intensity: 0.8; distance: 8">
+      </a-sphere>
+      
+      <!-- 入口门框 -->
+      <a-entity position="-6 0 0">
+        <a-box position="0 2 0" width="0.3" height="4" depth="0.3" material="color: #E8A87C; emissive: #E8A87C; emissiveIntensity: 0.2"></a-box>
+        <a-box position="0 2 1.5" width="0.3" height="4" depth="0.3" material="color: #E8A87C; emissive: #E8A87C; emissiveIntensity: 0.2"></a-box>
+        <a-box position="0 4.15 0.75" width="0.3" height="0.3" depth="1.8" material="color: #E8A87C; emissive: #E8A87C; emissiveIntensity: 0.2"></a-box>
+      </a-entity>
+    </a-entity>
+
+    <!-- ========== 区域2: 木地板舞蹈室 ========== -->
+    <a-entity id="zone-dance" position="-12 0 -8">
+      <!-- 木地板 -->
+      <a-plane 
+        position="0 0 0" 
+        rotation="-90 0 0" 
+        width="10" height="10"
+        material="src: #wood-texture; repeat: 5 5; metalness: 0.1; roughness: 0.9">
+      </a-plane>
+      
+      <!-- 围栏 -->
+      <a-box position="0 0.5 -5" width="10" height="1" depth="0.1" material="color: #5a4a3a"></a-box>
+      <a-box position="0 0.5 5" width="10" height="1" depth="0.1" material="color: #5a4a3a"></a-box>
+      <a-box position="-5 0.5 0" width="0.1" height="1" depth="10" material="color: #5a4a3a"></a-box>
+      <a-box position="5 0.5 0" width="0.1" height="1" depth="10" material="color: #5a4a3a"></a-box>
+      
+      <!-- 镜子（模拟） -->
+      <a-plane position="0 2.5 -4.9" width="8" height="5" material="color: #2a3a4a; metalness: 0.9; roughness: 0.1; transparent: true; opacity: 0.7"></a-plane>
+      
+      <!-- 可拾取能量球 -->
+      <a-sphere 
+        position="-3 1 0" 
+        radius="0.2"
+        material="color: #E8A87C; emissive: #E8A87C; emissiveIntensity: 0.6"
+        animation="property: rotation; to: 0 360 0; dur: 4000; easing: linear; loop: true"
+        class="collectible"
+        light="type: point; color: #E8A87C; intensity: 0.3; distance: 3">
+      </a-sphere>
+      <a-sphere 
+        position="3 1 0" 
+        radius="0.2"
+        material="color: #3498DB; emissive: #3498DB; emissiveIntensity: 0.6"
+        animation="property: rotation; to: 0 -360 0; dur: 5000; easing: linear; loop: true"
+        class="collectible"
+        light="type: point; color: #3498DB; intensity: 0.3; distance: 3">
+      </a-sphere>
+      
+      <!-- 区域标签 -->
+      <a-text value="💃 舞蹈室" position="0 4 -4.5" align="center" color="#E8A87C" width="8"></a-text>
+    </a-entity>
+
+    <!-- ========== 区域3: 石材庭院 ========== -->
+    <a-entity id="zone-garden" position="12 0 -8">
+      <!-- 石材地面 -->
+      <a-plane 
+        position="0 0 0" 
+        rotation="-90 0 0" 
+        width="12" height="12"
+        material="src: #stone-texture; repeat: 6 6; metalness: 0.2; roughness: 0.95">
+      </a-plane>
+      
+      <!-- 禅意石头 -->
+      <a-dodecahedron position="-3 0.5 0" radius="0.6" material="color: #6a6a7a; roughness: 0.9"></a-dodecahedron>
+      <a-dodecahedron position="2 0.4 2" radius="0.4" material="color: #5a5a6a; roughness: 0.9"></a-dodecahedron>
+      <a-dodecahedron position="4 0.3 -2" radius="0.3" material="color: #7a7a8a; roughness: 0.9"></a-dodecahedron>
+      
+      <!-- 发光灯笼 -->
+      <a-entity position="0 3 0">
+        <a-cylinder position="0 0 0" radius="0.5" height="1" material="color: #fff; transparent: true; opacity: 0.3"></a-cylinder>
+        <a-sphere position="0 0 0" radius="0.3" material="color: #E8A87C; emissive: #E8A87C; emissiveIntensity: 1"></a-sphere>
+        <a-light type="point" color="#E8A87C" intensity="1" distance="10"></a-light>
+      </a-entity>
+      
+      <!-- 区域标签 -->
+      <a-text value="🪨 禅意庭院" position="0 4 -5.5" align="center" color="#8a8a9a" width="8"></a-text>
+    </a-entity>
+
+    <!-- ========== 区域4: VR体验区 ========== -->
+    <a-entity id="zone-vr" position="0 0 -20">
+      <!-- VR专用地面 - 防眩晕高对比 -->
+      <a-plane 
+        position="0 0 0" 
+        rotation="-90 0 0" 
+        width="15" height="15"
+        material="color: #1a1a2a; metalness: 0.5; roughness: 0.5">
+      </a-plane>
+      
+      <!-- 边界标记 -->
+      <a-ring position="0 0.01 0" rotation="-90 0 0" radius-inner="6" radius-outer="6.2" material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 0.5; side: double"></a-ring>
+      <a-ring position="0 0.01 0" rotation="-90 0 0" radius-inner="4" radius-outer="4.1" material="color: #E8A87C; emissive: #E8A87C; emissiveIntensity: 0.5; side: double"></a-ring>
+      
+      <!-- VR交互对象 -->
+      <a-box 
+        id="vr-cube"
+        position="-2 1 0" 
+        width="0.5" height="0.5" depth="0.5"
+        material="color: #3498DB; emissive: #3498DB; emissiveIntensity: 0.3"
+        animation="property: rotation; to: 360 360 0; dur: 8000; easing: linear; loop: true"
+        class="interactive"
+        vr-interactive>
+      </a-box>
+      
+      <a-sphere 
+        position="2 1 0" 
+        radius="0.3"
+        material="color: #9B59B6; emissive: #9B59B6; emissiveIntensity: 0.3"
+        animation="property: position; to: 2 2 0; dur: 3000; easing: easeInOutSine; loop: true; dir: alternate"
+        class="interactive"
+        vr-interactive>
+      </a-sphere>
+      
+      <!-- 参考网格 -->
+      <a-entity position="0 0.01 0">
+        <a-plane rotation="-90 0 0" width="12" height="12" material="color: #7BC8A4; transparent: true; opacity: 0.05; src: #grid-texture; repeat: 12 12"></a-plane>
+      </a-entity>
+      
+      <!-- 区域标签 -->
+      <a-text value="🥽 VR 体验区" position="0 5 -7" align="center" color="#7BC8A4" width="10"></a-text>
+      <a-text value="VR中移动请注意眩晕感" position="0 4.5 -7" align="center" color="#8B9BB4" width="6" opacity="0.7"></a-text>
+    </a-entity>
+
+    <!-- ========== 连接通道 ========== -->
+    <!-- 通道1: 入口到舞蹈室 -->
+    <a-box position="-6 0 -4" width="4" height="0.1" depth="8" material="color: #2a2a3a"></a-box>
+    
+    <!-- 通道2: 入口到庭院 -->
+    <a-box position="6 0 -4" width="4" height="0.1" depth="8" material="color: #2a2a3a"></a-box>
+    
+    <!-- 通道3: 入口到VR区 -->
+    <a-box position="0 0 -14" width="6" height="0.1" depth="8" material="color: #2a2a3a"></a-box>
+    
+    <!-- 导航箭头 -->
+    <a-triangle position="-6 0.05 -6" rotation="-90 45 0" vertex-a="0 0.5 0" vertex-b="-0.3 0 0.3" vertex-c="0.3 0 0.3" material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 0.5"></a-triangle>
+    <a-triangle position="6 0.05 -6" rotation="-90 -45 0" vertex-a="0 0.5 0" vertex-b="-0.3 0 0.3" vertex-c="0.3 0 0.3" material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 0.5"></a-triangle>
+    <a-triangle position="0 0.05 -14" rotation="-90 0 0" vertex-a="0 0.5 0" vertex-b="-0.3 0 0.3" vertex-c="0.3 0 0.3" material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 0.5"></a-triangle>
+
+    <!-- 天空 -->
+    <a-sky color="#0a0a1a"></a-sky>
+    
+    <!-- 粒子效果 -->
+    <a-entity id="particles" position="0 3 0">
+      <a-sphere position="-3 0 2" radius="0.05" material="color: #7BC8A4; emissive: #7BC8A4; emissiveIntensity: 1" animation="property: position; to: -3 5 2; dur: 6000; loop: true; dir: alternate"></a-sphere>
+      <a-sphere position="3 0 -2" radius="0.05" material="color: #E8A87C; emissive: #E8A87C; emissiveIntensity: 1" animation="property: position; to: 3 4 -2; dur: 7000; loop: true; dir: alternate"></a-sphere>
+      <a-sphere position="0 0 3" radius="0.04" material="color: #3498DB; emissive: #3498DB; emissiveIntensity: 1" animation="property: position; to: 0 6 3; dur: 5000; loop: true; dir: alternate"></a-sphere>
+    </a-entity>
+
+  </a-scene>
+
+  <script>
+    // VR 进入按钮
+    document.getElementById('enterVR').addEventListener('click', () => {
+      document.querySelector('a-scene').enterVR();
+    });
+    
+    // 可交互物体点击效果
+    document.querySelectorAll('.interactive').forEach(el => {
+      el.addEventListener('click', () => {
+        // 视觉效果
+        el.setAttribute('animation__scale', {
+          property: 'scale',
+          to: '1.5 1.5 1.5',
+          dur: 200,
+          easing: 'easeOutElastic',
+          loop: false
+        });
+        
+        setTimeout(() => {
+          el.setAttribute('animation__scale', {
+            property: 'scale',
+            to: '1 1 1',
+            dur: 500,
+            easing: 'easeOutElastic'
+          });
+        }, 300);
+        
+        // 发光效果
+        const currentIntensity = el.getAttribute('material').emissiveIntensity || 0.3;
+        el.setAttribute('material', 'emissiveIntensity', currentIntensity + 0.5);
+        setTimeout(() => {
+          el.setAttribute('material', 'emissiveIntensity', currentIntensity);
+        }, 500);
+        
+        // 控制台日志（便于调试）
+        console.log('点击了:', el.id || el.tagName, '位置:', el.getAttribute('position'));
+      });
+    });
+    
+    // 可拾取物体
+    document.querySelectorAll('.collectible').forEach(el => {
+      el.addEventListener('click', () => {
+        // 收集动画
+        el.setAttribute('animation__collect', {
+          property: 'scale',
+          to: '0 0 0',
+          dur: 300,
+          easing: 'easeInBack'
+        });
+        
+        el.setAttribute('animation__fly', {
+          property: 'position',
+          to: '0 5 0',
+          dur: 300
+        });
+        
+        console.log('收集了能量球:', el.getAttribute('position'));
+        
+        // 2秒后重置（模拟可重复收集）
+        setTimeout(() => {
+          const originalY = el.getAttribute('position').y;
+          el.setAttribute('position', `${el.getAttribute('position').x} ${originalY} ${el.getAttribute('position').z}`);
+          el.setAttribute('scale', '1 1 1');
+        }, 2000);
+      });
+    });
+    
+    // 场景加载完成
+    document.querySelector('a-scene').addEventListener('loaded', () => {
+      console.log('🧶 VR 空间搭建场景加载完成');
+      console.log('💡 提示: 点击发光物体进行交互');
+    });
+  </script>
+</body>
+</html>

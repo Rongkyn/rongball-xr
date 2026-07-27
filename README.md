@@ -13,6 +13,7 @@ https://rongkyn.github.io/rongball-xr/
 | 项目 | 路径 | 说明 |
 |------|------|------|
 | 声源山水 ⭐NEW | [source-landscape.html](xr/source-landscape.html) | 音频可视化编辑器 · 拖拽声源 · 实时混音 |
+| VR 空间搭建 | [vr-space-builder.html](xr/vr-space-builder.html) | 环境搭建 · 导航练习 · VR交互 |
 | 禅意声景 | [zen-soundscape.html](xr/zen-soundscape.html) | 交互式空间音频 · 点击山水触发音效 |
 | 水墨山水 | [ink-landscape.html](xr/ink-landscape.html) | 东方美学沉浸式3D空间 · 留白意境 |
 | Hello World | [hello-world.html](xr/hello-world.html) | 基础 3D 场景 |
