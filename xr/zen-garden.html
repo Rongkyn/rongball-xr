@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>枯山水 · 绒球作</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #f5f0e6;
+            font-family: 'Noto Serif SC', serif;
+            cursor: crosshair;
+        }
+
+        #canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 工具栏 */
+        .toolbar {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 16px;
+            padding: 12px 24px;
+            background: rgba(245, 240, 230, 0.92);
+            border-radius: 10px;
+            box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(139, 115, 85, 0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+
+        .tool-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 14px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        .tool-btn:hover {
+            background: rgba(139, 115, 85, 0.06);
+        }
+
+        .tool-btn.active {
+            background: rgba(139, 115, 85, 0.12);
+            border-color: rgba(139, 115, 85, 0.25);
+        }
+
+        .tool-icon {
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .tool-label {
+            font-size: 11px;
+            color: #8b7355;
+            letter-spacing: 2px;
+        }
+
+        /* 标题 */
+        .title {
+            position: fixed;
+            top: 28px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            color: #9b8b75;
+            letter-spacing: 10px;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        /* 签名 */
+        .signature {
+            position: fixed;
+            bottom: 110px;
+            right: 28px;
+            font-size: 13px;
+            color: #a89580;
+            writing-mode: vertical-rl;
+            letter-spacing: 3px;
+            opacity: 0.35;
+            pointer-events: none;
+        }
+
+        /* 提示 */
+        .hint {
+            position: fixed;
+            top: 64px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #a89580;
+            letter-spacing: 3px;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+            pointer-events: none;
+        }
+
+        .hint.show {
+            opacity: 0.5;
+        }
+
+        /* 清除按钮 */
+        .clear-btn {
+            position: fixed;
+            top: 28px;
+            right: 28px;
+            padding: 6px 14px;
+            background: rgba(245, 240, 230, 0.9);
+            border: 1px solid rgba(139, 115, 85, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 11px;
+            color: #8b7355;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+            z-index: 10;
+        }
+
+        .clear-btn:hover {
+            background: rgba(139, 115, 85, 0.08);
+            border-color: rgba(139, 115, 85, 0.35);
+        }
+
+        /* 季节指示 */
+        .season {
+            position: fixed;
+            top: 28px;
+            left: 28px;
+            font-size: 11px;
+            color: #a89580;
+            letter-spacing: 2px;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div class="title">枯山水</div>
+    <div class="hint" id="hint">轻触画布，开始创作</div>
+    <div class="season" id="season">秋</div>
+    <div class="signature">绒球作</div>
+    
+    <button class="clear-btn" onclick="clearAll()">清空</button>
+    
+    <div class="toolbar">
+        <button class="tool-btn active" data-tool="sand" onclick="selectTool('sand', this)">
+            <span class="tool-icon">〰️</span>
+            <span class="tool-label">砂</span>
+        </button>
+        <button class="tool-btn" data-tool="stone" onclick="selectTool('stone', this)">
+            <span class="tool-icon">石</span>
+            <span class="tool-label">石</span>
+        </button>
+        <button class="tool-btn" data-tool="moss" onclick="selectTool('moss', this)">
+            <span class="tool-icon">苔</span>
+            <span class="tool-label">苔</span>
+        </button>
+        <button class="tool-btn" data-tool="leaf" onclick="selectTool('leaf', this)">
+            <span class="tool-icon">叶</span>
+            <span class="tool-label">叶</span>
+        </button>
+        <button class="tool-btn" data-tool="ripple" onclick="selectTool('ripple', this)">
+            <span class="tool-icon">◎</span>
+            <span class="tool-label">涟</span>
+        </button>
+    </div>
+
+    <script>
+        // ===== 初始化 =====
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const hint = document.getElementById('hint');
+        const seasonEl = document.getElementById('season');
+
+        let width, height;
+        let currentTool = 'sand';
+        let isDrawing = false;
+        let lastX = 0, lastY = 0;
+        let sandLines = [];
+        let stones = [];
+        let mosses = [];
+        let ripples = [];
+        let ambientLeaves = [];
+        let fallingLeaves = [];
+        let time = 0;
+        let audioCtx = null;
+
+        // 季节系统
+        const seasons = ['春', '夏', '秋', '冬'];
+        let currentSeason = 2; // 秋
+        seasonEl.textContent = seasons[currentSeason];
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+
+        // 显示提示
+        setTimeout(() => {
+            hint.classList.add('show');
+            setTimeout(() => hint.classList.remove('show'), 3000);
+        }, 500);
+
+        // ===== 音效系统 =====
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function playSandSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            
+            osc.type = 'sine';
+            osc.frequency.value = 200 + Math.random() * 100;
+            
+            filter.type = 'lowpass';
+            filter.frequency.value = 800;
+            
+            gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function playStoneSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.3);
+            
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.4);
+        }
+
+        function playRippleSound() {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'sine';
+            osc.frequency.value = 400 + Math.random() * 200;
+            
+            gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.6);
+        }
+
+        function playLeafSound() {
+            if (!audioCtx) return;
+            // 使用白噪声模拟叶子沙沙声
+            const bufferSize = audioCtx.sampleRate * 0.2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = (Math.random() * 2 - 1) * 0.02;
+            }
+            
+            const source = audioCtx.createBufferSource();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            
+            source.buffer = buffer;
+            filter.type = 'bandpass';
+            filter.frequency.value = 2000;
+            filter.Q.value = 0.5;
+            
+            gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+            
+            source.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            source.start();
+        }
+
+        // ===== 工具选择 =====
+        function selectTool(tool, btn) {
+            initAudio();
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // ===== 绘制沙纹 =====
+        function startSandLine(x, y) {
+            initAudio();
+            isDrawing = true;
+            lastX = x;
+            lastY = y;
+            const path = { 
+                points: [{ x, y }], 
+                width: 2 + Math.random() * 2,
+                opacity: 0.5 + Math.random() * 0.3
+            };
+            sandLines.push(path);
+            playSandSound();
+        }
+
+        function continueSandLine(x, y) {
+            if (!isDrawing || sandLines.length === 0) return;
+            
+            const dx = x - lastX;
+            const dy = y - lastY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > 2) {
+                sandLines[sandLines.length - 1].points.push({ x, y });
+                lastX = x;
+                lastY = y;
+            }
+        }
+
+        function endSandLine() {
+            isDrawing = false;
+        }
+
+        function drawSandLine(path) {
+            if (path.points.length < 2) return;
+            
+            ctx.save();
+            
+            // 主线条 - 沙纹凹槽
+            ctx.strokeStyle = `rgba(170, 150, 120, ${path.opacity})`;
+            ctx.lineWidth = path.width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            ctx.beginPath();
+            ctx.moveTo(path.points[0].x, path.points[0].y);
+            
+            // 使用贝塞尔曲线使线条更平滑
+            for (let i = 1; i < path.points.length - 1; i++) {
+                const xc = (path.points[i].x + path.points[i + 1].x) / 2;
+                const yc = (path.points[i].y + path.points[i + 1].y) / 2;
+                ctx.quadraticCurveTo(path.points[i].x, path.points[i].y, xc, yc);
+            }
+            if (path.points.length > 1) {
+                const last = path.points[path.points.length - 1];
+                ctx.lineTo(last.x, last.y);
+            }
+            ctx.stroke();
+            
+            // 阴影线 - 增加深度感
+            ctx.strokeStyle = `rgba(150, 130, 100, ${path.opacity * 0.4})`;
+            ctx.lineWidth = path.width * 0.6;
+            ctx.beginPath();
+            ctx.moveTo(path.points[0].x + 1.5, path.points[0].y + 1.5);
+            for (let i = 1; i < path.points.length - 1; i++) {
+                const xc = (path.points[i].x + path.points[i + 1].x) / 2 + 1.5;
+                const yc = (path.points[i].y + path.points[i + 1].y) / 2 + 1.5;
+                ctx.quadraticCurveTo(path.points[i].x + 1.5, path.points[i].y + 1.5, xc, yc);
+            }
+            if (path.points.length > 1) {
+                const last = path.points[path.points.length - 1];
+                ctx.lineTo(last.x + 1.5, last.y + 1.5);
+            }
+            ctx.stroke();
+            
+            // 高光边 - 模拟光线
+            ctx.strokeStyle = `rgba(220, 210, 190, ${path.opacity * 0.3})`;
+            ctx.lineWidth = path.width * 0.3;
+            ctx.beginPath();
+            ctx.moveTo(path.points[0].x - 1, path.points[0].y - 1);
+            for (let i = 1; i < path.points.length - 1; i++) {
+                const xc = (path.points[i].x + path.points[i + 1].x) / 2 - 1;
+                const yc = (path.points[i].y + path.points[i + 1].y) / 2 - 1;
+                ctx.quadraticCurveTo(path.points[i].x - 1, path.points[i].y - 1, xc, yc);
+            }
+            ctx.stroke();
+            
+            ctx.restore();
+        }
+
+        // ===== 涟漪效果 =====
+        class Ripple {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 5;
+                this.maxRadius = 40 + Math.random() * 30;
+                this.opacity = 0.5;
+                this.speed = 0.4 + Math.random() * 0.3;
+            }
+            
+            update() {
+                this.radius += this.speed;
+                this.opacity = 0.5 * (1 - this.radius / this.maxRadius);
+                return this.radius < this.maxRadius;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.strokeStyle = `rgba(160, 140, 110, ${this.opacity})`;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // 内圈
+                if (this.radius > 10) {
+                    ctx.strokeStyle = `rgba(160, 140, 110, ${this.opacity * 0.5})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+
+        function addRipple(x, y) {
+            ripples.push(new Ripple(x, y));
+            playRippleSound();
+        }
+
+        // ===== 放置石头 =====
+        function placeStone(x, y) {
+            initAudio();
+            const seed = Math.random();
+            const stone = {
+                x, y,
+                size: 18 + Math.random() * 35,
+                rotation: Math.random() * Math.PI * 2,
+                shape: Math.floor(seed * 4),
+                // 更自然的石头颜色
+                baseColor: [
+                    90 + Math.random() * 50,
+                    80 + Math.random() * 40,
+                    70 + Math.random() * 30
+                ],
+                vertices: []
+            };
+            
+            // 预生成不规则形状的顶点
+            if (stone.shape === 3) {
+                const numVertices = 6 + Math.floor(Math.random() * 4);
+                for (let i = 0; i < numVertices; i++) {
+                    const angle = (i / numVertices) * Math.PI * 2;
+                    const r = stone.size * (0.7 + Math.random() * 0.3);
+                    stone.vertices.push({ angle, r });
+                }
+            }
+            
+            stones.push(stone);
+            playStoneSound();
+        }
+
+        function drawStone(stone) {
+            ctx.save();
+            ctx.translate(stone.x, stone.y);
+            
+            const [r, g, b] = stone.baseColor;
+            
+            // 阴影
+            ctx.save();
+            ctx.translate(4, 5);
+            ctx.fillStyle = 'rgba(80, 70, 60, 0.12)';
+            ctx.beginPath();
+            drawStoneShape(ctx, stone);
+            ctx.fill();
+            ctx.restore();
+            
+            // 石头主体 - 渐变
+            const gradient = ctx.createRadialGradient(
+                -stone.size * 0.3, -stone.size * 0.3, 0,
+                0, 0, stone.size
+            );
+            gradient.addColorStop(0, `rgba(${r + 40}, ${g + 35}, ${b + 30}, 0.95)`);
+            gradient.addColorStop(0.6, `rgba(${r}, ${g}, ${b}, 0.95)`);
+            gradient.addColorStop(1, `rgba(${r - 20}, ${g - 20}, ${b - 15}, 0.95)`);
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            drawStoneShape(ctx, stone);
+            ctx.fill();
+            
+            // 高光
+            ctx.fillStyle = 'rgba(255, 255, 250, 0.15)';
+            ctx.beginPath();
+            ctx.ellipse(
+                -stone.size * 0.25, -stone.size * 0.25,
+                stone.size * 0.25, stone.size * 0.15,
+                -0.5, 0, Math.PI * 2
+            );
+            ctx.fill();
+            
+            // 纹理细节
+            ctx.strokeStyle = `rgba(${r - 30}, ${g - 30}, ${b - 25}, 0.15)`;
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                const sx = (Math.random() - 0.5) * stone.size;
+                const sy = (Math.random() - 0.5) * stone.size * 0.6;
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(sx + (Math.random() - 0.5) * stone.size * 0.5, sy + Math.random() * stone.size * 0.3);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+
+        function drawStoneShape(ctx, stone) {
+            if (stone.shape === 0) {
+                // 圆形
+                ctx.ellipse(0, 0, stone.size, stone.size * 0.75, 0, 0, Math.PI * 2);
+            } else if (stone.shape === 1) {
+                // 椭圆
+                ctx.ellipse(0, 0, stone.size * 1.2, stone.size * 0.65, 0, 0, Math.PI * 2);
+            } else if (stone.shape === 2) {
+                // 竖长形
+                ctx.ellipse(0, 0, stone.size * 0.7, stone.size * 1.1, 0, 0, Math.PI * 2);
+            } else {
+                // 不规则形状
+                if (stone.vertices.length > 0) {
+                    const first = stone.vertices[0];
+                    ctx.moveTo(Math.cos(first.angle) * first.r, Math.sin(first.angle) * first.r * 0.8);
+                    for (let i = 1; i < stone.vertices.length; i++) {
+                        const v = stone.vertices[i];
+                        ctx.lineTo(Math.cos(v.angle) * v.r, Math.sin(v.angle) * v.r * 0.8);
+                    }
+                    ctx.closePath();
+                }
+            }
+        }
+
+        // ===== 放置苔藓 =====
+        function placeMoss(x, y) {
+            initAudio();
+            const moss = {
+                x, y,
+                size: 10 + Math.random() * 15,
+                particles: []
+            };
+            
+            // 生成更有机的苔藓形态
+            const numClusters = 3 + Math.floor(Math.random() * 3);
+            for (let c = 0; c < numClusters; c++) {
+                const cx = (Math.random() - 0.5) * moss.size;
+                const cy = (Math.random() - 0.5) * moss.size;
+                const clusterSize = 5 + Math.random() * 8;
+                
+                for (let i = 0; i < 8; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = Math.random() * clusterSize;
+                    const green = 100 + Math.random() * 60;
+                    moss.particles.push({
+                        x: cx + Math.cos(angle) * dist,
+                        y: cy + Math.sin(angle) * dist,
+                        size: 1.5 + Math.random() * 3.5,
+                        color: `rgba(${60 + Math.random() * 40}, ${green}, ${50 + Math.random() * 40}, ${0.5 + Math.random() * 0.4})`
+                    });
+                }
+            }
+            
+            mosses.push(moss);
+            playLeafSound();
+        }
+
+        function drawMoss(moss) {
+            ctx.save();
+            ctx.translate(moss.x, moss.y);
+            
+            moss.particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            ctx.restore();
+        }
+
+        // ===== 环境落叶（背景装饰） =====
+        class AmbientLeaf {
+            constructor() {
+                this.reset();
+                this.y = Math.random() * height; // 初始随机位置
+            }
+            
+            reset() {
+                this.x = Math.random() * width;
+                this.y = -20;
+                this.size = 3 + Math.random() * 5;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.01;
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = 0.15 + Math.random() * 0.25;
+                this.swayPhase = Math.random() * Math.PI * 2;
+                this.swaySpeed = 0.005 + Math.random() * 0.01;
+                this.swayAmount = 0.3 + Math.random() * 0.5;
+                this.opacity = 0.15 + Math.random() * 0.2;
+                
+                // 季节颜色
+                const seasonColors = [
+                    // 春 - 粉色花瓣
+                    [`rgba(230, 180, 190, ${this.opacity})`, `rgba(240, 200, 210, ${this.opacity})`],
+                    // 夏 - 绿叶
+                    [`rgba(120, 170, 100, ${this.opacity})`, `rgba(100, 150, 80, ${this.opacity})`],
+                    // 秋 - 红叶黄叶
+                    [`rgba(200, 130, 60, ${this.opacity})`, `rgba(180, 100, 50, ${this.opacity})`, `rgba(220, 170, 80, ${this.opacity})`],
+                    // 冬 - 白色
+                    [`rgba(200, 200, 210, ${this.opacity * 0.8})`, `rgba(220, 220, 230, ${this.opacity * 0.6})`]
+                ];
+                
+                const colors = seasonColors[currentSeason];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+                this.isCircle = currentSeason === 0 || currentSeason === 3; // 春：花瓣，冬：雪花
+            }
+            
+            update() {
+                this.swayPhase += this.swaySpeed;
+                this.x += this.vx + Math.sin(this.swayPhase) * this.swayAmount;
+                this.y += this.vy;
+                this.rotation += this.rotationSpeed;
+                
+                if (this.y > height + 20) {
+                    this.reset();
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.fillStyle = this.color;
+                
+                if (this.isCircle) {
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // 叶子形状
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, this.size, this.size * 0.4, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        // 初始化环境落叶
+        function initAmbientLeaves() {
+            ambientLeaves = [];
+            const count = currentSeason === 3 ? 30 : 15; // 冬天雪花更多
+            for (let i = 0; i < count; i++) {
+                ambientLeaves.push(new AmbientLeaf());
+            }
+        }
+
+        // ===== 交互落叶（用户添加） =====
+        class FallingLeaf {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = 5 + Math.random() * 7;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.03;
+                this.vx = (Math.random() - 0.5) * 0.8;
+                this.vy = 0.3 + Math.random() * 0.4;
+                this.opacity = 0.7 + Math.random() * 0.3;
+                this.life = 1;
+                this.decay = 0.003 + Math.random() * 0.002;
+                
+                // 秋色
+                const autumnColors = [
+                    `rgba(200, 100, 40, `,
+                    `rgba(180, 80, 30, `,
+                    `rgba(220, 160, 60, `,
+                    `rgba(160, 60, 20, `
+                ];
+                this.color = autumnColors[Math.floor(Math.random() * autumnColors.length)];
+            }
+            
+            update() {
+                this.x += this.vx + Math.sin(time * 0.01 + this.rotation) * 0.3;
+                this.y += this.vy;
+                this.rotation += this.rotationSpeed;
+                this.life -= this.decay;
+                return this.life > 0;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.fillStyle = this.color + (this.opacity * this.life) + ')';
+                
+                // 枫叶形状（简化）
+                ctx.beginPath();
+                ctx.moveTo(0, -this.size);
+                ctx.quadraticCurveTo(this.size * 0.5, -this.size * 0.3, this.size, 0);
+                ctx.quadraticCurveTo(this.size * 0.5, this.size * 0.3, 0, this.size);
+                ctx.quadraticCurveTo(-this.size * 0.5, this.size * 0.3, -this.size, 0);
+                ctx.quadraticCurveTo(-this.size * 0.5, -this.size * 0.3, 0, -this.size);
+                ctx.fill();
+                
+                // 叶脉
+                ctx.strokeStyle = this.color + (this.opacity * this.life * 0.5) + ')';
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(0, -this.size);
+                ctx.lineTo(0, this.size);
+                ctx.stroke();
+                
+                ctx.restore();
+            }
+        }
+
+        function addFallingLeaf(x, y) {
+            initAudio();
+            for (let i = 0; i < 3; i++) {
+                fallingLeaves.push(new FallingLeaf(x + (Math.random() - 0.5) * 20, y + (Math.random() - 0.5) * 20));
+            }
+            playLeafSound();
+        }
+
+        // ===== 绘制沙地纹理 =====
+        let sandTextureCanvas = null;
+
+        function createSandTexture() {
+            sandTextureCanvas = document.createElement('canvas');
+            sandTextureCanvas.width = width;
+            sandTextureCanvas.height = height;
+            const sctx = sandTextureCanvas.getContext('2d');
+            
+            // 基底色
+            sctx.fillStyle = '#f0ebe0';
+            sctx.fillRect(0, 0, width, height);
+            
+            // 细微的沙粒
+            for (let i = 0; i < 3000; i++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                const size = Math.random() * 1.2;
+                const alpha = Math.random() * 0.15;
+                sctx.fillStyle = `rgba(${180 + Math.random() * 40}, ${160 + Math.random() * 30}, ${130 + Math.random() * 30}, ${alpha})`;
+                sctx.fillRect(x, y, size, size);
+            }
+            
+            // 添加细微的波纹纹理
+            sctx.strokeStyle = 'rgba(200, 185, 160, 0.04)';
+            sctx.lineWidth = 0.5;
+            for (let y = 0; y < height; y += 8 + Math.random() * 4) {
+                sctx.beginPath();
+                sctx.moveTo(0, y);
+                for (let x = 0; x < width; x += 20) {
+                    sctx.lineTo(x, y + Math.sin(x * 0.02) * 2);
+                }
+                sctx.stroke();
+            }
+        }
+
+        // ===== 光影效果 =====
+        function drawLightAndShadow() {
+            // 模拟阳光从右上角照射
+            const gradient = ctx.createRadialGradient(
+                width * 0.8, height * 0.1, 0,
+                width * 0.8, height * 0.1, width * 0.8
+            );
+            gradient.addColorStop(0, 'rgba(255, 250, 230, 0.08)');
+            gradient.addColorStop(0.5, 'rgba(255, 245, 220, 0.03)');
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            
+            // 左下角轻微阴影
+            const shadowGradient = ctx.createRadialGradient(
+                width * 0.1, height * 0.9, 0,
+                width * 0.1, height * 0.9, width * 0.5
+            );
+            shadowGradient.addColorStop(0, 'rgba(0, 0, 0, 0.03)');
+            shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            
+            ctx.fillStyle = shadowGradient;
+            ctx.fillRect(0, 0, width, height);
+        }
+
+        // ===== 主绘制函数 =====
+        function draw() {
+            // 沙地纹理
+            if (sandTextureCanvas) {
+                ctx.drawImage(sandTextureCanvas, 0, 0);
+            } else {
+                ctx.fillStyle = '#f0ebe0';
+                ctx.fillRect(0, 0, width, height);
+            }
+            
+            // 光影
+            drawLightAndShadow();
+            
+            // 沙纹
+            sandLines.forEach(drawSandLine);
+            
+            // 涟漪
+            ripples.forEach(r => r.draw());
+            
+            // 苔藓
+            mosses.forEach(drawMoss);
+            
+            // 石头
+            stones.forEach(drawStone);
+            
+            // 交互落叶
+            fallingLeaves.forEach(l => l.draw());
+            
+            // 环境落叶
+            ambientLeaves.forEach(l => l.draw());
+        }
+
+        // ===== 事件监听 =====
+        canvas.addEventListener('mousedown', (e) => {
+            const x = e.clientX;
+            const y = e.clientY;
+            
+            if (currentTool === 'sand') {
+                startSandLine(x, y);
+            } else if (currentTool === 'stone') {
+                placeStone(x, y);
+            } else if (currentTool === 'moss') {
+                placeMoss(x, y);
+            } else if (currentTool === 'leaf') {
+                addFallingLeaf(x, y);
+            } else if (currentTool === 'ripple') {
+                addRipple(x, y);
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (currentTool === 'sand' && isDrawing) {
+                continueSandLine(e.clientX, e.clientY);
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (currentTool === 'sand') {
+                endSandLine();
+            }
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            if (currentTool === 'sand') {
+                endSandLine();
+            }
+        });
+
+        // 触摸支持
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const x = touch.clientX;
+            const y = touch.clientY;
+            
+            if (currentTool === 'sand') {
+                startSandLine(x, y);
+            } else if (currentTool === 'stone') {
+                placeStone(x, y);
+            } else if (currentTool === 'moss') {
+                placeMoss(x, y);
+            } else if (currentTool === 'leaf') {
+                addFallingLeaf(x, y);
+            } else if (currentTool === 'ripple') {
+                addRipple(x, y);
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (currentTool === 'sand' && isDrawing) {
+                const touch = e.touches[0];
+                continueSandLine(touch.clientX, touch.clientY);
+            }
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (currentTool === 'sand') {
+                endSandLine();
+            }
+        });
+
+        // ===== 清空功能 =====
+        function clearAll() {
+            sandLines = [];
+            stones = [];
+            mosses = [];
+            ripples = [];
+            fallingLeaves = [];
+        }
+
+        // ===== 动画循环 =====
+        function animate() {
+            time++;
+            
+            // 更新环境落叶
+            ambientLeaves.forEach(l => l.update());
+            
+            // 更新交互落叶
+            fallingLeaves = fallingLeaves.filter(l => l.update());
+            
+            // 更新涟漪
+            ripples = ripples.filter(r => r.update());
+            
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        // ===== 初始化 =====
+        function init() {
+            createSandTexture();
+            initAmbientLeaves();
+            
+            // 生成初始场景
+            generateInitialScene();
+            
+            // 开始动画
+            animate();
+            
+            // 每60秒切换季节提示（纯装饰，不实际改变颜色）
+            setInterval(() => {
+                currentSeason = (currentSeason + 1) % 4;
+                seasonEl.textContent = seasons[currentSeason];
+                seasonEl.style.opacity = '0.6';
+                setTimeout(() => seasonEl.style.opacity = '0.4', 1000);
+            }, 60000);
+        }
+
+        function generateInitialScene() {
+            // 几块精心放置的石头
+            const stonePositions = [
+                { x: width * 0.35, y: height * 0.45, size: 35 },
+                { x: width * 0.55, y: height * 0.38, size: 25 },
+                { x: width * 0.48, y: height * 0.55, size: 20 }
+            ];
+            
+            stonePositions.forEach(pos => {
+                const stone = {
+                    x: pos.x,
+                    y: pos.y,
+                    size: pos.size + Math.random() * 10,
+                    rotation: Math.random() * 0.5,
+                    shape: Math.floor(Math.random() * 3),
+                    baseColor: [
+                        90 + Math.random() * 40,
+                        80 + Math.random() * 30,
+                        70 + Math.random() * 25
+                    ],
+                    vertices: []
+                };
+                stones.push(stone);
+            });
+            
+            // 石头周围的苔藓
+            stonePositions.forEach(pos => {
+                if (Math.random() > 0.3) {
+                    const moss = {
+                        x: pos.x + (Math.random() - 0.5) * 30,
+                        y: pos.y + pos.size * 0.5 + Math.random() * 10,
+                        size: 8 + Math.random() * 8,
+                        particles: []
+                    };
+                    for (let i = 0; i < 12; i++) {
+                        const angle = Math.random() * Math.PI * 2;
+                        const dist = Math.random() * moss.size;
+                        moss.particles.push({
+                            x: Math.cos(angle) * dist,
+                            y: Math.sin(angle) * dist,
+                            size: 1.5 + Math.random() * 3,
+                            color: `rgba(${60 + Math.random() * 40}, ${110 + Math.random() * 50}, ${50 + Math.random() * 30}, ${0.5 + Math.random() * 0.3})`
+                        });
+                    }
+                    mosses.push(moss);
+                }
+            });
+            
+            // 环绕石头的沙纹
+            for (let s = 0; s < stonePositions.length; s++) {
+                const pos = stonePositions[s];
+                const numRings = 2 + Math.floor(Math.random() * 2);
+                
+                for (let ring = 0; ring < numRings; ring++) {
+                    const path = { points: [], width: 1.5 + Math.random(), opacity: 0.35 + Math.random() * 0.2 };
+                    const radius = pos.size + 15 + ring * 12;
+                    const points = 40;
+                    
+                    for (let i = 0; i <= points; i++) {
+                        const angle = (i / points) * Math.PI * 2;
+                        const wobble = Math.sin(angle * 3 + ring) * 3;
+                        const x = pos.x + Math.cos(angle) * (radius + wobble);
+                        const y = pos.y + Math.sin(angle) * (radius * 0.7 + wobble * 0.7);
+                        path.points.push({ x, y });
+                    }
+                    sandLines.push(path);
+                }
+            }
+            
+            // 平行沙纹线（背景装饰）
+            for (let i = 0; i < 5; i++) {
+                const path = { points: [], width: 1.5, opacity: 0.25 };
+                const startY = height * 0.2 + i * height * 0.15;
+                
+                for (let x = width * 0.05; x < width * 0.95; x += 8) {
+                    const y = startY + Math.sin(x * 0.008 + i) * 15;
+                    path.points.push({ x, y });
+                }
+                sandLines.push(path);
+            }
+        }
+
+        // 窗口大小改变时重新生成纹理
+        window.addEventListener('resize', () => {
+            resize();
+            createSandTexture();
+        });
+
+        init();
+    </script>
+</body>
+</html>
