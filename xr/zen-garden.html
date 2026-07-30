@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>枯山水 · 绒球作</title>
+    <title>枯山水 v2.0 · 绒球作</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600&display=swap" rel="stylesheet">
     <style>
         * {
@@ -160,6 +160,99 @@
             opacity: 0.4;
             pointer-events: none;
         }
+
+        /* 顶部工具栏 */
+        .top-tools {
+            position: fixed;
+            top: 28px;
+            right: 28px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .icon-btn {
+            padding: 6px 14px;
+            background: rgba(245, 240, 230, 0.9);
+            border: 1px solid rgba(139, 115, 85, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Noto Serif SC', serif;
+            font-size: 11px;
+            color: #8b7355;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .icon-btn:hover {
+            background: rgba(139, 115, 85, 0.08);
+            border-color: rgba(139, 115, 85, 0.35);
+        }
+
+        .icon-btn.active {
+            background: rgba(139, 115, 85, 0.15);
+            border-color: rgba(139, 115, 85, 0.3);
+        }
+
+        /* 日夜模式 - 夜间样式 */
+        body.night {
+            background: #1a1a2e;
+            cursor: crosshair;
+        }
+
+        body.night .toolbar {
+            background: rgba(30, 30, 50, 0.92);
+            border-color: rgba(100, 100, 140, 0.2);
+        }
+
+        body.night .tool-btn:hover {
+            background: rgba(100, 100, 140, 0.1);
+        }
+
+        body.night .tool-btn.active {
+            background: rgba(100, 100, 140, 0.18);
+            border-color: rgba(100, 100, 140, 0.35);
+        }
+
+        body.night .tool-label {
+            color: #8888aa;
+        }
+
+        body.night .title {
+            color: #6666aa;
+        }
+
+        body.night .season {
+            color: #7777aa;
+        }
+
+        body.night .signature {
+            color: #5555aa;
+        }
+
+        body.night .icon-btn {
+            background: rgba(30, 30, 50, 0.9);
+            border-color: rgba(100, 100, 140, 0.2);
+            color: #8888aa;
+        }
+
+        body.night .icon-btn:hover {
+            background: rgba(100, 100, 140, 0.1);
+        }
+
+        body.night .hint {
+            color: #7777aa;
+        }
+
+        /* 拖拽光标 */
+        body.dragging {
+            cursor: grabbing !important;
+        }
+
+        body.dragging canvas {
+            cursor: grabbing !important;
+        }
     </style>
 </head>
 <body>
@@ -170,7 +263,11 @@
     <div class="season" id="season">秋</div>
     <div class="signature">绒球作</div>
     
-    <button class="clear-btn" onclick="clearAll()">清空</button>
+    <div class="top-tools">
+        <button class="icon-btn" onclick="toggleDayNight()" id="mode-btn">☽ 夜</button>
+        <button class="icon-btn" onclick="exportPNG()">↓ 存</button>
+        <button class="icon-btn" onclick="clearAll()">✕ 空</button>
+    </div>
     
     <div class="toolbar">
         <button class="tool-btn active" data-tool="sand" onclick="selectTool('sand', this)">
@@ -180,6 +277,10 @@
         <button class="tool-btn" data-tool="stone" onclick="selectTool('stone', this)">
             <span class="tool-icon">石</span>
             <span class="tool-label">石</span>
+        </button>
+        <button class="tool-btn" data-tool="bamboo" onclick="selectTool('bamboo', this)">
+            <span class="tool-icon">竹</span>
+            <span class="tool-label">竹</span>
         </button>
         <button class="tool-btn" data-tool="moss" onclick="selectTool('moss', this)">
             <span class="tool-icon">苔</span>
@@ -208,12 +309,22 @@
         let lastX = 0, lastY = 0;
         let sandLines = [];
         let stones = [];
+        let bamboos = [];
         let mosses = [];
         let ripples = [];
         let ambientLeaves = [];
         let fallingLeaves = [];
         let time = 0;
         let audioCtx = null;
+
+        // 日夜模式
+        let isNight = false;
+
+        // 石头拖拽
+        let dragStone = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let isDraggingStone = false;
 
         // 季节系统
         const seasons = ['春', '夏', '秋', '冬'];
@@ -337,6 +448,122 @@
             currentTool = tool;
             document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+        }
+
+        // ===== 放置竹子 =====
+        function placeBamboo(x, y) {
+            initAudio();
+            const bamboo = {
+                x, y,
+                height: 80 + Math.random() * 120,
+                segments: 4 + Math.floor(Math.random() * 4),
+                lean: (Math.random() - 0.5) * 0.15,
+                thickness: 4 + Math.random() * 4,
+                leaves: [],
+                color: isNight ? [40, 80, 50] : [60, 110, 60]
+            };
+
+            // 生成竹叶
+            const segHeight = bamboo.height / bamboo.segments;
+            for (let i = 1; i < bamboo.segments; i++) {
+                const nodeY = y - i * segHeight;
+                const nodeX = x + i * bamboo.lean * segHeight;
+                const leafCount = 2 + Math.floor(Math.random() * 3);
+                for (let j = 0; j < leafCount; j++) {
+                    const side = Math.random() > 0.5 ? 1 : -1;
+                    bamboo.leaves.push({
+                        x: nodeX + side * (bamboo.thickness + 2),
+                        y: nodeY + (Math.random() - 0.5) * segHeight * 0.3,
+                        angle: side * (0.3 + Math.random() * 0.8),
+                        length: 15 + Math.random() * 20,
+                        width: 3 + Math.random() * 3,
+                        sway: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+
+            bamboos.push(bamboo);
+            playBambooSound();
+        }
+
+        function playBambooSound() {
+            if (!audioCtx) return;
+            // 竹子敲击的清脆声
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 800 + Math.random() * 400;
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function drawBamboo(bamboo) {
+            ctx.save();
+            const [r, g, b] = bamboo.color;
+            const segHeight = bamboo.height / bamboo.segments;
+
+            // 竹竿
+            for (let i = 0; i < bamboo.segments; i++) {
+                const x1 = bamboo.x + i * bamboo.lean * segHeight;
+                const y1 = bamboo.y - i * segHeight;
+                const x2 = bamboo.x + (i + 1) * bamboo.lean * segHeight;
+                const y2 = bamboo.y - (i + 1) * segHeight;
+
+                // 竹节渐变
+                const alpha = 0.7 + (i / bamboo.segments) * 0.2;
+                ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                ctx.lineWidth = bamboo.thickness - i * 0.3;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                // 竹节横纹
+                if (i > 0) {
+                    ctx.strokeStyle = `rgba(${r - 20}, ${g - 20}, ${b - 20}, 0.4)`;
+                    ctx.lineWidth = bamboo.thickness * 0.6;
+                    ctx.beginPath();
+                    ctx.moveTo(x1 - bamboo.thickness * 0.5, y1);
+                    ctx.lineTo(x1 + bamboo.thickness * 0.5, y1);
+                    ctx.stroke();
+                }
+
+                // 高光
+                ctx.strokeStyle = `rgba(${r + 60}, ${g + 60}, ${b + 40}, 0.15)`;
+                ctx.lineWidth = bamboo.thickness * 0.2;
+                ctx.beginPath();
+                ctx.moveTo(x1 + bamboo.thickness * 0.2, y1);
+                ctx.lineTo(x2 + bamboo.thickness * 0.2, y2);
+                ctx.stroke();
+            }
+
+            // 竹叶（带微风摇摆）
+            bamboo.leaves.forEach(leaf => {
+                const sway = Math.sin(time * 0.008 + leaf.sway) * 0.1;
+                ctx.save();
+                ctx.translate(leaf.x, leaf.y);
+                ctx.rotate(leaf.angle + sway);
+                ctx.fillStyle = `rgba(${r - 10}, ${g + 10}, ${b}, 0.6)`;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(leaf.length * 0.5, -leaf.width, leaf.length, -1);
+                ctx.quadraticCurveTo(leaf.length * 0.5, leaf.width, 0, 0);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 阴影
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.04)';
+            ctx.beginPath();
+            ctx.ellipse(bamboo.x + 8, bamboo.y + 3, bamboo.thickness * 2, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
         }
 
         // ===== 绘制沙纹 =====
@@ -782,57 +1009,113 @@
             sandTextureCanvas.height = height;
             const sctx = sandTextureCanvas.getContext('2d');
             
-            // 基底色
-            sctx.fillStyle = '#f0ebe0';
-            sctx.fillRect(0, 0, width, height);
-            
-            // 细微的沙粒
-            for (let i = 0; i < 3000; i++) {
-                const x = Math.random() * width;
-                const y = Math.random() * height;
-                const size = Math.random() * 1.2;
-                const alpha = Math.random() * 0.15;
-                sctx.fillStyle = `rgba(${180 + Math.random() * 40}, ${160 + Math.random() * 30}, ${130 + Math.random() * 30}, ${alpha})`;
-                sctx.fillRect(x, y, size, size);
-            }
-            
-            // 添加细微的波纹纹理
-            sctx.strokeStyle = 'rgba(200, 185, 160, 0.04)';
-            sctx.lineWidth = 0.5;
-            for (let y = 0; y < height; y += 8 + Math.random() * 4) {
-                sctx.beginPath();
-                sctx.moveTo(0, y);
-                for (let x = 0; x < width; x += 20) {
-                    sctx.lineTo(x, y + Math.sin(x * 0.02) * 2);
+            if (isNight) {
+                // 夜间：深靛蓝沙地
+                sctx.fillStyle = '#1a1a2e';
+                sctx.fillRect(0, 0, width, height);
+                
+                // 细微的沙粒（偏蓝紫色）
+                for (let i = 0; i < 3000; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const size = Math.random() * 1.2;
+                    const alpha = Math.random() * 0.08;
+                    sctx.fillStyle = `rgba(${80 + Math.random() * 40}, ${80 + Math.random() * 40}, ${120 + Math.random() * 40}, ${alpha})`;
+                    sctx.fillRect(x, y, size, size);
                 }
-                sctx.stroke();
+                
+                // 波纹纹理（更暗）
+                sctx.strokeStyle = 'rgba(60, 60, 100, 0.04)';
+                sctx.lineWidth = 0.5;
+                for (let y = 0; y < height; y += 8 + Math.random() * 4) {
+                    sctx.beginPath();
+                    sctx.moveTo(0, y);
+                    for (let x = 0; x < width; x += 20) {
+                        sctx.lineTo(x, y + Math.sin(x * 0.02) * 2);
+                    }
+                    sctx.stroke();
+                }
+            } else {
+                // 日间：暖色沙地
+                sctx.fillStyle = '#f0ebe0';
+                sctx.fillRect(0, 0, width, height);
+                
+                // 细微的沙粒
+                for (let i = 0; i < 3000; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const size = Math.random() * 1.2;
+                    const alpha = Math.random() * 0.15;
+                    sctx.fillStyle = `rgba(${180 + Math.random() * 40}, ${160 + Math.random() * 30}, ${130 + Math.random() * 30}, ${alpha})`;
+                    sctx.fillRect(x, y, size, size);
+                }
+                
+                // 波纹纹理
+                sctx.strokeStyle = 'rgba(200, 185, 160, 0.04)';
+                sctx.lineWidth = 0.5;
+                for (let y = 0; y < height; y += 8 + Math.random() * 4) {
+                    sctx.beginPath();
+                    sctx.moveTo(0, y);
+                    for (let x = 0; x < width; x += 20) {
+                        sctx.lineTo(x, y + Math.sin(x * 0.02) * 2);
+                    }
+                    sctx.stroke();
+                }
             }
         }
 
         // ===== 光影效果 =====
         function drawLightAndShadow() {
-            // 模拟阳光从右上角照射
-            const gradient = ctx.createRadialGradient(
-                width * 0.8, height * 0.1, 0,
-                width * 0.8, height * 0.1, width * 0.8
-            );
-            gradient.addColorStop(0, 'rgba(255, 250, 230, 0.08)');
-            gradient.addColorStop(0.5, 'rgba(255, 245, 220, 0.03)');
-            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, width, height);
-            
-            // 左下角轻微阴影
-            const shadowGradient = ctx.createRadialGradient(
-                width * 0.1, height * 0.9, 0,
-                width * 0.1, height * 0.9, width * 0.5
-            );
-            shadowGradient.addColorStop(0, 'rgba(0, 0, 0, 0.03)');
-            shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            
-            ctx.fillStyle = shadowGradient;
-            ctx.fillRect(0, 0, width, height);
+            if (isNight) {
+                // 夜间：月光从左上角，偏冷色调
+                const moonGrad = ctx.createRadialGradient(
+                    width * 0.2, height * 0.15, 0,
+                    width * 0.2, height * 0.15, width * 0.7
+                );
+                moonGrad.addColorStop(0, 'rgba(180, 200, 255, 0.06)');
+                moonGrad.addColorStop(0.4, 'rgba(120, 140, 200, 0.02)');
+                moonGrad.addColorStop(1, 'rgba(0, 0, 30, 0)');
+                ctx.fillStyle = moonGrad;
+                ctx.fillRect(0, 0, width, height);
+
+                // 星光微闪
+                const twinkle = Math.sin(time * 0.02) * 0.015 + 0.015;
+                ctx.fillStyle = `rgba(200, 210, 255, ${twinkle})`;
+                ctx.fillRect(0, 0, width, height);
+
+                // 右下角深暗
+                const darkGrad = ctx.createRadialGradient(
+                    width * 0.85, height * 0.9, 0,
+                    width * 0.85, height * 0.9, width * 0.4
+                );
+                darkGrad.addColorStop(0, 'rgba(0, 0, 20, 0.06)');
+                darkGrad.addColorStop(1, 'rgba(0, 0, 20, 0)');
+                ctx.fillStyle = darkGrad;
+                ctx.fillRect(0, 0, width, height);
+            } else {
+                // 日间：阳光从右上角照射
+                const gradient = ctx.createRadialGradient(
+                    width * 0.8, height * 0.1, 0,
+                    width * 0.8, height * 0.1, width * 0.8
+                );
+                gradient.addColorStop(0, 'rgba(255, 250, 230, 0.08)');
+                gradient.addColorStop(0.5, 'rgba(255, 245, 220, 0.03)');
+                gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, width, height);
+                
+                // 左下角轻微阴影
+                const shadowGradient = ctx.createRadialGradient(
+                    width * 0.1, height * 0.9, 0,
+                    width * 0.1, height * 0.9, width * 0.5
+                );
+                shadowGradient.addColorStop(0, 'rgba(0, 0, 0, 0.03)');
+                shadowGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                
+                ctx.fillStyle = shadowGradient;
+                ctx.fillRect(0, 0, width, height);
+            }
         }
 
         // ===== 主绘制函数 =====
@@ -841,7 +1124,7 @@
             if (sandTextureCanvas) {
                 ctx.drawImage(sandTextureCanvas, 0, 0);
             } else {
-                ctx.fillStyle = '#f0ebe0';
+                ctx.fillStyle = isNight ? '#1a1a2e' : '#f0ebe0';
                 ctx.fillRect(0, 0, width, height);
             }
             
@@ -857,6 +1140,9 @@
             // 苔藓
             mosses.forEach(drawMoss);
             
+            // 竹子（在石头之前，形成层次）
+            bamboos.forEach(drawBamboo);
+
             // 石头
             stones.forEach(drawStone);
             
@@ -871,11 +1157,27 @@
         canvas.addEventListener('mousedown', (e) => {
             const x = e.clientX;
             const y = e.clientY;
+            initAudio();
+
+            // 石头工具：检测是否点击了已有石头（拖拽）
+            if (currentTool === 'stone') {
+                const hit = findStoneAt(x, y);
+                if (hit) {
+                    dragStone = hit.stone;
+                    dragOffsetX = x - hit.stone.x;
+                    dragOffsetY = y - hit.stone.y;
+                    isDraggingStone = true;
+                    document.body.classList.add('dragging');
+                    return;
+                }
+                placeStone(x, y);
+                return;
+            }
             
             if (currentTool === 'sand') {
                 startSandLine(x, y);
-            } else if (currentTool === 'stone') {
-                placeStone(x, y);
+            } else if (currentTool === 'bamboo') {
+                placeBamboo(x, y);
             } else if (currentTool === 'moss') {
                 placeMoss(x, y);
             } else if (currentTool === 'leaf') {
@@ -886,18 +1188,31 @@
         });
 
         canvas.addEventListener('mousemove', (e) => {
-            if (currentTool === 'sand' && isDrawing) {
+            if (isDraggingStone && dragStone) {
+                dragStone.x = e.clientX - dragOffsetX;
+                dragStone.y = e.clientY - dragOffsetY;
+            } else if (currentTool === 'sand' && isDrawing) {
                 continueSandLine(e.clientX, e.clientY);
             }
         });
 
         canvas.addEventListener('mouseup', () => {
+            if (isDraggingStone) {
+                isDraggingStone = false;
+                dragStone = null;
+                document.body.classList.remove('dragging');
+            }
             if (currentTool === 'sand') {
                 endSandLine();
             }
         });
 
         canvas.addEventListener('mouseleave', () => {
+            if (isDraggingStone) {
+                isDraggingStone = false;
+                dragStone = null;
+                document.body.classList.remove('dragging');
+            }
             if (currentTool === 'sand') {
                 endSandLine();
             }
@@ -909,11 +1224,25 @@
             const touch = e.touches[0];
             const x = touch.clientX;
             const y = touch.clientY;
-            
+            initAudio();
+
+            if (currentTool === 'stone') {
+                const hit = findStoneAt(x, y);
+                if (hit) {
+                    dragStone = hit.stone;
+                    dragOffsetX = x - hit.stone.x;
+                    dragOffsetY = y - hit.stone.y;
+                    isDraggingStone = true;
+                    return;
+                }
+                placeStone(x, y);
+                return;
+            }
+
             if (currentTool === 'sand') {
                 startSandLine(x, y);
-            } else if (currentTool === 'stone') {
-                placeStone(x, y);
+            } else if (currentTool === 'bamboo') {
+                placeBamboo(x, y);
             } else if (currentTool === 'moss') {
                 placeMoss(x, y);
             } else if (currentTool === 'leaf') {
@@ -925,23 +1254,78 @@
 
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
-            if (currentTool === 'sand' && isDrawing) {
-                const touch = e.touches[0];
+            const touch = e.touches[0];
+            if (isDraggingStone && dragStone) {
+                dragStone.x = touch.clientX - dragOffsetX;
+                dragStone.y = touch.clientY - dragOffsetY;
+            } else if (currentTool === 'sand' && isDrawing) {
                 continueSandLine(touch.clientX, touch.clientY);
             }
         });
 
         canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
+            if (isDraggingStone) {
+                isDraggingStone = false;
+                dragStone = null;
+            }
             if (currentTool === 'sand') {
                 endSandLine();
             }
         });
 
+        // ===== 日夜模式切换 =====
+        function toggleDayNight() {
+            isNight = !isNight;
+            document.body.classList.toggle('night', isNight);
+            const btn = document.getElementById('mode-btn');
+            btn.textContent = isNight ? '☀ 昼' : '☽ 夜';
+            btn.classList.toggle('active', isNight);
+            // 重新生成沙地纹理以匹配模式
+            createSandTexture();
+        }
+
+        // ===== 导出PNG =====
+        function exportPNG() {
+            // 临时隐藏UI元素
+            const uiElements = document.querySelectorAll('.toolbar, .top-tools, .title, .season, .signature, .hint');
+            uiElements.forEach(el => el.style.display = 'none');
+
+            // 等一帧让UI消失
+            requestAnimationFrame(() => {
+                // 导出画布
+                const dataURL = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                link.download = `枯山水_${dateStr}.png`;
+                link.href = dataURL;
+                link.click();
+
+                // 恢复UI
+                uiElements.forEach(el => el.style.display = '');
+            });
+        }
+
+        // ===== 石头拖拽检测 =====
+        function findStoneAt(x, y) {
+            // 从后往前检测（后添加的在上面）
+            for (let i = stones.length - 1; i >= 0; i--) {
+                const s = stones[i];
+                const dx = x - s.x;
+                const dy = y - s.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < s.size * 1.2) {
+                    return { stone: s, index: i };
+                }
+            }
+            return null;
+        }
+
         // ===== 清空功能 =====
         function clearAll() {
             sandLines = [];
             stones = [];
+            bamboos = [];
             mosses = [];
             ripples = [];
             fallingLeaves = [];
@@ -1064,6 +1448,43 @@
                 }
                 sandLines.push(path);
             }
+            
+            // 几棵竹子（右侧点缀）
+            const bambooPositions = [
+                { x: width * 0.78, y: height * 0.7 },
+                { x: width * 0.82, y: height * 0.65 },
+                { x: width * 0.75, y: height * 0.72 }
+            ];
+            bambooPositions.forEach(pos => {
+                const bamboo = {
+                    x: pos.x,
+                    y: pos.y,
+                    height: 90 + Math.random() * 100,
+                    segments: 4 + Math.floor(Math.random() * 3),
+                    lean: (Math.random() - 0.5) * 0.12,
+                    thickness: 4 + Math.random() * 3,
+                    leaves: [],
+                    color: isNight ? [40, 80, 50] : [60, 110, 60]
+                };
+                const segHeight = bamboo.height / bamboo.segments;
+                for (let i = 1; i < bamboo.segments; i++) {
+                    const nodeY = pos.y - i * segHeight;
+                    const nodeX = pos.x + i * bamboo.lean * segHeight;
+                    const leafCount = 2 + Math.floor(Math.random() * 2);
+                    for (let j = 0; j < leafCount; j++) {
+                        const side = Math.random() > 0.5 ? 1 : -1;
+                        bamboo.leaves.push({
+                            x: nodeX + side * (bamboo.thickness + 2),
+                            y: nodeY + (Math.random() - 0.5) * segHeight * 0.3,
+                            angle: side * (0.3 + Math.random() * 0.8),
+                            length: 15 + Math.random() * 18,
+                            width: 3 + Math.random() * 2,
+                            sway: Math.random() * Math.PI * 2
+                        });
+                    }
+                }
+                bamboos.push(bamboo);
+            });
         }
 
         // 窗口大小改变时重新生成纹理
