@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>鱼乐 · Fish Joy 🧶</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    overflow: hidden;
+    background: #0a1a2e;
+    font-family: 'Georgia', 'Noto Serif SC', serif;
+    cursor: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  canvas {
+    display: block;
+    position: fixed;
+    top: 0; left: 0;
+  }
+  
+  /* 自定义光标 */
+  #cursor {
+    position: fixed;
+    width: 20px; height: 20px;
+    border: 1.5px solid rgba(255,255,255,0.4);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 100;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s, border-color 0.3s;
+  }
+  #cursor.active {
+    width: 30px; height: 30px;
+    border-color: rgba(255,255,255,0.7);
+  }
+  
+  /* 标题 */
+  #title {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 2s ease;
+  }
+  #title.hidden { opacity: 0; }
+  #title h1 {
+    font-size: 4rem;
+    color: rgba(255,255,255,0.85);
+    font-weight: 300;
+    letter-spacing: 1.2rem;
+    text-shadow: 0 0 40px rgba(100,180,255,0.3);
+    margin-bottom: 0.5rem;
+  }
+  #title p {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.3rem;
+    font-style: italic;
+  }
+  
+  /* 底部提示 */
+  #hint {
+    position: fixed;
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.25);
+    font-size: 0.75rem;
+    letter-spacing: 0.2rem;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 3s ease 5s;
+  }
+  #hint.hidden { opacity: 0; }
+  
+  /* 控制面板 */
+  #controls {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  #controls:hover, #controls.show { opacity: 1; }
+  
+  .ctrl-btn {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50%;
+    background: rgba(10,26,46,0.6);
+    backdrop-filter: blur(10px);
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+  .ctrl-btn:hover {
+    border-color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.8);
+    background: rgba(20,40,70,0.8);
+  }
+  .ctrl-btn.active {
+    border-color: rgba(100,180,255,0.5);
+    color: rgba(100,180,255,0.8);
+  }
+  
+  /* 鱼数量显示 */
+  #info {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    color: rgba(255,255,255,0.15);
+    font-size: 0.65rem;
+    z-index: 50;
+    pointer-events: none;
+    letter-spacing: 0.1rem;
+  }
+  
+  /* 签名 */
+  #signature {
+    position: fixed;
+    bottom: 20px; left: 20px;
+    color: rgba(255,255,255,0.12);
+    font-size: 0.7rem;
+    z-index: 50;
+    pointer-events: none;
+    letter-spacing: 0.15rem;
+  }
+
+  /* 响应式 */
+  @media (max-width: 768px) {
+    #title h1 { font-size: 2.5rem; letter-spacing: 0.8rem; }
+    #title p { font-size: 0.7rem; }
+    .ctrl-btn { width: 40px; height: 40px; font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="pond"></canvas>
+
+<div id="cursor"></div>
+
+<div id="title">
+  <h1>鱼乐</h1>
+  <p>子非鱼 安知鱼之乐</p>
+</div>
+
+<div id="hint">轻触水面 · 观鱼之乐</div>
+
+<div id="controls">
+  <button class="ctrl-btn" id="btn-sound" title="音效">🔇</button>
+  <button class="ctrl-btn" id="btn-feed" title="喂食">🍞</button>
+  <button class="ctrl-btn" id="btn-night" title="日夜">☽</button>
+</div>
+
+<div id="info"></div>
+<div id="signature">绒球 🧶 鱼乐</div>
+
+<script>
+// ============================================================
+//  鱼乐 · Fish Joy
+//  Interactive Koi Pond Experience
+//  by 绒球 🧶 2026-07-31
+// ============================================================
+
+const canvas = document.getElementById('pond');
+const ctx = canvas.getContext('2d');
+const cursor = document.getElementById('cursor');
+
+// --- State ---
+let W, H;
+let mouseX = -100, mouseY = -100;
+let mouseDown = false;
+let isNight = false;
+let soundEnabled = false;
+let feedMode = false;
+let time = 0;
+let titleHidden = false;
+
+// --- Koi Color Palettes ---
+const KOI_PALETTES = [
+  { body: '#f5f0e8', accent: '#c84b3a', name: '红白' },      // Kohaku - white + red
+  { body: '#e8a735', accent: '#f5f0e8', name: '金' },         // Gold
+  { body: '#e87835', accent: '#f5e0c0', name: '橙' },         // Orange
+  { body: '#1a1a2e', accent: '#f5f0e8', name: '黑' },         // Black
+  { body: '#f5f0e8', accent: '#2a5a8a', name: '蓝白' },       // Blue + white
+  { body: '#d44a3a', accent: '#f5e0c0', name: '绯' },         // Deep red
+  { body: '#f5f0e8', accent: '#e87835', accent2: '#1a1a2e', name: '三色列' }, // Sanke
+];
+
+// --- Resize ---
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  // Regenerate caustics texture
+  generateCausticsTexture();
+}
+window.addEventListener('resize', resize);
+
+// ============================================================
+//  Water Caustics (Pre-rendered texture)
+// ============================================================
+let causticsCanvas, causticsCtx;
+let causticsOffset = { x: 0, y: 0 };
+
+function generateCausticsTexture() {
+  causticsCanvas = document.createElement('canvas');
+  causticsCanvas.width = Math.min(W, 800);
+  causticsCanvas.height = Math.min(H, 800);
+  causticsCtx = causticsCanvas.getContext('2d');
+  
+  const w = causticsCanvas.width;
+  const h = causticsCanvas.height;
+  const imgData = causticsCtx.createImageData(w, h);
+  
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Multiple overlapping sine waves for organic caustic pattern
+      let v = 0;
+      v += Math.sin(x * 0.02 + y * 0.015) * 0.3;
+      v += Math.sin(x * 0.035 - y * 0.02 + 1.5) * 0.25;
+      v += Math.sin((x + y) * 0.018 + 0.7) * 0.2;
+      v += Math.sin(Math.sqrt(x * x + y * y) * 0.012) * 0.15;
+      v += Math.sin(x * 0.06 + y * 0.04 - 2.0) * 0.1;
+      
+      // Threshold to create web-like caustic pattern
+      v = Math.max(0, v - 0.2);
+      v = Math.pow(v, 2) * 3;
+      v = Math.min(v, 1);
+      
+      const idx = (y * w + x) * 4;
+      const brightness = Math.floor(v * 40);
+      imgData.data[idx] = brightness;
+      imgData.data[idx + 1] = brightness + Math.floor(v * 15);
+      imgData.data[idx + 2] = brightness + Math.floor(v * 30);
+      imgData.data[idx + 3] = Math.floor(v * 30);
+    }
+  }
+  causticsCtx.putImageData(imgData, 0, 0);
+}
+
+// ============================================================
+//  Water Surface
+// ============================================================
+function drawWater() {
+  // Base gradient
+  let grad;
+  if (isNight) {
+    grad = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+    grad.addColorStop(0, '#0d1f3c');
+    grad.addColorStop(0.5, '#091428');
+    grad.addColorStop(1, '#050e1a');
+  } else {
+    grad = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+    grad.addColorStop(0, '#1a4a6a');
+    grad.addColorStop(0.5, '#123a55');
+    grad.addColorStop(1, '#0a2540');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Caustics overlay - animated drift
+  if (causticsCanvas) {
+    causticsOffset.x = Math.sin(time * 0.0003) * 30;
+    causticsOffset.y = Math.cos(time * 0.00025) * 20;
+    
+    ctx.globalAlpha = isNight ? 0.15 : 0.25;
+    ctx.globalCompositeOperation = 'screen';
+    
+    // Tile the caustics texture
+    const cw = causticsCanvas.width;
+    const ch = causticsCanvas.height;
+    const ox = ((causticsOffset.x % cw) + cw) % cw;
+    const oy = ((causticsOffset.y % ch) + ch) % ch;
+    
+    for (let x = -cw + ox; x < W + cw; x += cw) {
+      for (let y = -ch + oy; y < H + ch; y += ch) {
+        ctx.drawImage(causticsCanvas, x, y);
+      }
+    }
+    
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  
+  // Subtle wave distortion lines
+  ctx.globalAlpha = isNight ? 0.03 : 0.05;
+  ctx.strokeStyle = isNight ? '#4488cc' : '#6699bb';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 8; i++) {
+    ctx.beginPath();
+    const yBase = (H / 8) * i + Math.sin(time * 0.001 + i) * 20;
+    for (let x = 0; x < W; x += 5) {
+      const y = yBase + Math.sin(x * 0.005 + time * 0.001 + i * 0.5) * 15
+                      + Math.sin(x * 0.012 + time * 0.0007) * 8;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+//  Ripple System
+// ============================================================
+const ripples = [];
+
+class Ripple {
+  constructor(x, y, strength = 1) {
+    this.x = x;
+    this.y = y;
+    this.radius = 0;
+    this.maxRadius = 80 + Math.random() * 60;
+    this.strength = strength;
+    this.speed = 1.2 + Math.random() * 0.8;
+    this.life = 1;
+    this.rings = 2 + Math.floor(Math.random() * 2);
+  }
+  
+  update() {
+    this.radius += this.speed;
+    this.life = 1 - (this.radius / this.maxRadius);
+    return this.life > 0;
+  }
+  
+  draw() {
+    if (this.life <= 0) return;
+    const alpha = this.life * 0.4 * this.strength;
+    
+    for (let i = 0; i < this.rings; i++) {
+      const r = this.radius - i * 12;
+      if (r < 0) continue;
+      
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(180, 220, 255, ${alpha * (1 - i * 0.3)})`;
+      ctx.lineWidth = 1.5 - i * 0.3;
+      ctx.stroke();
+    }
+    
+    // Center glow
+    if (this.life > 0.7) {
+      const glowAlpha = (this.life - 0.7) / 0.3 * 0.15;
+      const glowGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 30);
+      glowGrad.addColorStop(0, `rgba(200, 230, 255, ${glowAlpha})`);
+      glowGrad.addColorStop(1, 'rgba(200, 230, 255, 0)');
+      ctx.fillStyle = glowGrad;
+      ctx.fillRect(this.x - 30, this.y - 30, 60, 60);
+    }
+  }
+}
+
+// Natural ripples (from fish movement)
+function addNaturalRipple(x, y) {
+  if (Math.random() > 0.03) return; // rare
+  ripples.push(new Ripple(x, y, 0.3));
+}
+
+// ============================================================
+//  Koi Fish (Boids + Artistic Rendering)
+// ============================================================
+const koiList = [];
+
+class Koi {
+  constructor(x, y, palette) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = (Math.random() - 0.5) * 2;
+    this.angle = Math.atan2(this.vy, this.vx);
+    this.speed = 0.8 + Math.random() * 0.5;
+    this.maxSpeed = 1.5 + Math.random() * 0.5;
+    this.size = 18 + Math.random() * 14; // body length
+    this.palette = palette;
+    
+    // Tail animation
+    this.tailPhase = Math.random() * Math.PI * 2;
+    this.tailSpeed = 0.05 + Math.random() * 0.02;
+    
+    // Pattern - random spots/marking positions
+    this.spots = [];
+    const numSpots = 2 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < numSpots; i++) {
+      this.spots.push({
+        offset: -0.3 + Math.random() * 0.6, // along body (-0.3 to 0.3)
+        side: (Math.random() - 0.5) * 0.6,   // across body
+        size: 0.15 + Math.random() * 0.25,    // relative to body
+      });
+    }
+    
+    // Depth (for layering)
+    this.depth = Math.random();
+    
+    // State
+    this.scared = 0; // 0-1, increases when clicked near
+    this.curious = 0; // 0-1, increases near food
+  }
+  
+  update(koiList, foods) {
+    // --- Boids rules ---
+    let sepX = 0, sepY = 0, sepCount = 0;
+    let aliX = 0, aliY = 0, aliCount = 0;
+    let cohX = 0, cohY = 0, cohCount = 0;
+    
+    const sepRadius = 50;
+    const aliRadius = 120;
+    const cohRadius = 180;
+    
+    for (const other of koiList) {
+      if (other === this) continue;
+      const dx = other.x - this.x;
+      const dy = other.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      // Separation
+      if (dist < sepRadius && dist > 0) {
+        sepX -= dx / dist / dist * sepRadius;
+        sepY -= dy / dist / dist * sepRadius;
+        sepCount++;
+      }
+      // Alignment
+      if (dist < aliRadius) {
+        aliX += other.vx;
+        aliY += other.vy;
+        aliCount++;
+      }
+      // Cohesion
+      if (dist < cohRadius) {
+        cohX += other.x;
+        cohY += other.y;
+        cohCount++;
+      }
+    }
+    
+    // Apply boids forces
+    let ax = 0, ay = 0;
+    
+    if (sepCount > 0) {
+      ax += sepX * 0.15;
+      ay += sepY * 0.15;
+    }
+    if (aliCount > 0) {
+      ax += (aliX / aliCount - this.vx) * 0.05;
+      ay += (aliY / aliCount - this.vy) * 0.05;
+    }
+    if (cohCount > 0) {
+      const cx = cohX / cohCount;
+      const cy = cohY / cohCount;
+      ax += (cx - this.x) * 0.0003;
+      ay += (cy - this.y) * 0.0003;
+    }
+    
+    // --- Edge avoidance (soft boundaries) ---
+    const margin = 80;
+    if (this.x < margin) ax += (margin - this.x) * 0.005;
+    if (this.x > W - margin) ax -= (this.x - (W - margin)) * 0.005;
+    if (this.y < margin) ay += (margin - this.y) * 0.005;
+    if (this.y > H - margin) ay -= (this.y - (H - margin)) * 0.005;
+    
+    // --- Mouse interaction ---
+    if (this.scared > 0) {
+      // Flee from last click point
+      const dx = this.x - mouseX;
+      const dy = this.y - mouseY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 0 && dist < 200) {
+        ax += (dx / dist) * 0.3 * this.scared;
+        ay += (dy / dist) * 0.3 * this.scared;
+      }
+      this.scared *= 0.97;
+      if (this.scared < 0.01) this.scared = 0;
+    }
+    
+    // --- Food attraction ---
+    if (foods.length > 0) {
+      let nearestFood = null;
+      let nearestDist = Infinity;
+      for (const food of foods) {
+        const dx = food.x - this.x;
+        const dy = food.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < nearestDist) {
+          nearestDist = dist;
+          nearestFood = food;
+        }
+      }
+      if (nearestFood && nearestDist < 300) {
+        const dx = nearestFood.x - this.x;
+        const dy = nearestFood.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        ax += (dx / dist) * 0.15;
+        ay += (dy / dist) * 0.15;
+        this.curious = 1;
+        
+        // Eat food when close
+        if (nearestDist < this.size * 0.8) {
+          nearestFood.eaten = true;
+          this.curious = 0;
+        }
+      }
+    }
+    
+    // --- Gentle wandering ---
+    ax += (Math.random() - 0.5) * 0.05;
+    ay += (Math.random() - 0.5) * 0.05;
+    
+    // --- Mouse gentle avoidance (hover) ---
+    if (!feedMode) {
+      const mdx = this.x - mouseX;
+      const mdy = this.y - mouseY;
+      const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+      if (mdist < 100 && mdist > 0) {
+        const force = (100 - mdist) / 100 * 0.05;
+        ax += (mdx / mdist) * force;
+        ay += (mdy / mdist) * force;
+      }
+    }
+    
+    // --- Apply acceleration ---
+    this.vx += ax;
+    this.vy += ay;
+    
+    // Speed limit
+    const spd = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    const currentMax = this.scared > 0 ? this.maxSpeed * 2.5 : this.maxSpeed;
+    if (spd > currentMax) {
+      this.vx = (this.vx / spd) * currentMax;
+      this.vy = (this.vy / spd) * currentMax;
+    }
+    // Min speed (koi always moving)
+    if (spd < 0.3) {
+      this.vx *= 1.05;
+      this.vy *= 1.05;
+    }
+    
+    // --- Update position ---
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    // --- Update angle (smooth turning) ---
+    const targetAngle = Math.atan2(this.vy, this.vx);
+    let angleDiff = targetAngle - this.angle;
+    // Normalize
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    this.angle += angleDiff * 0.08; // smooth turning
+    
+    // --- Tail animation ---
+    this.tailPhase += this.tailSpeed * (spd / this.maxSpeed + 0.5);
+    
+    // --- Natural ripple ---
+    addNaturalRipple(this.x, this.y);
+    
+    // Decay curiosity
+    if (this.curious > 0) this.curious *= 0.99;
+  }
+  
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    
+    const s = this.size;
+    const tailSwing = Math.sin(this.tailPhase) * 0.3;
+    const bodyWave = Math.sin(this.tailPhase * 0.7) * 0.05;
+    
+    // --- Shadow (underwater depth) ---
+    ctx.save();
+    ctx.translate(3 + this.depth * 4, 3 + this.depth * 4);
+    ctx.globalAlpha = 0.15 + this.depth * 0.1;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, s * 0.9, s * 0.28, bodyWave, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    
+    // --- Body ---
+    ctx.beginPath();
+    // Main body ellipse with slight wave
+    ctx.save();
+    ctx.rotate(bodyWave);
+    
+    // Draw body shape using bezier curves for organic form
+    ctx.moveTo(s * 0.6, 0); // nose
+    ctx.bezierCurveTo(
+      s * 0.5, -s * 0.25,  // top front
+      s * 0.1, -s * 0.32,  // top mid
+      -s * 0.3, -s * 0.2   // top back
+    );
+    ctx.bezierCurveTo(
+      -s * 0.5, -s * 0.12, // tail top
+      -s * 0.6, tailSwing * s * 0.3 - s * 0.05,
+      -s * 0.75, tailSwing * s * 0.5 // tail tip
+    );
+    ctx.bezierCurveTo(
+      -s * 0.6, tailSwing * s * 0.3 + s * 0.05,
+      -s * 0.5, s * 0.12,  // tail bottom
+      -s * 0.3, s * 0.2    // bottom back
+    );
+    ctx.bezierCurveTo(
+      s * 0.1, s * 0.32,   // bottom mid
+      s * 0.5, s * 0.25,   // bottom front
+      s * 0.6, 0           // nose
+    );
+    ctx.closePath();
+    
+    // Body gradient
+    const bodyGrad = ctx.createLinearGradient(0, -s * 0.3, 0, s * 0.3);
+    bodyGrad.addColorStop(0, this.lighten(this.palette.body, 20));
+    bodyGrad.addColorStop(0.3, this.palette.body);
+    bodyGrad.addColorStop(0.7, this.palette.body);
+    bodyGrad.addColorStop(1, this.darken(this.palette.body, 15));
+    ctx.fillStyle = bodyGrad;
+    ctx.fill();
+    
+    // Body outline (subtle)
+    ctx.strokeStyle = this.darken(this.palette.body, 30);
+    ctx.lineWidth = 0.5;
+    ctx.globalAlpha = 0.3;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    
+    // --- Color spots/patterns ---
+    for (const spot of this.spots) {
+      const sx = spot.offset * s;
+      const sy = spot.side * s * 0.5;
+      const sr = spot.size * s * 0.4;
+      
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, sr, sr * 0.7, Math.random() * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = this.palette.accent;
+      ctx.globalAlpha = 0.7;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    if (this.palette.accent2) {
+      // Sanke pattern - add black spots
+      const bx = (Math.random() - 0.5) * s * 0.4;
+      const by = (Math.random() - 0.5) * s * 0.3;
+      ctx.beginPath();
+      ctx.ellipse(bx, by, s * 0.1, s * 0.08, 0, 0, Math.PI * 2);
+      ctx.fillStyle = this.palette.accent2;
+      ctx.globalAlpha = 0.5;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    
+    ctx.restore();
+    
+    // --- Tail fin ---
+    ctx.beginPath();
+    const tailX = -s * 0.65;
+    const tailY = tailSwing * s * 0.3;
+    ctx.moveTo(tailX, tailY);
+    ctx.bezierCurveTo(
+      tailX - s * 0.15, tailY - s * 0.2 + tailSwing * s * 0.1,
+      tailX - s * 0.25, tailY - s * 0.15 + tailSwing * s * 0.15,
+      tailX - s * 0.3, tailY - s * 0.1 + tailSwing * s * 0.2
+    );
+    ctx.bezierCurveTo(
+      tailX - s * 0.2, tailY + tailSwing * s * 0.05,
+      tailX - s * 0.2, tailY + tailSwing * s * 0.05,
+      tailX - s * 0.3, tailY + s * 0.1 + tailSwing * s * 0.2
+    );
+    ctx.bezierCurveTo(
+      tailX - s * 0.25, tailY + s * 0.15 + tailSwing * s * 0.15,
+      tailX - s * 0.15, tailY + s * 0.2 + tailSwing * s * 0.1,
+      tailX, tailY
+    );
+    ctx.fillStyle = this.palette.accent;
+    ctx.globalAlpha = 0.5;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    
+    // --- Pectoral fins (small side fins) ---
+    const finPhase = Math.sin(this.tailPhase * 1.3) * 0.15;
+    // Left fin
+    ctx.beginPath();
+    ctx.moveTo(s * 0.15, -s * 0.18);
+    ctx.bezierCurveTo(
+      s * 0.05, -s * 0.35 + finPhase * s,
+      -s * 0.1, -s * 0.38 + finPhase * s,
+      -s * 0.05, -s * 0.25
+    );
+    ctx.fillStyle = this.palette.body;
+    ctx.globalAlpha = 0.35;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // Right fin
+    ctx.beginPath();
+    ctx.moveTo(s * 0.15, s * 0.18);
+    ctx.bezierCurveTo(
+      s * 0.05, s * 0.35 - finPhase * s,
+      -s * 0.1, s * 0.38 - finPhase * s,
+      -s * 0.05, s * 0.25
+    );
+    ctx.fillStyle = this.palette.body;
+    ctx.globalAlpha = 0.35;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    
+    // --- Eye ---
+    const eyeX = s * 0.35;
+    const eyeY = -s * 0.08;
+    const eyeR = s * 0.04;
+    ctx.beginPath();
+    ctx.arc(eyeX, eyeY, eyeR, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fill();
+    // Eye highlight
+    ctx.beginPath();
+    ctx.arc(eyeX + eyeR * 0.3, eyeY - eyeR * 0.3, eyeR * 0.4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fill();
+    
+    // --- Highlight on body (light reflection) ---
+    ctx.beginPath();
+    ctx.ellipse(s * 0.15, -s * 0.12, s * 0.25, s * 0.06, -0.2, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fill();
+    
+    ctx.restore();
+  }
+  
+  // Color utility functions
+  lighten(hex, amount) {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.min(255, (num >> 16) + amount);
+    const g = Math.min(255, ((num >> 8) & 0xff) + amount);
+    const b = Math.min(255, (num & 0xff) + amount);
+    return `rgb(${r},${g},${b})`;
+  }
+  
+  darken(hex, amount) {
+    const num = parseInt(hex.replace('#', ''), 16);
+    const r = Math.max(0, (num >> 16) - amount);
+    const g = Math.max(0, ((num >> 8) & 0xff) - amount);
+    const b = Math.max(0, (num & 0xff) - amount);
+    return `rgb(${r},${g},${b})`;
+  }
+}
+
+// ============================================================
+//  Food Particles
+// ============================================================
+const foods = [];
+
+class Food {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.size = 3 + Math.random() * 2;
+    this.life = 1;
+    this.eaten = false;
+    this.drift = Math.random() * Math.PI * 2;
+    this.bobPhase = Math.random() * Math.PI * 2;
+  }
+  
+  update() {
+    this.bobPhase += 0.02;
+    this.drift += 0.01;
+    this.x += Math.sin(this.drift) * 0.1;
+    this.y += Math.cos(this.drift) * 0.05;
+    this.life -= 0.001;
+    return this.life > 0 && !this.eaten;
+  }
+  
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y + Math.sin(this.bobPhase) * 1.5, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(210, 170, 80, ${this.life * 0.7})`;
+    ctx.fill();
+    
+    // Small highlight
+    ctx.beginPath();
+    ctx.arc(this.x - 1, this.y - 1 + Math.sin(this.bobPhase) * 1.5, this.size * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 230, 150, ${this.life * 0.5})`;
+    ctx.fill();
+  }
+}
+
+// ============================================================
+//  Lotus Leaves (ambient decoration)
+// ============================================================
+const lotusLeaves = [];
+
+class LotusLeaf {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.size = 25 + Math.random() * 35;
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 0.001;
+    this.driftPhase = Math.random() * Math.PI * 2;
+    this.type = Math.random() > 0.7 ? 'flower' : 'leaf';
+  }
+  
+  update() {
+    this.rotation += this.rotSpeed;
+    this.driftPhase += 0.003;
+    this.x += Math.sin(this.driftPhase) * 0.05;
+    this.y += Math.cos(this.driftPhase * 0.7) * 0.03;
+  }
+  
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    ctx.globalAlpha = isNight ? 0.15 : 0.2;
+    
+    if (this.type === 'leaf') {
+      // Lotus leaf - circular with notch
+      ctx.beginPath();
+      ctx.arc(0, 0, this.size, 0.15, Math.PI * 2 - 0.15);
+      ctx.lineTo(0, 0);
+      ctx.closePath();
+      
+      const leafGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, this.size);
+      if (isNight) {
+        leafGrad.addColorStop(0, '#1a3a2a');
+        leafGrad.addColorStop(1, '#0d2518');
+      } else {
+        leafGrad.addColorStop(0, '#3a7a4a');
+        leafGrad.addColorStop(1, '#2a5a35');
+      }
+      ctx.fillStyle = leafGrad;
+      ctx.fill();
+      
+      // Veins
+      ctx.strokeStyle = isNight ? 'rgba(60,120,80,0.3)' : 'rgba(80,150,90,0.3)';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 / 6) * i + 0.3;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * this.size * 0.85, Math.sin(a) * this.size * 0.85);
+        ctx.stroke();
+      }
+    } else {
+      // Lotus flower - simple
+      const petalCount = 8;
+      for (let i = 0; i < petalCount; i++) {
+        const a = (Math.PI * 2 / petalCount) * i;
+        ctx.save();
+        ctx.rotate(a);
+        ctx.beginPath();
+        ctx.ellipse(this.size * 0.35, 0, this.size * 0.35, this.size * 0.15, 0, 0, Math.PI * 2);
+        ctx.fillStyle = isNight ? 'rgba(180,120,140,0.4)' : 'rgba(230,160,170,0.5)';
+        ctx.fill();
+        ctx.restore();
+      }
+      // Center
+      ctx.beginPath();
+      ctx.arc(0, 0, this.size * 0.15, 0, Math.PI * 2);
+      ctx.fillStyle = isNight ? 'rgba(200,180,80,0.4)' : 'rgba(230,200,80,0.6)';
+      ctx.fill();
+    }
+    
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  Light Rays (surface light through water)
+// ============================================================
+function drawLightRays() {
+  const rayCount = 5;
+  ctx.globalAlpha = isNight ? 0.02 : 0.04;
+  
+  for (let i = 0; i < rayCount; i++) {
+    const x = W * (0.15 + 0.7 * (i / (rayCount - 1)));
+    const w = 40 + Math.sin(time * 0.0005 + i * 1.5) * 20;
+    const sway = Math.sin(time * 0.0003 + i * 0.8) * 30;
+    
+    const grad = ctx.createLinearGradient(x + sway, 0, x + sway, H);
+    grad.addColorStop(0, isNight ? 'rgba(100,150,220,0.5)' : 'rgba(200,220,255,0.8)');
+    grad.addColorStop(0.5, 'rgba(200,220,255,0.3)');
+    grad.addColorStop(1, 'rgba(200,220,255,0)');
+    
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(x + sway - w * 0.3, 0);
+    ctx.lineTo(x + sway + w * 0.3, 0);
+    ctx.lineTo(x + sway + w, H);
+    ctx.lineTo(x + sway - w, H);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ============================================================
+//  Floating Petals (ambient)
+// ============================================================
+const petals = [];
+
+class Petal {
+  constructor() {
+    this.reset();
+  }
+  
+  reset() {
+    this.x = Math.random() * W;
+    this.y = -20;
+    this.size = 3 + Math.random() * 4;
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 0.02;
+    this.fallSpeed = 0.2 + Math.random() * 0.3;
+    this.driftPhase = Math.random() * Math.PI * 2;
+    this.driftAmp = 0.5 + Math.random() * 1;
+    this.opacity = 0.2 + Math.random() * 0.3;
+    // Color - pink/white petals
+    const pinkShade = Math.random();
+    if (pinkShade > 0.5) {
+      this.color = `rgba(230, 170, 180, ${this.opacity})`;
+    } else if (pinkShade > 0.2) {
+      this.color = `rgba(245, 220, 225, ${this.opacity})`;
+    } else {
+      this.color = `rgba(255, 200, 200, ${this.opacity})`;
+    }
+  }
+  
+  update() {
+    this.y += this.fallSpeed;
+    this.driftPhase += 0.01;
+    this.x += Math.sin(this.driftPhase) * this.driftAmp;
+    this.rotation += this.rotSpeed;
+    
+    if (this.y > H + 20) this.reset();
+  }
+  
+  draw() {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, this.size, this.size * 0.5, 0, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ============================================================
+//  Audio System (Web Audio API)
+// ============================================================
+let audioCtx = null;
+let masterGain = null;
+let ambientOsc = null;
+let ambientGain = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.3;
+  masterGain.connect(audioCtx.destination);
+  
+  // Ambient water drone
+  ambientGain = audioCtx.createGain();
+  ambientGain.gain.value = 0;
+  ambientGain.connect(masterGain);
+  
+  // Low frequency drone (water ambience)
+  ambientOsc = audioCtx.createOscillator();
+  ambientOsc.type = 'sine';
+  ambientOsc.frequency.value = 80;
+  
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 200;
+  filter.Q.value = 1;
+  
+  ambientOsc.connect(filter);
+  filter.connect(ambientGain);
+  ambientOsc.start();
+  
+  // Second harmonic
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = 120;
+  const gain2 = audioCtx.createGain();
+  gain2.gain.value = 0.3;
+  osc2.connect(gain2);
+  gain2.connect(ambientGain);
+  osc2.start();
+  
+  // Fade in ambient
+  ambientGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 3);
+}
+
+function playRippleSound(x, y) {
+  if (!audioCtx || !soundEnabled) return;
+  
+  const osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  
+  // Pitch based on position (higher at top, lower at bottom)
+  const pitch = 300 + (1 - y / H) * 400 + Math.random() * 100;
+  osc.frequency.value = pitch;
+  
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.08;
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+  
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 800;
+  
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(masterGain);
+  
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.8);
+}
+
+function playFeedSound() {
+  if (!audioCtx || !soundEnabled) return;
+  
+  // Soft pluck sound
+  const osc = audioCtx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.value = 500 + Math.random() * 200;
+  
+  const gain = audioCtx.createGain();
+  gain.gain.value = 0.05;
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+  
+  osc.connect(gain);
+  gain.connect(masterGain);
+  
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.3);
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  const btn = document.getElementById('btn-sound');
+  
+  if (soundEnabled) {
+    initAudio();
+    btn.textContent = '🔊';
+    btn.classList.add('active');
+    if (ambientGain) {
+      ambientGain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 1);
+    }
+  } else {
+    btn.textContent = '🔇';
+    btn.classList.remove('active');
+    if (ambientGain && audioCtx) {
+      ambientGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+    }
+  }
+}
+
+// ============================================================
+//  Initialization
+// ============================================================
+function init() {
+  resize();
+  
+  // Create koi fish
+  const numKoi = Math.min(12, Math.max(6, Math.floor((W * H) / 80000)));
+  for (let i = 0; i < numKoi; i++) {
+    const palette = KOI_PALETTES[i % KOI_PALETTES.length];
+    const x = W * 0.2 + Math.random() * W * 0.6;
+    const y = H * 0.2 + Math.random() * H * 0.6;
+    koiList.push(new Koi(x, y, palette));
+  }
+  
+  // Sort by depth for rendering order
+  koiList.sort((a, b) => a.depth - b.depth);
+  
+  // Create lotus leaves
+  const numLotus = Math.min(5, Math.max(2, Math.floor((W * H) / 200000)));
+  for (let i = 0; i < numLotus; i++) {
+    lotusLeaves.push(new LotusLeaf());
+  }
+  
+  // Create petals
+  for (let i = 0; i < 8; i++) {
+    const p = new Petal();
+    p.y = Math.random() * H; // Start distributed
+    petals.push(p);
+  }
+  
+  // Update info
+  document.getElementById('info').textContent = `${numKoi} 尾 · ${lotusLeaves.length} 叶`;
+}
+
+// ============================================================
+//  Main Loop
+// ============================================================
+function animate(timestamp) {
+  time = timestamp || 0;
+  
+  // Clear
+  ctx.clearRect(0, 0, W, H);
+  
+  // Draw layers (back to front)
+  drawWater();
+  drawLightRays();
+  
+  // Lotus leaves (on water surface, behind fish)
+  for (const leaf of lotusLeaves) {
+    leaf.update();
+    leaf.draw();
+  }
+  
+  // Update and draw food
+  for (let i = foods.length - 1; i >= 0; i--) {
+    if (!foods[i].update()) {
+      foods.splice(i, 1);
+    } else {
+      foods[i].draw();
+    }
+  }
+  
+  // Update koi
+  for (const koi of koiList) {
+    koi.update(koiList, foods);
+  }
+  
+  // Draw koi (sorted by depth)
+  for (const koi of koiList) {
+    koi.draw();
+  }
+  
+  // Ripples (on top of everything)
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    if (!ripples[i].update()) {
+      ripples.splice(i, 1);
+    } else {
+      ripples[i].draw();
+    }
+  }
+  
+  // Petals (floating on surface)
+  for (const petal of petals) {
+    petal.update();
+    petal.draw();
+  }
+  
+  // Vignette overlay
+  drawVignette();
+  
+  requestAnimationFrame(animate);
+}
+
+function drawVignette() {
+  const grad = ctx.createRadialGradient(W * 0.5, H * 0.5, Math.min(W, H) * 0.3, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+  grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(1, isNight ? 'rgba(0,0,0,0.4)' : 'rgba(0,5,15,0.3)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// ============================================================
+//  Event Handlers
+// ============================================================
+
+// Mouse move
+document.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  cursor.style.left = mouseX + 'px';
+  cursor.style.top = mouseY + 'px';
+  
+  // Hide title on first interaction
+  if (!titleHidden) {
+    titleHidden = true;
+    document.getElementById('title').classList.add('hidden');
+    document.getElementById('hint').classList.add('hidden');
+  }
+});
+
+document.addEventListener('mouseleave', () => {
+  mouseX = -100;
+  mouseY = -100;
+});
+
+// Click / Touch - create ripple
+function handleInteraction(x, y) {
+  // Create ripple
+  ripples.push(new Ripple(x, y, 1));
+  
+  // Play sound
+  playRippleSound(x, y);
+  
+  // Scare nearby fish
+  for (const koi of koiList) {
+    const dx = koi.x - x;
+    const dy = koi.y - y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 200) {
+      koi.scared = Math.max(koi.scared, 1 - dist / 200);
+    }
+  }
+  
+  if (!titleHidden) {
+    titleHidden = true;
+    document.getElementById('title').classList.add('hidden');
+    document.getElementById('hint').classList.add('hidden');
+  }
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  mouseDown = true;
+  cursor.classList.add('active');
+  
+  if (feedMode) {
+    // Drop food
+    foods.push(new Food(e.clientX, e.clientY));
+    playFeedSound();
+  } else {
+    handleInteraction(e.clientX, e.clientY);
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  mouseDown = false;
+  cursor.classList.remove('active');
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (mouseDown && feedMode) {
+    // Scatter food while dragging
+    if (Math.random() > 0.7) {
+      foods.push(new Food(e.clientX + (Math.random() - 0.5) * 30, e.clientY + (Math.random() - 0.5) * 30));
+      playFeedSound();
+    }
+  }
+});
+
+// Touch support
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  mouseX = touch.clientX;
+  mouseY = touch.clientY;
+  
+  if (feedMode) {
+    foods.push(new Food(touch.clientX, touch.clientY));
+    playFeedSound();
+  } else {
+    handleInteraction(touch.clientX, touch.clientY);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  mouseX = touch.clientX;
+  mouseY = touch.clientY;
+  
+  if (feedMode && Math.random() > 0.7) {
+    foods.push(new Food(touch.clientX + (Math.random() - 0.5) * 20, touch.clientY + (Math.random() - 0.5) * 20));
+  }
+}, { passive: false });
+
+// Button controls
+document.getElementById('btn-sound').addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleSound();
+});
+
+document.getElementById('btn-feed').addEventListener('click', (e) => {
+  e.stopPropagation();
+  feedMode = !feedMode;
+  const btn = document.getElementById('btn-feed');
+  if (feedMode) {
+    btn.classList.add('active');
+    document.body.style.cursor = 'none';
+  } else {
+    btn.classList.remove('active');
+  }
+});
+
+document.getElementById('btn-night').addEventListener('click', (e) => {
+  e.stopPropagation();
+  isNight = !isNight;
+  const btn = document.getElementById('btn-night');
+  if (isNight) {
+    btn.classList.add('active');
+    btn.textContent = '☀';
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '☽';
+  }
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'n' || e.key === 'N') {
+    document.getElementById('btn-night').click();
+  }
+  if (e.key === 's' || e.key === 'S') {
+    document.getElementById('btn-sound').click();
+  }
+  if (e.key === 'f' || e.key === 'F') {
+    document.getElementById('btn-feed').click();
+  }
+});
+
+// ============================================================
+//  Start
+// ============================================================
+init();
+animate();
+
+// Auto-hide title after 6 seconds
+setTimeout(() => {
+  if (!titleHidden) {
+    titleHidden = true;
+    document.getElementById('title').classList.add('hidden');
+    document.getElementById('hint').classList.add('hidden');
+  }
+}, 6000);
+
+// Show controls on mouse near top-right
+document.addEventListener('mousemove', (e) => {
+  const controls = document.getElementById('controls');
+  if (e.clientX > W - 100 && e.clientY < 200) {
+    controls.classList.add('show');
+  } else {
+    controls.classList.remove('show');
+  }
+});
+
+console.log('🧶 鱼乐 · Fish Joy | by 绒球');
+console.log('子非鱼，安知鱼之乐？');
+console.log('操作: 点击水面产生涟漪 | N日夜 | S音效 | F喂食');
+</script>
+
+</body>
+</html>
