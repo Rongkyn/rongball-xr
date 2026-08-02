@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>涌 · Emergence</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  overflow: hidden;
+  background: #000;
+  font-family: 'Georgia', 'PingFang SC', serif;
+  cursor: crosshair;
+  user-select: none;
+}
+canvas { display: block; }
+
+#title {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 2s;
+}
+#title.hidden { opacity: 0; }
+#title h1 {
+  font-size: 4rem;
+  color: rgba(255,255,255,0.8);
+  font-weight: 300;
+  letter-spacing: 1.5rem;
+  text-shadow: 0 0 60px rgba(180,130,255,0.2);
+}
+#title p {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.5rem;
+  margin-top: 0.8rem;
+}
+#title .sub {
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.15);
+  margin-top: 1.5rem;
+  letter-spacing: 0.3rem;
+}
+
+/* 控制面板 */
+#panel {
+  position: fixed;
+  top: 16px; left: 16px;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 1s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#panel.show { opacity: 1; }
+
+.btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.4);
+  padding: 5px 12px;
+  border-radius: 12px;
+  font-size: 0.65rem;
+  cursor: pointer;
+  letter-spacing: 1px;
+  font-family: inherit;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+.btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.7);
+}
+.btn.active {
+  background: rgba(180,130,255,0.12);
+  border-color: rgba(180,130,255,0.25);
+  color: rgba(200,170,255,0.8);
+}
+
+/* 信息 */
+#info {
+  position: fixed;
+  bottom: 16px; right: 16px;
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.15);
+  text-align: right;
+  line-height: 1.8;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 1s;
+  letter-spacing: 1px;
+}
+#info.show { opacity: 1; }
+
+/* 吸引矩阵 */
+#matrix {
+  position: fixed;
+  top: 16px; right: 16px;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 1s;
+}
+#matrix.show { opacity: 1; }
+#matrix canvas {
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+#matrix-label {
+  font-size: 0.55rem;
+  color: rgba(255,255,255,0.15);
+  text-align: center;
+  margin-top: 4px;
+  letter-spacing: 2px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="title">
+  <h1>涌</h1>
+  <p>E M E R G E N C E</p>
+  <div class="sub">点击开始 · 观察从混沌中涌现的秩序</div>
+</div>
+
+<div id="panel">
+  <button class="btn" onclick="randomize()">随机规则</button>
+  <button class="btn" onclick="toggleTrails()">轨迹</button>
+  <button class="btn" onclick="cyclePreset()">切换预设</button>
+  <button class="btn" onclick="addParticles()">+粒子</button>
+  <button class="btn" onclick="reset()">重置</button>
+</div>
+
+<div id="matrix">
+  <canvas id="matrixCanvas" width="80" height="80"></canvas>
+  <div id="matrix-label">吸引矩阵</div>
+</div>
+
+<div id="info">
+  <span id="particleCount"></span><br>
+  <span id="fpsDisplay"></span>
+</div>
+
+<script>
+// ============================================
+// 涌 · Emergence - by 绒球 🧶🌸
+// 粒子生命模拟 - 简单规则涌现复杂行为
+// ============================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const matrixCanvas = document.getElementById('matrixCanvas');
+const mctx = matrixCanvas.getContext('2d');
+
+let W, H;
+let started = false;
+let showTrails = true;
+let particles = [];
+let attrMatrix = [];
+let presetIndex = 0;
+
+// 颜色方案
+const palettes = [
+  // 霓虹
+  ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#a29bfe'],
+  // 极光
+  ['#00f5d4', '#7b2ff7', '#f72585', '#4cc9f0', '#f9c74f'],
+  // 水墨
+  ['#e8e8e8', '#b0b0b0', '#808080', '#505050', '#303030'],
+  // 熔岩
+  ['#ff4500', '#ff6347', '#ffa500', '#ffd700', '#8b0000'],
+  // 海洋
+  ['#0077b6', '#00b4d8', '#90e0ef', '#caf0f8', '#023e8a'],
+];
+let currentPalette = 0;
+const COLORS = palettes[currentPalette];
+const NUM_TYPES = COLORS.length;
+const NUM_PARTICLES = 500;
+const INTERACTION_RADIUS = 80;
+const FRICTION = 0.92;
+const FORCE_FACTOR = 0.8;
+
+// FPS
+let lastTime = performance.now();
+let frameCount = 0;
+let fps = 0;
+
+class Particle {
+  constructor(x, y, type) {
+    this.x = x || Math.random() * W;
+    this.y = y || Math.random() * H;
+    this.vx = 0;
+    this.vy = 0;
+    this.type = type !== undefined ? type : Math.floor(Math.random() * NUM_TYPES);
+    this.trail = [];
+  }
+  
+  update(allParticles) {
+    let fx = 0, fy = 0;
+    
+    for (let i = 0; i < allParticles.length; i++) {
+      const other = allParticles[i];
+      if (other === this) continue;
+      
+      const dx = other.x - this.x;
+      const dy = other.y - this.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      if (dist < INTERACTION_RADIUS && dist > 1) {
+        const force = attrMatrix[this.type][other.type];
+        const normalizedDist = dist / INTERACTION_RADIUS;
+        
+        // 吸引力在中等距离最强，太近时排斥
+        let f;
+        if (normalizedDist < 0.3) {
+          f = (normalizedDist / 0.3 - 1) * 2; // 近距离排斥
+        } else {
+          f = force * (1 - Math.abs(2 * normalizedDist - 1.3) / 1.3);
+        }
+        
+        fx += (dx / dist) * f;
+        fy += (dy / dist) * f;
+      }
+    }
+    
+    this.vx = (this.vx + fx * FORCE_FACTOR) * FRICTION;
+    this.vy = (this.vy + fy * FORCE_FACTOR) * FRICTION;
+    
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    // 边界环绕
+    if (this.x < 0) this.x += W;
+    if (this.x > W) this.x -= W;
+    if (this.y < 0) this.y += H;
+    if (this.y > H) this.y -= H;
+    
+    // 轨迹
+    if (showTrails) {
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > 8) this.trail.shift();
+    } else {
+      this.trail = [];
+    }
+  }
+  
+  draw() {
+    const color = COLORS[this.type];
+    
+    // 轨迹
+    if (this.trail.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(this.trail[0].x, this.trail[0].y);
+      for (let i = 1; i < this.trail.length; i++) {
+        // 不画跨越边界的线
+        const dx = Math.abs(this.trail[i].x - this.trail[i-1].x);
+        const dy = Math.abs(this.trail[i].y - this.trail[i-1].y);
+        if (dx > W * 0.5 || dy > H * 0.5) {
+          ctx.moveTo(this.trail[i].x, this.trail[i].y);
+        } else {
+          ctx.lineTo(this.trail[i].x, this.trail[i].y);
+        }
+      }
+      ctx.strokeStyle = color + '20'; // 很淡的透明
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    
+    // 粒子本体
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    
+    // 光晕
+    const glow = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, 8);
+    glow.addColorStop(0, color + '25');
+    glow.addColorStop(1, color + '00');
+    ctx.fillStyle = glow;
+    ctx.fillRect(this.x - 8, this.y - 8, 16, 16);
+  }
+}
+
+function initMatrix() {
+  attrMatrix = [];
+  for (let i = 0; i < NUM_TYPES; i++) {
+    attrMatrix[i] = [];
+    for (let j = 0; j < NUM_TYPES; j++) {
+      attrMatrix[i][j] = Math.random() * 2 - 1; // -1 到 1
+    }
+  }
+}
+
+function drawMatrix() {
+  const size = 14;
+  const gap = 2;
+  mctx.clearRect(0, 0, 80, 80);
+  
+  for (let i = 0; i < NUM_TYPES; i++) {
+    for (let j = 0; j < NUM_TYPES; j++) {
+      const val = attrMatrix[i][j];
+      const x = j * (size + gap) + 4;
+      const y = i * (size + gap) + 4;
+      
+      if (val > 0) {
+        const alpha = Math.floor(val * 200 + 55).toString(16).padStart(2, '0');
+        mctx.fillStyle = '#4ecdc4' + alpha;
+      } else {
+        const alpha = Math.floor(-val * 200 + 55).toString(16).padStart(2, '0');
+        mctx.fillStyle = '#ff6b6b' + alpha;
+      }
+      
+      mctx.fillRect(x, y, size, size);
+    }
+  }
+  
+  // 颜色标签
+  for (let i = 0; i < NUM_TYPES; i++) {
+    mctx.fillStyle = COLORS[i];
+    mctx.fillRect(4 + i * (size + gap), 76, size, 3);
+    mctx.fillRect(76, 4 + i * (size + gap), 3, size);
+  }
+}
+
+function initParticles() {
+  particles = [];
+  for (let i = 0; i < NUM_PARTICLES; i++) {
+    particles.push(new Particle());
+  }
+}
+
+function randomize() {
+  initMatrix();
+  drawMatrix();
+}
+
+function toggleTrails() {
+  showTrails = !showTrails;
+  document.querySelectorAll('.btn')[1].classList.toggle('active', showTrails);
+}
+
+function cyclePreset() {
+  currentPalette = (currentPalette + 1) % palettes.length;
+  for (let i = 0; i < particles.length; i++) {
+    // 保持 type，只改颜色显示
+  }
+  // 更新 COLORS 引用
+  COLORS.length = 0;
+  palettes[currentPalette].forEach(c => COLORS.push(c));
+  
+  // 同时换一套吸引规则
+  const presets = [
+    () => { // 混沌
+      for (let i = 0; i < NUM_TYPES; i++)
+        for (let j = 0; j < NUM_TYPES; j++)
+          attrMatrix[i][j] = Math.random() * 2 - 1;
+    },
+    () => { // 群落
+      for (let i = 0; i < NUM_TYPES; i++)
+        for (let j = 0; j < NUM_TYPES; j++)
+          attrMatrix[i][j] = i === j ? 0.8 : -0.3 + Math.random() * 0.3;
+    },
+    () => { // 追逐
+      for (let i = 0; i < NUM_TYPES; i++)
+        for (let j = 0; j < NUM_TYPES; j++)
+          attrMatrix[i][j] = j === (i + 1) % NUM_TYPES ? 0.9 : -0.5;
+    },
+    () => { // 层级
+      for (let i = 0; i < NUM_TYPES; i++)
+        for (let j = 0; j < NUM_TYPES; j++)
+          attrMatrix[i][j] = i < j ? 0.5 : -0.8;
+    },
+    () => { // 对称吸引
+      for (let i = 0; i < NUM_TYPES; i++)
+        for (let j = 0; j < NUM_TYPES; j++) {
+          const v = Math.random() * 1.5 - 0.5;
+          attrMatrix[i][j] = v;
+          attrMatrix[j][i] = v;
+        }
+    },
+  ];
+  presets[presetIndex % presets.length]();
+  presetIndex++;
+  drawMatrix();
+}
+
+function addParticles() {
+  for (let i = 0; i < 50; i++) {
+    particles.push(new Particle());
+  }
+}
+
+function reset() {
+  initMatrix();
+  initParticles();
+  drawMatrix();
+}
+
+// 鼠标交互
+let mouseDown = false;
+canvas.addEventListener('mousedown', e => {
+  if (!started) {
+    started = true;
+    document.getElementById('title').classList.add('hidden');
+    document.getElementById('panel').classList.add('show');
+    document.getElementById('matrix').classList.add('show');
+    document.getElementById('info').classList.add('show');
+    document.querySelectorAll('.btn')[1].classList.add('active');
+    return;
+  }
+  mouseDown = true;
+});
+canvas.addEventListener('mouseup', () => mouseDown = false);
+canvas.addEventListener('mousemove', e => {
+  if (mouseDown) {
+    // 鼠标位置产生排斥力
+    for (const p of particles) {
+      const dx = p.x - e.clientX;
+      const dy = p.y - e.clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 100 && dist > 1) {
+        const force = (100 - dist) / 100 * 3;
+        p.vx += (dx / dist) * force;
+        p.vy += (dy / dist) * force;
+      }
+    }
+  }
+});
+
+// 触摸
+canvas.addEventListener('touchstart', e => {
+  if (!started) {
+    started = true;
+    document.getElementById('title').classList.add('hidden');
+    document.getElementById('panel').classList.add('show');
+    document.getElementById('matrix').classList.add('show');
+    document.getElementById('info').classList.add('show');
+    return;
+  }
+});
+
+function resize() {
+  W = canvas.width = innerWidth;
+  H = canvas.height = innerHeight;
+}
+
+// --- 空间分区优化 ---
+function updateWithGrid() {
+  // 简化版：直接 O(n²) 但限制距离检查
+  for (const p of particles) {
+    p.update(particles);
+  }
+}
+
+// --- 主循环 ---
+function loop() {
+  const now = performance.now();
+  frameCount++;
+  if (now - lastTime >= 1000) {
+    fps = frameCount;
+    frameCount = 0;
+    lastTime = now;
+  }
+  
+  // 背景（带拖尾效果）
+  ctx.fillStyle = showTrails ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,1)';
+  ctx.fillRect(0, 0, W, H);
+  
+  // 更新 & 绘制
+  if (started) {
+    for (const p of particles) {
+      p.update(particles);
+    }
+  }
+  for (const p of particles) {
+    p.draw();
+  }
+  
+  // 鼠标光晕
+  if (mouseDown) {
+    // 实际上 mouseDown 时 mousemove 才有效，这里画个指示
+  }
+  
+  // 信息
+  document.getElementById('particleCount').textContent = `粒子 ${particles.length}`;
+  document.getElementById('fpsDisplay').textContent = `${fps} fps`;
+  
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', resize);
+resize();
+initMatrix();
+initParticles();
+drawMatrix();
+loop();
+</script>
+</body>
+</html>

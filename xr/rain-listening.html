@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>听雨 · Rain Listening 🧶</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    overflow: hidden;
+    background: #0d1117;
+    font-family: 'Georgia', 'Noto Serif SC', 'PingFang SC', serif;
+    cursor: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  canvas { display: block; position: fixed; top: 0; left: 0; }
+  
+  /* 自定义光标 - 小雨滴 */
+  #cursor {
+    position: fixed;
+    width: 8px; height: 12px;
+    pointer-events: none;
+    z-index: 100;
+    transform: translate(-50%, -50%);
+    transition: opacity 0.3s;
+  }
+  #cursor::before {
+    content: '';
+    display: block;
+    width: 8px; height: 12px;
+    background: radial-gradient(ellipse at 50% 30%, rgba(180,210,255,0.6), rgba(120,160,220,0.2));
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    transform: rotate(-15deg);
+  }
+  
+  /* 标题 */
+  #title {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 2.5s ease;
+  }
+  #title.hidden { opacity: 0; }
+  #title h1 {
+    font-size: 5rem;
+    color: rgba(255,255,255,0.82);
+    font-weight: 300;
+    letter-spacing: 2rem;
+    text-shadow: 0 0 80px rgba(100,150,200,0.2);
+    margin-bottom: 0.8rem;
+  }
+  #title p {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.6rem;
+  }
+  #title .sub {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.18);
+    margin-top: 2rem;
+    letter-spacing: 0.3rem;
+  }
+  
+  /* 混音面板 */
+  #mixer {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 28px;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    padding: 18px 32px;
+    background: rgba(8,10,18,0.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  #mixer.show { opacity: 1; }
+  
+  .channel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    min-width: 52px;
+    transition: opacity 0.3s;
+  }
+  .channel-label {
+    font-size: 0.65rem;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 2px;
+  }
+  .channel-icon {
+    font-size: 1.1rem;
+    opacity: 0.5;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .channel:hover .channel-icon { opacity: 0.9; transform: scale(1.1); }
+  
+  .slider-wrap {
+    width: 3px;
+    height: 70px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    position: relative;
+    cursor: pointer;
+  }
+  .slider-fill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    border-radius: 2px;
+    transition: height 0.12s ease;
+  }
+  .slider-knob {
+    position: absolute;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    left: 50%;
+    transform: translate(-50%, 50%);
+    transition: bottom 0.12s ease, box-shadow 0.3s;
+  }
+  .channel[data-ch="bamboo"] .slider-fill { background: linear-gradient(to top, rgba(100,160,90,0.5), rgba(120,180,100,0.2)); }
+  .channel[data-ch="bamboo"] .slider-knob { background: rgba(120,180,100,0.7); box-shadow: 0 0 6px rgba(120,180,100,0.3); }
+  .channel[data-ch="stone"] .slider-fill { background: linear-gradient(to top, rgba(180,180,190,0.5), rgba(200,200,210,0.2)); }
+  .channel[data-ch="stone"] .slider-knob { background: rgba(200,200,210,0.7); box-shadow: 0 0 6px rgba(200,200,210,0.3); }
+  .channel[data-ch="water"] .slider-fill { background: linear-gradient(to top, rgba(100,160,220,0.5), rgba(130,180,230,0.2)); }
+  .channel[data-ch="water"] .slider-knob { background: rgba(130,180,230,0.7); box-shadow: 0 0 6px rgba(130,180,230,0.3); }
+  .channel[data-ch="distant"] .slider-fill { background: linear-gradient(to top, rgba(140,140,180,0.5), rgba(160,160,200,0.2)); }
+  .channel[data-ch="distant"] .slider-knob { background: rgba(160,160,200,0.7); box-shadow: 0 0 6px rgba(160,160,200,0.3); }
+  
+  /* 雨强 */
+  #intensity {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    text-align: center;
+  }
+  #intensity.show { opacity: 1; }
+  #intensity-label {
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.2);
+    letter-spacing: 3px;
+  }
+  #intensity-value {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.35);
+    margin-top: 4px;
+    letter-spacing: 2px;
+  }
+  
+  /* 提示 */
+  #hint {
+    position: fixed;
+    top: 20px;
+    left: 24px;
+    font-size: 0.6rem;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 1px;
+    z-index: 50;
+    opacity: 0;
+    transition: opacity 1.5s;
+    line-height: 1.8;
+  }
+  #hint.show { opacity: 1; }
+  
+  /* 点击涟漪 */
+  .click-ripple {
+    position: fixed;
+    border: 1px solid rgba(180,210,255,0.3);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 40;
+    animation: clickRipple 1.2s ease-out forwards;
+  }
+  @keyframes clickRipple {
+    0% { width: 0; height: 0; opacity: 1; }
+    100% { width: 100px; height: 100px; opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="cursor"></div>
+
+<div id="title">
+  <h1>听雨</h1>
+  <p>R A I N &nbsp; L I S T E N I N G</p>
+  <div class="sub">点击开始 · Click to begin</div>
+</div>
+
+<div id="mixer">
+  <div class="channel" data-ch="bamboo">
+    <div class="channel-icon">🎋</div>
+    <div class="channel-label">竹</div>
+    <div class="slider-wrap">
+      <div class="slider-fill" style="height:70%"></div>
+      <div class="slider-knob" style="bottom:70%"></div>
+    </div>
+  </div>
+  <div class="channel" data-ch="stone">
+    <div class="channel-icon">🪨</div>
+    <div class="channel-label">石</div>
+    <div class="slider-wrap">
+      <div class="slider-fill" style="height:50%"></div>
+      <div class="slider-knob" style="bottom:50%"></div>
+    </div>
+  </div>
+  <div class="channel" data-ch="water">
+    <div class="channel-icon">💧</div>
+    <div class="channel-label">水</div>
+    <div class="slider-wrap">
+      <div class="slider-fill" style="height:60%"></div>
+      <div class="slider-knob" style="bottom:60%"></div>
+    </div>
+  </div>
+  <div class="channel" data-ch="distant">
+    <div class="channel-icon">🌧️</div>
+    <div class="channel-label">远</div>
+    <div class="slider-wrap">
+      <div class="slider-fill" style="height:40%"></div>
+      <div class="slider-knob" style="bottom:40%"></div>
+    </div>
+  </div>
+</div>
+
+<div id="intensity">
+  <div id="intensity-label">雨 势</div>
+  <div id="intensity-value">细雨</div>
+</div>
+
+<div id="hint">
+  点击水面产生涟漪<br>
+  拖动滑块混合雨声
+</div>
+
+<script>
+// ============================================
+// 听雨 · Rain Listening v2 - by 绒球 🧶🌸
+// 水墨雨景 × 程序化音频 × 交互混音
+// ============================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const cursorEl = document.getElementById('cursor');
+const titleEl = document.getElementById('title');
+const mixerEl = document.getElementById('mixer');
+const intensityEl = document.getElementById('intensity');
+const hintEl = document.getElementById('hint');
+
+let W, H;
+let started = false;
+let mx = -100, my = -100;
+let audioCtx = null;
+let audioReady = false;
+let time = 0;
+
+// 频道音量
+const vol = { bamboo: 0.7, stone: 0.5, water: 0.6, distant: 0.4 };
+const gainNodes = {};
+
+// --- 初始化 ---
+function resize() {
+  W = canvas.width = innerWidth;
+  H = canvas.height = innerHeight;
+  buildTerrain();
+}
+
+// --- 地形 ---
+let terrain = { layers: [], waterY: 0 };
+
+function buildTerrain() {
+  terrain.waterY = H * 0.83;
+  terrain.layers = [];
+  
+  // 三层山
+  const layerConfigs = [
+    { baseRatio: 0.52, ampRatio: 0.18, alpha: 0.12, segments: 10 },
+    { baseRatio: 0.62, ampRatio: 0.12, alpha: 0.16, segments: 14 },
+    { baseRatio: 0.72, ampRatio: 0.08, alpha: 0.22, segments: 18 },
+  ];
+  
+  layerConfigs.forEach((cfg, li) => {
+    const pts = [];
+    const baseY = H * cfg.baseRatio;
+    const amp = H * cfg.ampRatio;
+    for (let i = 0; i <= cfg.segments; i++) {
+      const x = (W / cfg.segments) * i;
+      const noise = Math.sin(i * 0.9 + li * 3.1) * 0.6 + Math.sin(i * 1.7 + li * 1.3) * 0.4;
+      const y = baseY - Math.abs(noise) * amp;
+      pts.push({ x, y });
+    }
+    terrain.layers.push({ pts, alpha: cfg.alpha, layer: li });
+  });
+}
+
+// --- 雨滴 ---
+const drops = [];
+const splashes = [];
+const ripples = [];
+
+class Drop {
+  constructor() { this.reset(true); }
+  reset(init) {
+    this.x = Math.random() * W * 1.3 - W * 0.15;
+    this.y = init ? Math.random() * H : -10 - Math.random() * 80;
+    this.vy = 8 + Math.random() * 7;
+    this.vx = -2 + Math.random() * 0.8;
+    this.len = 12 + Math.random() * 22;
+    this.alpha = 0.08 + Math.random() * 0.2;
+    this.hitY = H * (0.5 + Math.random() * 0.45);
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.y >= this.hitY) {
+      const type = this.hitY < H * 0.68 ? 'bamboo' : this.hitY < H * 0.83 ? 'stone' : 'water';
+      // 溅射
+      if (type === 'stone' || type === 'water') {
+        for (let i = 0; i < 2 + Math.random() * 3; i++) {
+          splashes.push(new Splash(this.x, this.hitY, type));
+        }
+      }
+      // 涟漪
+      if (Math.random() < 0.4) {
+        ripples.push(new Ripple(this.x, this.hitY, type));
+      }
+      // 声音
+      if (audioReady && Math.random() < 0.15) {
+        playDropSound(type, this.x / W);
+      }
+      this.reset(false);
+    }
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.moveTo(this.x, this.y);
+    ctx.lineTo(this.x + this.vx * 1.5, this.y - this.len);
+    ctx.strokeStyle = `rgba(170,200,230,${this.alpha})`;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+}
+
+class Splash {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    const angle = -Math.PI * 0.5 + (Math.random() - 0.5) * Math.PI * 0.6;
+    const speed = 1.5 + Math.random() * 3;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.life = 1;
+    this.decay = 0.03 + Math.random() * 0.03;
+    this.size = 1 + Math.random() * 1.5;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.15; // gravity
+    this.life -= this.decay;
+  }
+  draw() {
+    if (this.life <= 0) return;
+    const a = this.life * 0.4;
+    const c = this.type === 'water' ? `rgba(150,190,230,${a})` : `rgba(200,200,210,${a})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fillStyle = c;
+    ctx.fill();
+  }
+}
+
+class Ripple {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.r = 0;
+    this.maxR = type === 'water' ? 20 + Math.random() * 20 : 6 + Math.random() * 6;
+    this.alpha = type === 'water' ? 0.35 : 0.2;
+    this.speed = type === 'water' ? 0.6 : 0.4;
+  }
+  update() {
+    this.r += this.speed;
+    this.alpha *= 0.98;
+  }
+  draw() {
+    if (this.alpha < 0.01) return;
+    ctx.beginPath();
+    ctx.ellipse(this.x, this.y, this.r, this.r * 0.35, 0, 0, Math.PI * 2);
+    let c;
+    if (this.type === 'bamboo') c = `rgba(100,160,90,${this.alpha})`;
+    else if (this.type === 'stone') c = `rgba(190,190,200,${this.alpha})`;
+    else c = `rgba(130,175,220,${this.alpha})`;
+    ctx.strokeStyle = c;
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+  get alive() { return this.alpha > 0.01 && this.r < this.maxR; }
+}
+
+// --- 雾气 ---
+class Mote {
+  constructor() {
+    this.x = Math.random() * W;
+    this.y = H * (0.35 + Math.random() * 0.35);
+    this.size = 60 + Math.random() * 120;
+    this.baseA = 0.015 + Math.random() * 0.03;
+    this.speed = 0.08 + Math.random() * 0.15;
+    this.phase = Math.random() * Math.PI * 2;
+  }
+  update() {
+    this.x += this.speed;
+    if (this.x > W + this.size) this.x = -this.size;
+  }
+  draw() {
+    const a = this.baseA * (0.6 + 0.4 * Math.sin(time * 0.0006 + this.phase));
+    const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+    g.addColorStop(0, `rgba(140,160,185,${a})`);
+    g.addColorStop(1, `rgba(140,160,185,0)`);
+    ctx.fillStyle = g;
+    ctx.fillRect(this.x - this.size, this.y - this.size, this.size * 2, this.size * 2);
+  }
+}
+
+// --- 月亮 ---
+function drawMoon() {
+  const moonX = W * 0.78;
+  const moonY = H * 0.12;
+  const r = 25;
+  
+  // 月晕
+  const glow = ctx.createRadialGradient(moonX, moonY, r * 0.5, moonX, moonY, r * 5);
+  glow.addColorStop(0, 'rgba(200,210,230,0.04)');
+  glow.addColorStop(0.5, 'rgba(180,195,220,0.015)');
+  glow.addColorStop(1, 'rgba(180,195,220,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(moonX - r * 5, moonY - r * 5, r * 10, r * 10);
+  
+  // 月亮本体（被云遮住一些）
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, r, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(210,220,235,0.08)';
+  ctx.fill();
+  
+  // 月亮内部纹理
+  ctx.beginPath();
+  ctx.arc(moonX - 5, moonY - 3, r * 0.85, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(190,200,220,0.03)';
+  ctx.fill();
+}
+
+// --- 云 ---
+function drawClouds() {
+  const drift = time * 0.008;
+  
+  for (let i = 0; i < 4; i++) {
+    const cx = ((W * 0.2 * i + drift * (0.5 + i * 0.2)) % (W + 300)) - 150;
+    const cy = H * (0.05 + i * 0.06);
+    const w = 200 + i * 60;
+    const h = 30 + i * 10;
+    
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, w * 0.5);
+    g.addColorStop(0, `rgba(60,70,85,${0.12 - i * 0.02})`);
+    g.addColorStop(0.6, `rgba(50,60,75,${0.06 - i * 0.01})`);
+    g.addColorStop(1, 'rgba(50,60,75,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(cx - w * 0.5, cy - h, w, h * 2);
+  }
+}
+
+// --- 山 ---
+function drawMountains() {
+  terrain.layers.forEach((mtn, idx) => {
+    const sway = Math.sin(time * 0.0002 + idx) * 1.5;
+    
+    ctx.beginPath();
+    mtn.pts.forEach((p, i) => {
+      const y = p.y + sway + Math.sin(time * 0.0003 + i * 0.5) * 1;
+      if (i === 0) ctx.moveTo(p.x, y);
+      else {
+        const prev = mtn.pts[i-1];
+        const prevY = prev.y + sway + Math.sin(time * 0.0003 + (i-1) * 0.5) * 1;
+        const cpx = (prev.x + p.x) / 2;
+        const cpy = (prevY + y) / 2;
+        ctx.quadraticCurveTo(prev.x, prevY, cpx, cpy);
+      }
+    });
+    ctx.lineTo(W + 10, H + 10);
+    ctx.lineTo(-10, H + 10);
+    ctx.closePath();
+    
+    // 填充
+    const grad = ctx.createLinearGradient(0, mtn.pts[0].y - 30, 0, H);
+    const a = mtn.alpha;
+    grad.addColorStop(0, `rgba(25,38,55,${a + 0.08})`);
+    grad.addColorStop(0.5, `rgba(18,28,42,${a + 0.12})`);
+    grad.addColorStop(1, `rgba(12,18,28,${a + 0.08})`);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    
+    // 轮廓
+    ctx.beginPath();
+    mtn.pts.forEach((p, i) => {
+      const y = p.y + sway + Math.sin(time * 0.0003 + i * 0.5) * 1;
+      if (i === 0) ctx.moveTo(p.x, y);
+      else {
+        const prev = mtn.pts[i-1];
+        const prevY = prev.y + sway + Math.sin(time * 0.0003 + (i-1) * 0.5) * 1;
+        ctx.quadraticCurveTo(prev.x, prevY, (prev.x + p.x)/2, (prevY + y)/2);
+      }
+    });
+    ctx.strokeStyle = `rgba(90,120,155,${0.06 - idx * 0.015})`;
+    ctx.lineWidth = 1.2 - idx * 0.3;
+    ctx.stroke();
+  });
+}
+
+// --- 远亭 ---
+function drawPavilion() {
+  const px = W * 0.62;
+  const py = terrain.layers[1].pts[4]?.y || H * 0.6;
+  const scale = 0.7;
+  
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.strokeStyle = 'rgba(150,170,200,1)';
+  ctx.lineWidth = 1;
+  
+  // 柱子
+  ctx.beginPath();
+  ctx.moveTo(px - 12 * scale, py);
+  ctx.lineTo(px - 12 * scale, py - 25 * scale);
+  ctx.moveTo(px + 12 * scale, py);
+  ctx.lineTo(px + 12 * scale, py - 25 * scale);
+  ctx.stroke();
+  
+  // 屋顶
+  ctx.beginPath();
+  ctx.moveTo(px - 20 * scale, py - 25 * scale);
+  ctx.quadraticCurveTo(px, py - 38 * scale, px + 20 * scale, py - 25 * scale);
+  ctx.stroke();
+  
+  // 顶饰
+  ctx.beginPath();
+  ctx.moveTo(px, py - 38 * scale);
+  ctx.lineTo(px, py - 42 * scale);
+  ctx.stroke();
+  
+  ctx.restore();
+}
+
+// --- 竹子/树枝 ---
+function drawFoliage() {
+  const branches = [
+    { x: W * 0.02, y: H * 0.08, angle: -0.25, len: 200, leaves: 8 },
+    { x: W * 0.95, y: H * 0.03, angle: 0.2, len: 220, leaves: 9 },
+    { x: W * 0.12, y: -15, angle: -0.55, len: 170, leaves: 7 },
+    { x: W * 0.88, y: -8, angle: 0.45, len: 180, leaves: 7 },
+    { x: W * -0.02, y: H * 0.35, angle: -0.15, len: 140, leaves: 5 },
+    { x: W * 1.02, y: H * 0.3, angle: 0.1, len: 130, leaves: 5 },
+  ];
+  
+  branches.forEach((b, bi) => {
+    const sway = Math.sin(time * 0.0006 + bi * 1.8) * 0.04;
+    
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(b.angle + sway);
+    
+    // 枝干
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    const endX = b.len * 0.15 * Math.sin(b.angle);
+    ctx.quadraticCurveTo(b.len * 0.3, b.len * 0.5, endX, b.len);
+    ctx.strokeStyle = `rgba(70,90,70,${0.12 + Math.sin(time*0.0003+bi)*0.02})`;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+    
+    // 叶
+    for (let i = 0; i < b.leaves; i++) {
+      const t = 0.15 + (i / b.leaves) * 0.8;
+      const lx = b.len * 0.3 * t * (1-t) * 2 + endX * t;
+      const ly = b.len * t;
+      const leafA = Math.sin(time * 0.0008 + i * 0.7 + bi) * 0.12 + (i % 2 ? 0.45 : -0.45);
+      
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(leafA);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 2.5, 16, 0, 0, Math.PI * 2);
+      const la = 0.06 + Math.sin(time*0.001+i)*0.015;
+      ctx.fillStyle = `rgba(55,85,55,${la})`;
+      ctx.fill();
+      ctx.restore();
+    }
+    
+    ctx.restore();
+  });
+}
+
+// --- 水面 ---
+function drawWater() {
+  const wy = terrain.waterY;
+  
+  // 水面色
+  const wg = ctx.createLinearGradient(0, wy, 0, H);
+  wg.addColorStop(0, 'rgba(12,22,38,0.4)');
+  wg.addColorStop(1, 'rgba(8,15,25,0.7)');
+  ctx.fillStyle = wg;
+  ctx.fillRect(0, wy, W, H - wy);
+  
+  // 水波纹
+  ctx.lineWidth = 0.6;
+  for (let i = 0; i < 10; i++) {
+    const y = wy + 8 + i * 12;
+    ctx.beginPath();
+    for (let x = 0; x < W; x += 2) {
+      const wave = Math.sin(x * 0.008 + time * 0.0008 + i * 0.8) * 2.5
+                 + Math.sin(x * 0.015 + time * 0.0012 + i * 1.2) * 1.2;
+      if (x === 0) ctx.moveTo(x, y + wave);
+      else ctx.lineTo(x, y + wave);
+    }
+    ctx.strokeStyle = `rgba(80,120,165,${0.03 - i * 0.002})`;
+    ctx.stroke();
+  }
+  
+  // 山倒影
+  ctx.save();
+  ctx.globalAlpha = 0.025;
+  ctx.translate(0, wy * 2);
+  ctx.scale(1, -1);
+  if (terrain.layers.length > 0) {
+    const mtn = terrain.layers[0];
+    ctx.beginPath();
+    mtn.pts.forEach((p, i) => {
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(50,80,120,1)';
+    ctx.fill();
+  }
+  ctx.restore();
+  
+  // 荷叶（水面装饰）
+  drawLotusLeaf(W * 0.3, wy + 20, 28);
+  drawLotusLeaf(W * 0.7, wy + 35, 22);
+}
+
+function drawLotusLeaf(lx, ly, r) {
+  const sway = Math.sin(time * 0.0005 + lx) * 2;
+  
+  ctx.save();
+  ctx.translate(lx + sway, ly);
+  ctx.rotate(Math.sin(time * 0.0003 + lx) * 0.05);
+  
+  // 叶片
+  ctx.beginPath();
+  ctx.ellipse(0, 0, r, r * 0.35, 0.1, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(40,65,40,0.08)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(60,90,60,0.05)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  
+  // 叶脉
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.7, 0);
+  ctx.lineTo(r * 0.7, 0);
+  ctx.strokeStyle = 'rgba(60,90,60,0.04)';
+  ctx.stroke();
+  
+  ctx.restore();
+}
+
+// --- 屋檐 ---
+function drawEaves() {
+  // 深色屋檐
+  ctx.fillStyle = 'rgba(10,12,18,0.85)';
+  ctx.beginPath();
+  ctx.moveTo(-10, -10);
+  ctx.lineTo(W + 10, -10);
+  ctx.lineTo(W + 10, 30);
+  ctx.quadraticCurveTo(W * 0.5, 42, -10, 30);
+  ctx.closePath();
+  ctx.fill();
+  
+  // 瓦当纹理
+  ctx.strokeStyle = 'rgba(50,55,65,0.15)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < W; x += 30) {
+    ctx.beginPath();
+    ctx.arc(x + 15, 32, 8, 0, Math.PI, false);
+    ctx.stroke();
+  }
+  
+  // 屋檐边线
+  ctx.beginPath();
+  ctx.moveTo(-10, 30);
+  ctx.quadraticCurveTo(W * 0.5, 42, W + 10, 30);
+  ctx.strokeStyle = 'rgba(80,90,100,0.2)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  
+  // 檐下雨线
+  const dripPoints = [0.12, 0.28, 0.5, 0.72, 0.88];
+  dripPoints.forEach((ratio, i) => {
+    const x = W * ratio;
+    const baseY = 30 + Math.sin(ratio * Math.PI) * 12;
+    
+    // 悬挂的水滴将落未落
+    const phase = Math.sin(time * 0.002 + i * 2);
+    if (phase > 0.7) {
+      const dropY = baseY + (phase - 0.7) * 30;
+      ctx.beginPath();
+      ctx.ellipse(x, dropY, 1.5, 2.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(150,180,210,${(phase - 0.7) * 0.5})`;
+      ctx.fill();
+    }
+  });
+}
+
+// --- 天空 ---
+function drawSky() {
+  const sg = ctx.createLinearGradient(0, 0, 0, H);
+  sg.addColorStop(0, '#0a0e16');
+  sg.addColorStop(0.25, '#0f1520');
+  sg.addColorStop(0.5, '#141d2b');
+  sg.addColorStop(0.75, '#172130');
+  sg.addColorStop(1, '#0e1520');
+  ctx.fillStyle = sg;
+  ctx.fillRect(0, 0, W, H);
+}
+
+// --- 音频系统 ---
+function initAudio() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const master = audioCtx.createGain();
+    master.gain.value = 0.5;
+    master.connect(audioCtx.destination);
+    
+    // 噪声缓冲
+    const sr = audioCtx.sampleRate;
+    const noiseBuf = audioCtx.createBuffer(2, sr * 4, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = noiseBuf.getChannelData(ch);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    
+    // 各频道 gain
+    ['bamboo', 'stone', 'water', 'distant'].forEach(name => {
+      const g = audioCtx.createGain();
+      g.gain.value = vol[name];
+      g.connect(master);
+      gainNodes[name] = g;
+    });
+    
+    // 远雨底噪（持续粉红噪声）
+    const distSrc = audioCtx.createBufferSource();
+    distSrc.buffer = noiseBuf;
+    distSrc.loop = true;
+    const distLP = audioCtx.createBiquadFilter();
+    distLP.type = 'lowpass';
+    distLP.frequency.value = 700;
+    const distHP = audioCtx.createBiquadFilter();
+    distHP.type = 'highpass';
+    distHP.frequency.value = 80;
+    distSrc.connect(distHP);
+    distHP.connect(distLP);
+    distLP.connect(gainNodes.distant);
+    distSrc.start();
+    
+    // 竹叶沙沙（带通噪声 + LFO）
+    const bamSrc = audioCtx.createBufferSource();
+    bamSrc.buffer = noiseBuf;
+    bamSrc.loop = true;
+    const bamBP = audioCtx.createBiquadFilter();
+    bamBP.type = 'bandpass';
+    bamBP.frequency.value = 2800;
+    bamBP.Q.value = 0.7;
+    const lfo = audioCtx.createOscillator();
+    lfo.frequency.value = 0.25;
+    const lfoG = audioCtx.createGain();
+    lfoG.gain.value = 0.08;
+    lfo.connect(lfoG);
+    lfoG.connect(gainNodes.bamboo.gain);
+    lfo.start();
+    bamSrc.connect(bamBP);
+    bamBP.connect(gainNodes.bamboo);
+    bamSrc.start();
+    
+    // 水面低频（持续）
+    const watSrc = audioCtx.createBufferSource();
+    watSrc.buffer = noiseBuf;
+    watSrc.loop = true;
+    const watLP = audioCtx.createBiquadFilter();
+    watLP.type = 'lowpass';
+    watLP.frequency.value = 400;
+    watSrc.connect(watLP);
+    watLP.connect(gainNodes.water);
+    watSrc.start();
+    
+    // 石面环境
+    const stnSrc = audioCtx.createBufferSource();
+    stnSrc.buffer = noiseBuf;
+    stnSrc.loop = true;
+    const stnHP = audioCtx.createBiquadFilter();
+    stnHP.type = 'highpass';
+    stnHP.frequency.value = 1500;
+    const stnG = audioCtx.createGain();
+    stnG.gain.value = 0.3;
+    stnSrc.connect(stnHP);
+    stnHP.connect(stnG);
+    stnG.connect(gainNodes.stone);
+    stnSrc.start();
+    
+    audioReady = true;
+  } catch(e) {
+    console.warn('Audio init failed:', e);
+  }
+}
+
+function playDropSound(type, panPos) {
+  if (!audioCtx || !audioReady) return;
+  const now = audioCtx.currentTime;
+  const pan = audioCtx.createStereoPanner();
+  pan.pan.value = panPos * 2 - 1;
+  
+  if (type === 'bamboo') {
+    // 竹叶：短促高频
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 1100 + Math.random() * 800;
+    const env = audioCtx.createGain();
+    env.gain.setValueAtTime(0.1, now);
+    env.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+    osc.connect(env);
+    env.connect(pan);
+    pan.connect(gainNodes.bamboo);
+    osc.start(now);
+    osc.stop(now + 0.08);
+    
+  } else if (type === 'stone') {
+    // 石阶：清脆
+    const osc = audioCtx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = 2200 + Math.random() * 1200;
+    const osc2 = audioCtx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.value = 3800 + Math.random() * 600;
+    const env = audioCtx.createGain();
+    env.gain.setValueAtTime(0.06, now);
+    env.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.connect(env);
+    osc2.connect(env);
+    env.connect(pan);
+    pan.connect(gainNodes.stone);
+    osc.start(now); osc2.start(now);
+    osc.stop(now + 0.15); osc2.stop(now + 0.15);
+    
+  } else if (type === 'water') {
+    // 水面：柔和低频
+    const osc = audioCtx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(250 + Math.random() * 100, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.2);
+    const env = audioCtx.createGain();
+    env.gain.setValueAtTime(0.08, now);
+    env.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 500;
+    osc.connect(env);
+    env.connect(lp);
+    lp.connect(pan);
+    pan.connect(gainNodes.water);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
+}
+
+// --- 光标尾迹 ---
+const trail = [];
+function drawTrail() {
+  if (mx < 0 || trail.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(trail[0].x, trail[0].y);
+  for (let i = 1; i < trail.length; i++) {
+    ctx.lineTo(trail[i].x, trail[i].y);
+  }
+  ctx.strokeStyle = 'rgba(160,190,220,0.06)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+// --- 主循环 ---
+const motes = [];
+function init() {
+  resize();
+  for (let i = 0; i < 180; i++) drops.push(new Drop());
+  for (let i = 0; i < 15; i++) motes.push(new Mote());
+  loop();
+}
+
+function loop() {
+  time = performance.now();
+  
+  drawSky();
+  drawMoon();
+  drawClouds();
+  motes.forEach(m => { m.update(); m.draw(); });
+  drawMountains();
+  drawPavilion();
+  drawFoliage();
+  drawWater();
+  drawEaves();
+  
+  // 雨
+  const activeCount = started ? drops.length : 30;
+  for (let i = 0; i < activeCount; i++) {
+    drops[i].update();
+    drops[i].draw();
+  }
+  
+  // 溅射
+  for (let i = splashes.length - 1; i >= 0; i--) {
+    splashes[i].update();
+    splashes[i].draw();
+    if (splashes[i].life <= 0) splashes.splice(i, 1);
+  }
+  
+  // 涟漪
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    ripples[i].update();
+    ripples[i].draw();
+    if (!ripples[i].alive) ripples.splice(i, 1);
+  }
+  
+  // 光标
+  trail.push({ x: mx, y: my, t: time });
+  while (trail.length > 0 && time - trail[0].t > 600) trail.shift();
+  drawTrail();
+  
+  // 渐晕
+  const vig = ctx.createRadialGradient(W/2, H/2, W*0.25, W/2, H/2, W*0.75);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+  
+  requestAnimationFrame(loop);
+}
+
+// --- 交互 ---
+addEventListener('resize', resize);
+
+addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursorEl.style.left = mx + 'px';
+  cursorEl.style.top = my + 'px';
+});
+
+function start() {
+  if (started) return;
+  started = true;
+  titleEl.classList.add('hidden');
+  setTimeout(() => {
+    mixerEl.classList.add('show');
+    intensityEl.classList.add('show');
+    hintEl.classList.add('show');
+  }, 1200);
+  if (!audioReady) initAudio();
+}
+
+addEventListener('click', e => {
+  // 避免点到滑块时触发
+  if (e.target.closest('#mixer')) return;
+  start();
+  
+  // 点击涟漪
+  const rip = document.createElement('div');
+  rip.className = 'click-ripple';
+  rip.style.left = (e.clientX - 50) + 'px';
+  rip.style.top = (e.clientY - 50) + 'px';
+  document.body.appendChild(rip);
+  setTimeout(() => rip.remove(), 1200);
+  
+  // 点击水面
+  if (audioReady && e.clientY > terrain.waterY) {
+    playDropSound('water', e.clientX / W);
+    for (let i = 0; i < 3; i++) {
+      ripples.push(new Ripple(
+        e.clientX + (Math.random()-0.5) * 25,
+        terrain.waterY + 5 + Math.random() * 15,
+        'water'
+      ));
+    }
+    // 溅射
+    for (let i = 0; i < 6; i++) {
+      splashes.push(new Splash(e.clientX, terrain.waterY, 'water'));
+    }
+  }
+});
+
+// 混音面板
+document.querySelectorAll('.slider-wrap').forEach(wrap => {
+  const ch = wrap.closest('.channel').dataset.ch;
+  
+  function update(e) {
+    const rect = wrap.getBoundingClientRect();
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    let ratio = 1 - (cy - rect.top) / rect.height;
+    ratio = Math.max(0, Math.min(1, ratio));
+    vol[ch] = ratio;
+    wrap.querySelector('.slider-fill').style.height = (ratio * 100) + '%';
+    wrap.querySelector('.slider-knob').style.bottom = (ratio * 100) + '%';
+    if (audioReady && gainNodes[ch]) {
+      gainNodes[ch].gain.setTargetAtTime(ratio, audioCtx.currentTime, 0.08);
+    }
+    updateIntensity();
+  }
+  
+  let drag = false;
+  wrap.addEventListener('mousedown', e => { drag = true; update(e); e.stopPropagation(); });
+  wrap.addEventListener('touchstart', e => { drag = true; update(e); e.stopPropagation(); }, {passive: true});
+  addEventListener('mousemove', e => { if (drag) update(e); });
+  addEventListener('touchmove', e => { if (drag) update(e); }, {passive: true});
+  addEventListener('mouseup', () => drag = false);
+  addEventListener('touchend', () => drag = false);
+});
+
+function updateIntensity() {
+  const avg = (vol.bamboo + vol.stone + vol.water + vol.distant) / 4;
+  const el = document.getElementById('intensity-value');
+  if (avg < 0.15) el.textContent = '无雨';
+  else if (avg < 0.3) el.textContent = '微雨';
+  else if (avg < 0.5) el.textContent = '细雨';
+  else if (avg < 0.7) el.textContent = '小雨';
+  else if (avg < 0.85) el.textContent = '中雨';
+  else el.textContent = '大雨';
+}
+
+addEventListener('keydown', e => { if (e.key === ' ') { e.preventDefault(); start(); } });
+
+init();
+</script>
+</body>
+</html>
