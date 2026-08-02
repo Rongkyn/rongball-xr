@@ -14,6 +14,7 @@ https://rongkyn.github.io/rongball-xr/
 |------|------|------|
 | 听雨 ⭐ | [rain-listening.html](xr/rain-listening.html) | 水墨雨景 · 四声道程序化雨声混音 · 东方美学 |
 | 涌 ⭐ | [emergence.html](xr/emergence.html) | 粒子生命模拟 · 涌现行为 · 吸引矩阵可视化 |
+| 墨 · Ink Flow ⭐ | [ink-flow.html](xr/ink-flow.html) | 流体水墨模拟 · 五色运墨 · 宣纸质感 |
 | 鱼乐 | [koi-pond.html](xr/koi-pond.html) | Boids鱼群AI · 锦鲤 · 涟漪互动 · 日夜切换 |
 | 星野 | [starry-night.html](xr/starry-night.html) | 东方星官 · 银河粒子 · 月相变化 · 流星雨 |
 | 枯山水 | [zen-garden.html](xr/zen-garden.html) | 禅意互动庭园 · 沙纹绘制 · 四季流转 |

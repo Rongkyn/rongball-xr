@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>墨 · Ink Flow</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  overflow: hidden;
+  background: #f5f0e8;
+  font-family: 'Georgia', 'Noto Serif SC', 'PingFang SC', serif;
+  cursor: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+canvas { display: block; position: fixed; top: 0; left: 0; }
+
+/* 宣纸纹理叠加 */
+#paper {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.3;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23n)' opacity='0.15'/%3E%3C/svg%3E");
+}
+
+/* 自定义光标 - 毛笔 */
+#cursor {
+  position: fixed;
+  pointer-events: none;
+  z-index: 100;
+  transform: translate(-50%, -100%);
+}
+#cursor .tip {
+  width: 3px;
+  height: 18px;
+  background: linear-gradient(to bottom, rgba(40,30,20,0.6), rgba(20,15,10,0.9));
+  border-radius: 0 0 50% 50%;
+  transform: rotate(-15deg);
+}
+#cursor .handle {
+  width: 2px;
+  height: 30px;
+  background: linear-gradient(to bottom, rgba(100,70,40,0.4), rgba(60,40,25,0.6));
+  margin-left: 0.5px;
+  transform: rotate(-15deg);
+  transform-origin: top center;
+}
+
+/* 标题 */
+#title {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 2s;
+}
+#title.hidden { opacity: 0; }
+#title h1 {
+  font-size: 6rem;
+  color: rgba(30,25,20,0.75);
+  font-weight: 300;
+  letter-spacing: 0;
+}
+#title p {
+  font-size: 0.8rem;
+  color: rgba(80,60,40,0.4);
+  letter-spacing: 0.4rem;
+  margin-top: 0.5rem;
+}
+#title .sub {
+  font-size: 0.7rem;
+  color: rgba(80,60,40,0.25);
+  margin-top: 1.5rem;
+  letter-spacing: 0.2rem;
+}
+
+/* 工具栏 */
+#tools {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 1s;
+  padding: 10px 20px;
+  background: rgba(240,235,225,0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 20px;
+  border: 1px solid rgba(120,100,80,0.1);
+}
+#tools.show { opacity: 1; }
+
+.tool-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(100,80,60,0.15);
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+.tool-btn:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.tool-btn.active {
+  border-color: rgba(100,80,60,0.4);
+  box-shadow: 0 0 0 2px rgba(100,80,60,0.15);
+}
+.tool-btn .dot {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 16px; height: 16px;
+  border-radius: 50%;
+}
+
+/* 墨色选择 */
+.ink-black .dot { background: radial-gradient(circle, #1a1510, #0a0805); }
+.ink-brown .dot { background: radial-gradient(circle, #5a3a20, #3a2510); }
+.ink-blue .dot { background: radial-gradient(circle, #2a4060, #1a2540); }
+.ink-red .dot { background: radial-gradient(circle, #8a2020, #5a1515); }
+.ink-green .dot { background: radial-gradient(circle, #2a5a30, #1a3a20); }
+
+/* 控制按钮 */
+.ctrl-btn {
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(100,80,60,0.15);
+  background: transparent;
+  color: rgba(60,45,30,0.5);
+  font-size: 0.65rem;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 1px;
+  transition: all 0.3s;
+  align-self: center;
+}
+.ctrl-btn:hover {
+  background: rgba(100,80,60,0.08);
+  color: rgba(60,45,30,0.7);
+}
+
+/* 分隔线 */
+.divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(100,80,60,0.1);
+  align-self: center;
+}
+
+/* 印章 */
+#seal {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  z-index: 50;
+  opacity: 0;
+  transition: opacity 1s;
+  pointer-events: none;
+}
+#seal.show { opacity: 0.6; }
+#seal canvas {
+  width: 40px; height: 40px;
+}
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="paper"></div>
+<div id="cursor"><div class="tip"></div><div class="handle"></div></div>
+
+<div id="title">
+  <h1>墨</h1>
+  <p>I N K &nbsp; F L O W</p>
+  <div class="sub">在宣纸上运墨 · 点击开始</div>
+</div>
+
+<div id="tools">
+  <div class="tool-btn ink-black active" data-ink="black" title="焦墨"><div class="dot"></div></div>
+  <div class="tool-btn ink-brown" data-ink="brown" title="赭石"><div class="dot"></div></div>
+  <div class="tool-btn ink-blue" data-ink="blue" title="花青"><div class="dot"></div></div>
+  <div class="tool-btn ink-red" data-ink="red" title="朱砂"><div class="dot"></div></div>
+  <div class="tool-btn ink-green" data-ink="green" title="石绿"><div class="dot"></div></div>
+  <div class="divider"></div>
+  <button class="ctrl-btn" onclick="clearCanvas()">净纸</button>
+  <button class="ctrl-btn" onclick="toggleFlow()">流转</button>
+</div>
+
+<div id="seal"><canvas id="sealCanvas" width="40" height="40"></canvas></div>
+
+<script>
+// ============================================
+// 墨 · Ink Flow - by 绒球 🧶🌸
+// 流体水墨模拟 · 宣纸质感 · 五色运墨
+// ============================================
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const cursorEl = document.getElementById('cursor');
+
+let W, H;
+let started = false;
+let mouseX = -100, mouseY = -100;
+let prevX = 0, prevY = 0;
+let mouseDown = false;
+let flowing = true; // 自动流动
+
+// 墨色配置
+const inks = {
+  black: { r: 20, g: 15, b: 10, name: '焦墨' },
+  brown: { r: 70, g: 45, b: 25, name: '赭石' },
+  blue: { r: 30, g: 50, b: 80, name: '花青' },
+  red: { r: 120, g: 25, b: 20, name: '朱砂' },
+  green: { r: 35, g: 75, b: 40, name: '石绿' },
+};
+let currentInk = 'black';
+
+// 流体网格
+const GRID_SCALE = 4; // 每个格子4像素
+let gridW, gridH;
+let density, densityPrev;
+let vx, vy, vxPrev, vyPrev;
+
+function initGrid() {
+  gridW = Math.ceil(W / GRID_SCALE);
+  gridH = Math.ceil(H / GRID_SCALE);
+  const size = gridW * gridH;
+  
+  density = new Float32Array(size);
+  densityPrev = new Float32Array(size);
+  vx = new Float32Array(size);
+  vy = new Float32Array(size);
+  vxPrev = new Float32Array(size);
+  vyPrev = new Float32Array(size);
+}
+
+function idx(x, y) {
+  x = Math.max(0, Math.min(gridW - 1, x));
+  y = Math.max(0, Math.min(gridH - 1, y));
+  return y * gridW + x;
+}
+
+// 简化的扩散
+function diffuse(x, x0, diff, dt) {
+  const a = dt * diff * gridW * gridH;
+  const c = 1 + 4 * a;
+  for (let k = 0; k < 4; k++) {
+    for (let j = 1; j < gridH - 1; j++) {
+      for (let i = 1; i < gridW - 1; i++) {
+        const id = idx(i, j);
+        x[id] = (x0[id] + a * (
+          x[idx(i-1,j)] + x[idx(i+1,j)] +
+          x[idx(i,j-1)] + x[idx(i,j+1)]
+        )) / c;
+      }
+    }
+  }
+}
+
+// 平流
+function advect(d, d0, u, v, dt) {
+  const dt0x = dt * gridW;
+  const dt0y = dt * gridH;
+  
+  for (let j = 1; j < gridH - 1; j++) {
+    for (let i = 1; i < gridW - 1; i++) {
+      const id = idx(i, j);
+      let x = i - dt0x * u[id];
+      let y = j - dt0y * v[id];
+      
+      x = Math.max(0.5, Math.min(gridW - 1.5, x));
+      y = Math.max(0.5, Math.min(gridH - 1.5, y));
+      
+      const i0 = Math.floor(x), i1 = i0 + 1;
+      const j0 = Math.floor(y), j1 = j0 + 1;
+      const s1 = x - i0, s0 = 1 - s1;
+      const t1 = y - j0, t0 = 1 - t1;
+      
+      d[id] = s0 * (t0 * d0[idx(i0,j0)] + t1 * d0[idx(i0,j1)]) +
+              s1 * (t0 * d0[idx(i1,j0)] + t1 * d0[idx(i1,j1)]);
+    }
+  }
+}
+
+// 投影（保持无散度）
+function project(u, v, p, div) {
+  const hx = 1.0 / gridW;
+  const hy = 1.0 / gridH;
+  
+  for (let j = 1; j < gridH - 1; j++) {
+    for (let i = 1; i < gridW - 1; i++) {
+      const id = idx(i, j);
+      div[id] = -0.5 * (
+        hx * (u[idx(i+1,j)] - u[idx(i-1,j)]) +
+        hy * (v[idx(i,j+1)] - v[idx(i,j-1)])
+      );
+      p[id] = 0;
+    }
+  }
+  
+  for (let k = 0; k < 4; k++) {
+    for (let j = 1; j < gridH - 1; j++) {
+      for (let i = 1; i < gridW - 1; i++) {
+        const id = idx(i, j);
+        p[id] = (div[id] + p[idx(i-1,j)] + p[idx(i+1,j)] +
+                 p[idx(i,j-1)] + p[idx(i,j+1)]) / 4;
+      }
+    }
+  }
+  
+  for (let j = 1; j < gridH - 1; j++) {
+    for (let i = 1; i < gridW - 1; i++) {
+      const id = idx(i, j);
+      u[id] -= 0.5 * gridW * (p[idx(i+1,j)] - p[idx(i-1,j)]);
+      v[id] -= 0.5 * gridH * (p[idx(i,j+1)] - p[idx(i,j-1)]);
+    }
+  }
+}
+
+// 速度步进
+function velStep(dt) {
+  // 添加源
+  for (let i = 0; i < vx.length; i++) {
+    vx[i] += dt * vxPrev[i];
+    vy[i] += dt * vyPrev[i];
+  }
+  vxPrev.fill(0);
+  vyPrev.fill(0);
+  
+  // 扩散
+  [vx, vxPrev] = [vxPrev, vx];
+  diffuse(vx, vxPrev, 0.0001, dt);
+  [vy, vyPrev] = [vyPrev, vy];
+  diffuse(vy, vyPrev, 0.0001, dt);
+  
+  project(vx, vy, vxPrev, vyPrev);
+  
+  [vx, vxPrev] = [vxPrev, vx];
+  [vy, vyPrev] = [vyPrev, vy];
+  advect(vx, vxPrev, vxPrev, vyPrev, dt);
+  advect(vy, vyPrev, vxPrev, vyPrev, dt);
+  
+  project(vx, vy, vxPrev, vyPrev);
+  
+  // 衰减
+  for (let i = 0; i < vx.length; i++) {
+    vx[i] *= 0.999;
+    vy[i] *= 0.999;
+  }
+}
+
+// 密度步进
+function densStep(dt) {
+  for (let i = 0; i < density.length; i++) {
+    density[i] += dt * densityPrev[i];
+  }
+  densityPrev.fill(0);
+  
+  [density, densityPrev] = [densityPrev, density];
+  diffuse(density, densityPrev, 0.00005, dt);
+  [density, densityPrev] = [densityPrev, density];
+  advect(density, densityPrev, vx, vy, dt);
+  
+  // 缓慢衰减（墨迹固定但不完全消失）
+  for (let i = 0; i < density.length; i++) {
+    density[i] *= 0.9998;
+  }
+}
+
+// 添加墨
+function addInk(gx, gy, amount, spread) {
+  for (let dy = -spread; dy <= spread; dy++) {
+    for (let dx = -spread; dx <= spread; dx++) {
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist > spread) continue;
+      const falloff = 1 - dist / spread;
+      const id = idx(Math.floor(gx + dx), Math.floor(gy + dy));
+      densityPrev[id] += amount * falloff * falloff;
+    }
+  }
+}
+
+// 添加速度
+function addVelocity(gx, gy, fx, fy) {
+  const spread = 3;
+  for (let dy = -spread; dy <= spread; dy++) {
+    for (let dx = -spread; dx <= spread; dx++) {
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist > spread) continue;
+      const falloff = 1 - dist / spread;
+      const id = idx(Math.floor(gx + dx), Math.floor(gy + dy));
+      vxPrev[id] += fx * falloff;
+      vyPrev[id] += fy * falloff;
+    }
+  }
+}
+
+// 渲染到画布
+// 保存的墨迹（已固定的）
+let inkStains = []; // {x, y, density, ink}
+
+function render() {
+  // 宣纸底色
+  ctx.fillStyle = '#f5f0e8';
+  ctx.fillRect(0, 0, W, H);
+  
+  // 渲染密度场
+  const imgData = ctx.createImageData(W, H);
+  const data = imgData.data;
+  const ink = inks[currentInk];
+  
+  for (let j = 0; j < gridH; j++) {
+    for (let i = 0; i < gridW; i++) {
+      const d = Math.min(1, density[idx(i, j)] * 0.8);
+      if (d < 0.001) continue;
+      
+      // 墨色混合（浓度越高越深）
+      const r = Math.floor(245 - d * (245 - ink.r));
+      const g = Math.floor(240 - d * (240 - ink.g));
+      const b = Math.floor(232 - d * (232 - ink.b));
+      const a = Math.floor(d * 255);
+      
+      // 填充对应像素块
+      for (let py = 0; py < GRID_SCALE && j * GRID_SCALE + py < H; py++) {
+        for (let px = 0; px < GRID_SCALE && i * GRID_SCALE + px < W; px++) {
+          const pi = ((j * GRID_SCALE + py) * W + (i * GRID_SCALE + px)) * 4;
+          data[pi] = r;
+          data[pi + 1] = g;
+          data[pi + 2] = b;
+          data[pi + 3] = 255;
+        }
+      }
+    }
+  }
+  
+  ctx.putImageData(imgData, 0, 0);
+  
+  // 叠加已保存的墨迹（多色）
+  inkStains.forEach(stain => {
+    const si = inks[stain.ink];
+    const a = stain.density * 0.7;
+    ctx.fillStyle = `rgba(${si.r},${si.g},${si.b},${a})`;
+    ctx.beginPath();
+    ctx.arc(stain.x, stain.y, stain.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+// 自动流动效果
+let flowTime = 0;
+function autoFlow(dt) {
+  if (!flowing) return;
+  flowTime += dt;
+  
+  // 轻微的环境流场
+  for (let j = 1; j < gridH - 1; j++) {
+    for (let i = 1; i < gridW - 1; i++) {
+      const id = idx(i, j);
+      const nx = i / gridW;
+      const ny = j / gridH;
+      vxPrev[id] += Math.sin(ny * 4 + flowTime * 0.3) * 0.02;
+      vyPrev[id] += Math.cos(nx * 3 + flowTime * 0.2) * 0.015;
+    }
+  }
+}
+
+// --- 印章 ---
+function drawSeal() {
+  const sc = document.getElementById('sealCanvas');
+  const sctx = sc.getContext('2d');
+  sctx.clearRect(0, 0, 40, 40);
+  
+  // 方印
+  sctx.strokeStyle = 'rgba(180,40,30,0.6)';
+  sctx.lineWidth = 1.5;
+  sctx.strokeRect(5, 5, 30, 30);
+  
+  // 文字 "绒"
+  sctx.font = '16px serif';
+  sctx.fillStyle = 'rgba(180,40,30,0.5)';
+  sctx.textAlign = 'center';
+  sctx.textBaseline = 'middle';
+  sctx.fillText('绒', 20, 21);
+}
+
+// --- 主循环 ---
+function loop() {
+  const dt = 0.1;
+  
+  autoFlow(dt);
+  velStep(dt);
+  densStep(dt);
+  render();
+  
+  requestAnimationFrame(loop);
+}
+
+function resize() {
+  W = canvas.width = innerWidth;
+  H = canvas.height = innerHeight;
+  initGrid();
+}
+
+// --- 交互 ---
+addEventListener('resize', resize);
+
+addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  cursorEl.style.left = mouseX + 'px';
+  cursorEl.style.top = mouseY + 'px';
+  
+  if (mouseDown && started) {
+    const gx = mouseX / GRID_SCALE;
+    const gy = mouseY / GRID_SCALE;
+    const dx = (mouseX - prevX) / GRID_SCALE;
+    const dy = (mouseY - prevY) / GRID_SCALE;
+    
+    addInk(gx, gy, 8, 4);
+    addVelocity(gx, gy, dx * 3, dy * 3);
+  }
+  prevX = mouseX;
+  prevY = mouseY;
+});
+
+addEventListener('mousedown', e => {
+  if (!started) {
+    start();
+    return;
+  }
+  mouseDown = true;
+  const gx = e.clientX / GRID_SCALE;
+  const gy = e.clientY / GRID_SCALE;
+  addInk(gx, gy, 15, 6);
+});
+
+addEventListener('mouseup', () => {
+  mouseDown = false;
+  // 保存墨迹
+  if (started && density[idx(Math.floor(mouseX/GRID_SCALE), Math.floor(mouseY/GRID_SCALE))] > 0.1) {
+    inkStains.push({
+      x: mouseX, y: mouseY,
+      density: density[idx(Math.floor(mouseX/GRID_SCALE), Math.floor(mouseY/GRID_SCALE))] * 0.5,
+      ink: currentInk,
+      size: 12 + Math.random() * 8
+    });
+    if (inkStains.length > 200) inkStains.shift();
+  }
+});
+
+// 触摸
+addEventListener('touchstart', e => {
+  if (!started) { start(); return; }
+  mouseDown = true;
+  const t = e.touches[0];
+  mouseX = t.clientX; mouseY = t.clientY;
+  prevX = mouseX; prevY = mouseY;
+  cursorEl.style.left = mouseX + 'px';
+  cursorEl.style.top = mouseY + 'px';
+}, {passive: true});
+
+addEventListener('touchmove', e => {
+  const t = e.touches[0];
+  mouseX = t.clientX; mouseY = t.clientY;
+  cursorEl.style.left = mouseX + 'px';
+  cursorEl.style.top = mouseY + 'px';
+  if (started) {
+    const gx = mouseX / GRID_SCALE;
+    const gy = mouseY / GRID_SCALE;
+    const dx = (mouseX - prevX) / GRID_SCALE;
+    const dy = (mouseY - prevY) / GRID_SCALE;
+    addInk(gx, gy, 8, 4);
+    addVelocity(gx, gy, dx * 3, dy * 3);
+  }
+  prevX = mouseX; prevY = mouseY;
+}, {passive: true});
+
+addEventListener('touchend', () => mouseDown = false);
+
+// 墨色选择
+document.querySelectorAll('.tool-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentInk = btn.dataset.ink;
+  });
+});
+
+function start() {
+  started = true;
+  document.getElementById('title').classList.add('hidden');
+  document.getElementById('tools').classList.add('show');
+  document.getElementById('seal').classList.add('show');
+}
+
+function clearCanvas() {
+  density.fill(0);
+  densityPrev.fill(0);
+  vx.fill(0); vy.fill(0);
+  vxPrev.fill(0); vyPrev.fill(0);
+  inkStains = [];
+}
+
+function toggleFlow() {
+  flowing = !flowing;
+}
+
+// 初始化
+resize();
+drawSeal();
+loop();
+</script>
+</body>
+</html>
