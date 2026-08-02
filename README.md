@@ -12,10 +12,16 @@ https://rongkyn.github.io/rongball-xr/
 
 | 项目 | 路径 | 说明 |
 |------|------|------|
-| 声源山水 ⭐NEW | [source-landscape.html](xr/source-landscape.html) | 音频可视化编辑器 · 拖拽声源 · 实时混音 |
+| 听雨 ⭐ | [rain-listening.html](xr/rain-listening.html) | 水墨雨景 · 四声道程序化雨声混音 · 东方美学 |
+| 涌 ⭐ | [emergence.html](xr/emergence.html) | 粒子生命模拟 · 涌现行为 · 吸引矩阵可视化 |
+| 鱼乐 | [koi-pond.html](xr/koi-pond.html) | Boids鱼群AI · 锦鲤 · 涟漪互动 · 日夜切换 |
+| 星野 | [starry-night.html](xr/starry-night.html) | 东方星官 · 银河粒子 · 月相变化 · 流星雨 |
+| 枯山水 | [zen-garden.html](xr/zen-garden.html) | 禅意互动庭园 · 沙纹绘制 · 四季流转 |
+| 声源山水 | [source-landscape.html](xr/source-landscape.html) | 音频可视化编辑器 · 拖拽声源 · 实时混音 |
 | VR 空间搭建 | [vr-space-builder.html](xr/vr-space-builder.html) | 环境搭建 · 导航练习 · VR交互 |
 | 禅意声景 | [zen-soundscape.html](xr/zen-soundscape.html) | 交互式空间音频 · 点击山水触发音效 |
 | 水墨山水 | [ink-landscape.html](xr/ink-landscape.html) | 东方美学沉浸式3D空间 · 留白意境 |
+| 程序化音效 | [procedural-audio-tonejs.html](xr/procedural-audio-tonejs.html) | Tone.js 13种音效实时合成 |
 | Hello World | [hello-world.html](xr/hello-world.html) | 基础 3D 场景 |
 | 自定义组件练习 | [exercise-components.html](xr/exercise-components.html) | 6 个组件实验 |
 | 社区组件综合场景 | [exercise-community.html](xr/exercise-community.html) | 粒子/海洋/多光源/雾效 |
