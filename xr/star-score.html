@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星谱 · Star Score</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            overflow: hidden;
+            background: #000;
+            font-family: 'Georgia', 'Songti SC', serif;
+            cursor: crosshair;
+        }
+        
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        /* Title overlay */
+        #title-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: rgba(200, 210, 255, 0.9);
+            pointer-events: none;
+            z-index: 10;
+            transition: opacity 2s ease;
+        }
+        
+        #title-overlay h1 {
+            font-size: 3.5rem;
+            font-weight: 300;
+            letter-spacing: 1.2rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 30px rgba(150, 180, 255, 0.5);
+        }
+        
+        #title-overlay p {
+            font-size: 1rem;
+            letter-spacing: 0.3rem;
+            opacity: 0.6;
+        }
+        
+        /* Controls */
+        #controls {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        
+        .ctrl-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(200, 210, 255, 0.8);
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.1rem;
+            font-family: inherit;
+        }
+        
+        .ctrl-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(150, 180, 255, 0.4);
+            color: rgba(220, 230, 255, 1);
+        }
+        
+        .ctrl-btn.active {
+            background: rgba(150, 180, 255, 0.15);
+            border-color: rgba(150, 180, 255, 0.5);
+        }
+        
+        /* Info panel */
+        #info {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            color: rgba(200, 210, 255, 0.5);
+            font-size: 0.75rem;
+            text-align: right;
+            z-index: 20;
+            letter-spacing: 0.05rem;
+            line-height: 1.8;
+        }
+        
+        /* Hint */
+        #hint {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(200, 210, 255, 0.35);
+            font-size: 0.75rem;
+            letter-spacing: 0.15rem;
+            z-index: 20;
+            transition: opacity 2s ease;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div id="title-overlay">
+        <h1>星 谱</h1>
+        <p>Star Score · 点击夜空，谱写星辰</p>
+    </div>
+    
+    <div id="hint">点击任意位置放置星辰</div>
+    
+    <div id="controls">
+        <button class="ctrl-btn" id="btn-sound" onclick="toggleSound()">🔇 声音</button>
+        <button class="ctrl-btn" id="btn-rotate" onclick="toggleRotation()">⟳ 旋转</button>
+        <button class="ctrl-btn" id="btn-lines" onclick="toggleLines()">✦ 连线</button>
+        <button class="ctrl-btn" id="btn-clear" onclick="clearStars()">○ 清空</button>
+    </div>
+    
+    <div id="info">
+        <div id="star-count">星辰: 0</div>
+        <div id="constellation-count">星座: 0</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script>
+        // ============================================
+        // 星谱 · Star Score
+        // A cosmic instrument - place stars, form constellations, create music
+        // ============================================
+        
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let W, H;
+        function resize() {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // --- State ---
+        let stars = [];
+        let constellations = [];
+        let shootingStars = [];
+        let bgStars = [];
+        let nebulae = [];
+        let time = 0;
+        let rotationAngle = 0;
+        let soundEnabled = false;
+        let rotationEnabled = true;
+        let linesEnabled = true;
+        let audioStarted = false;
+        let titleVisible = true;
+        let mouseX = W / 2, mouseY = H / 2;
+        
+        // --- Audio Setup ---
+        let reverb, delay, ambientPad, starSynth, constellationSynth;
+        
+        function initAudio() {
+            reverb = new Tone.Reverb({ decay: 8, wet: 0.6 }).toDestination();
+            delay = new Tone.FeedbackDelay({ delayTime: 0.4, feedback: 0.3, wet: 0.2 }).connect(reverb);
+            
+            // Ambient pad
+            ambientPad = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'sine4' },
+                envelope: { attack: 4, decay: 2, sustain: 0.3, release: 6 },
+                volume: -24
+            }).connect(reverb);
+            
+            // Star placement sound
+            starSynth = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 1.5, sustain: 0, release: 2 },
+                volume: -12
+            }).connect(delay);
+            
+            // Constellation completion sound
+            constellationSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'triangle8' },
+                envelope: { attack: 0.1, decay: 2, sustain: 0.1, release: 4 },
+                volume: -16
+            }).connect(reverb);
+            
+            // Start ambient drone
+            const now = Tone.now();
+            ambientPad.triggerAttack(['C2', 'G2', 'C3', 'E3'], now);
+        }
+        
+        // --- Scale for star pitches (pentatonic for meditative feel) ---
+        const PENTATONIC = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+        
+        function getStarPitch(star) {
+            // Map position to pentatonic scale
+            // Y position determines base note, X adds subtle variation
+            const yNorm = 1 - (star.y / H); // 0 at bottom, 1 at top
+            const noteIndex = Math.floor(yNorm * (PENTATONIC.length - 1));
+            const baseNote = PENTATONIC[noteIndex];
+            const octave = 3 + Math.floor(yNorm * 2); // Higher stars = higher octave
+            const noteName = ['C', 'D', 'E', 'G', 'A'][baseNote % 5];
+            return noteName + (octave + Math.floor(baseNote / 12));
+        }
+        
+        // --- Star class ---
+        class Star {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = 2 + Math.random() * 3;
+                this.brightness = 0.6 + Math.random() * 0.4;
+                this.twinkleSpeed = 0.5 + Math.random() * 2;
+                this.twinklePhase = Math.random() * Math.PI * 2;
+                this.color = this.getColor();
+                this.age = 0;
+                this.maxAge = Infinity;
+                this.pulseIntensity = 1; // For placement animation
+                this.pitch = getStarPitch(this);
+                this.constellationId = -1;
+            }
+            
+            getColor() {
+                const colors = [
+                    { r: 200, g: 210, b: 255 }, // Blue-white
+                    { r: 255, g: 240, b: 220 }, // Warm white
+                    { r: 180, g: 200, b: 255 }, // Cool blue
+                    { r: 255, g: 220, b: 180 }, // Golden
+                    { r: 220, g: 200, b: 255 }, // Purple tint
+                ];
+                return colors[Math.floor(Math.random() * colors.length)];
+            }
+            
+            update(dt) {
+                this.age += dt;
+                this.twinklePhase += this.twinkleSpeed * dt;
+                if (this.pulseIntensity > 1) {
+                    this.pulseIntensity -= dt * 2;
+                }
+            }
+            
+            draw(ctx, offsetX, offsetY) {
+                const twinkle = 0.6 + 0.4 * Math.sin(this.twinklePhase);
+                const alpha = this.brightness * twinkle * Math.min(1, this.age * 2);
+                const size = this.size * (1 + (this.pulseIntensity - 1) * 0.5);
+                
+                const x = this.x + offsetX;
+                const y = this.y + offsetY;
+                
+                // Outer glow
+                const glowRadius = size * 8 * this.pulseIntensity;
+                const glow = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
+                glow.addColorStop(0, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${alpha * 0.3})`);
+                glow.addColorStop(0.3, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${alpha * 0.1})`);
+                glow.addColorStop(1, `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, 0)`);
+                ctx.fillStyle = glow;
+                ctx.fillRect(x - glowRadius, y - glowRadius, glowRadius * 2, glowRadius * 2);
+                
+                // Core
+                ctx.beginPath();
+                ctx.arc(x, y, size * this.pulseIntensity, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${alpha})`;
+                ctx.fill();
+                
+                // Bright center
+                ctx.beginPath();
+                ctx.arc(x, y, size * 0.4 * this.pulseIntensity, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${alpha * 0.9})`;
+                ctx.fill();
+            }
+        }
+        
+        // --- Background stars (static, for depth) ---
+        function initBgStars() {
+            bgStars = [];
+            for (let i = 0; i < 400; i++) {
+                bgStars.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    size: Math.random() * 1.2,
+                    brightness: Math.random() * 0.4 + 0.1,
+                    twinkleSpeed: Math.random() * 1.5 + 0.3,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        
+        // --- Nebula clouds ---
+        function initNebulae() {
+            nebulae = [];
+            for (let i = 0; i < 5; i++) {
+                nebulae.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    radius: 100 + Math.random() * 250,
+                    color: {
+                        r: 40 + Math.random() * 60,
+                        g: 20 + Math.random() * 80,
+                        b: 80 + Math.random() * 100
+                    },
+                    alpha: 0.02 + Math.random() * 0.03,
+                    drift: { x: (Math.random() - 0.5) * 0.1, y: (Math.random() - 0.5) * 0.05 }
+                });
+            }
+        }
+        
+        // --- Shooting star ---
+        class ShootingStar {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * W * 0.8;
+                this.y = Math.random() * H * 0.3;
+                this.vx = 4 + Math.random() * 6;
+                this.vy = 2 + Math.random() * 3;
+                this.life = 1;
+                this.decay = 0.015 + Math.random() * 0.01;
+                this.trail = [];
+                this.active = true;
+            }
+            
+            update() {
+                if (!this.active) return;
+                this.trail.push({ x: this.x, y: this.y, alpha: this.life });
+                if (this.trail.length > 20) this.trail.shift();
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+                
+                if (this.life <= 0) this.active = false;
+            }
+            
+            draw(ctx) {
+                if (!this.active) return;
+                
+                for (let i = 1; i < this.trail.length; i++) {
+                    const t = i / this.trail.length;
+                    const p = this.trail[i];
+                    ctx.beginPath();
+                    ctx.moveTo(this.trail[i-1].x, this.trail[i-1].y);
+                    ctx.lineTo(p.x, p.y);
+                    ctx.strokeStyle = `rgba(220, 230, 255, ${t * this.life * 0.6})`;
+                    ctx.lineWidth = t * 2;
+                    ctx.stroke();
+                }
+                
+                // Head glow
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.life * 0.8})`;
+                ctx.fill();
+            }
+        }
+        
+        // --- Constellation detection ---
+        const CONNECTION_DISTANCE = 180;
+        const MAX_CONNECTIONS = 3;
+        
+        function updateConstellations() {
+            constellations = [];
+            const visited = new Set();
+            
+            for (let i = 0; i < stars.length; i++) {
+                if (visited.has(i)) continue;
+                
+                // BFS to find connected component
+                const component = [i];
+                const queue = [i];
+                visited.add(i);
+                
+                while (queue.length > 0) {
+                    const current = queue.shift();
+                    let connections = 0;
+                    
+                    for (let j = 0; j < stars.length; j++) {
+                        if (visited.has(j)) continue;
+                        const dx = stars[current].x - stars[j].x;
+                        const dy = stars[current].y - stars[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < CONNECTION_DISTANCE && connections < MAX_CONNECTIONS) {
+                            component.push(j);
+                            queue.push(j);
+                            visited.add(j);
+                            connections++;
+                        }
+                    }
+                }
+                
+                if (component.length >= 3) {
+                    constellations.push(component);
+                    component.forEach(idx => { stars[idx].constellationId = constellations.length - 1; });
+                }
+            }
+            
+            document.getElementById('constellation-count').textContent = `星座: ${constellations.length}`;
+        }
+        
+        // --- Drawing functions ---
+        function drawBackground() {
+            // Deep space gradient
+            const grad = ctx.createRadialGradient(W * 0.5, H * 0.5, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.7);
+            grad.addColorStop(0, '#0a0a1a');
+            grad.addColorStop(0.5, '#050510');
+            grad.addColorStop(1, '#020208');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+        }
+        
+        function drawNebulae(dt) {
+            for (const neb of nebulae) {
+                neb.x += neb.drift.x;
+                neb.y += neb.drift.y;
+                if (neb.x < -neb.radius) neb.x = W + neb.radius;
+                if (neb.x > W + neb.radius) neb.x = -neb.radius;
+                if (neb.y < -neb.radius) neb.y = H + neb.radius;
+                if (neb.y > H + neb.radius) neb.y = -neb.radius;
+                
+                const grad = ctx.createRadialGradient(neb.x, neb.y, 0, neb.x, neb.y, neb.radius);
+                grad.addColorStop(0, `rgba(${neb.color.r}, ${neb.color.g}, ${neb.color.b}, ${neb.alpha})`);
+                grad.addColorStop(0.5, `rgba(${neb.color.r}, ${neb.color.g}, ${neb.color.b}, ${neb.alpha * 0.5})`);
+                grad.addColorStop(1, `rgba(${neb.color.r}, ${neb.color.g}, ${neb.color.b}, 0)`);
+                ctx.fillStyle = grad;
+                ctx.fillRect(neb.x - neb.radius, neb.y - neb.radius, neb.radius * 2, neb.radius * 2);
+            }
+        }
+        
+        function drawBgStars(dt) {
+            for (const s of bgStars) {
+                s.phase += s.twinkleSpeed * dt;
+                const twinkle = 0.5 + 0.5 * Math.sin(s.phase);
+                const alpha = s.brightness * twinkle;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(200, 210, 240, ${alpha})`;
+                ctx.fill();
+            }
+        }
+        
+        function drawConstellationLines(offsetX, offsetY) {
+            if (!linesEnabled) return;
+            
+            for (const constellation of constellations) {
+                // Sort stars by distance for clean lines
+                const sorted = [...constellation];
+                
+                ctx.beginPath();
+                for (let i = 0; i < sorted.length; i++) {
+                    for (let j = i + 1; j < sorted.length; j++) {
+                        const s1 = stars[sorted[i]];
+                        const s2 = stars[sorted[j]];
+                        const dx = s1.x - s2.x;
+                        const dy = s1.y - s2.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < CONNECTION_DISTANCE) {
+                            ctx.moveTo(s1.x + offsetX, s1.y + offsetY);
+                            ctx.lineTo(s2.x + offsetX, s2.y + offsetY);
+                        }
+                    }
+                }
+                
+                // Animated glow for lines
+                const lineAlpha = 0.12 + 0.05 * Math.sin(time * 0.5);
+                ctx.strokeStyle = `rgba(150, 180, 255, ${lineAlpha})`;
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+                
+                // Second pass: brighter thin lines
+                ctx.strokeStyle = `rgba(200, 220, 255, ${lineAlpha * 0.5})`;
+                ctx.lineWidth = 0.3;
+                ctx.stroke();
+            }
+        }
+        
+        // --- Parallax offset based on mouse ---
+        function getParallax() {
+            const px = (mouseX - W / 2) * 0.02;
+            const py = (mouseY - H / 2) * 0.02;
+            return { x: px, y: py };
+        }
+        
+        // --- Rotation transform ---
+        function getRotationOffset(star) {
+            if (!rotationEnabled) return { x: 0, y: 0 };
+            
+            const cx = W / 2, cy = H / 2;
+            const dx = star.x - cx, dy = star.y - cy;
+            const cos = Math.cos(rotationAngle), sin = Math.sin(rotationAngle);
+            const rx = dx * cos - dy * sin - dx;
+            const ry = dx * sin + dy * cos - dy;
+            return { x: rx, y: ry };
+        }
+        
+        // --- Main loop ---
+        let lastTime = performance.now();
+        
+        function animate(now) {
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+            time += dt;
+            
+            // Update rotation
+            if (rotationEnabled) {
+                rotationAngle += dt * 0.03; // Very slow rotation
+            }
+            
+            // Shooting stars
+            if (Math.random() < 0.003) {
+                const available = shootingStars.find(s => !s.active);
+                if (available) {
+                    available.reset();
+                } else if (shootingStars.length < 3) {
+                    shootingStars.push(new ShootingStar());
+                }
+            }
+            
+            // --- Draw ---
+            drawBackground();
+            drawNebulae(dt);
+            drawBgStars(dt);
+            
+            // Draw constellation lines
+            const parallax = getParallax();
+            drawConstellationLines(parallax.x, parallax.y);
+            
+            // Draw user stars
+            for (const star of stars) {
+                star.update(dt);
+                const rot = getRotationOffset(star);
+                star.draw(ctx, parallax.x + rot.x, parallax.y + rot.y);
+            }
+            
+            // Draw shooting stars
+            for (const ss of shootingStars) {
+                ss.update();
+                ss.draw(ctx);
+            }
+            
+            // Cursor glow
+            const cursorGlow = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 60);
+            cursorGlow.addColorStop(0, 'rgba(150, 180, 255, 0.03)');
+            cursorGlow.addColorStop(1, 'rgba(150, 180, 255, 0)');
+            ctx.fillStyle = cursorGlow;
+            ctx.fillRect(mouseX - 60, mouseY - 60, 120, 120);
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // --- Interaction ---
+        canvas.addEventListener('click', (e) => {
+            // Start audio on first click
+            if (!audioStarted) {
+                Tone.start().then(() => {
+                    initAudio();
+                    audioStarted = true;
+                    soundEnabled = true;
+                    document.getElementById('btn-sound').textContent = '🔊 声音';
+                    document.getElementById('btn-sound').classList.add('active');
+                });
+            }
+            
+            // Hide title on first click
+            if (titleVisible) {
+                document.getElementById('title-overlay').style.opacity = '0';
+                document.getElementById('hint').style.opacity = '0';
+                document.getElementById('controls').style.opacity = '1';
+                titleVisible = false;
+            }
+            
+            // Place star
+            const star = new Star(e.clientX, e.clientY);
+            stars.push(star);
+            star.pulseIntensity = 2.5; // Start with big pulse
+            
+            // Play sound
+            if (soundEnabled && audioStarted) {
+                starSynth.triggerAttackRelease(star.pitch, '2n');
+            }
+            
+            // Update constellations
+            updateConstellations();
+            
+            // Check if a new constellation was just formed
+            const newCount = constellations.length;
+            if (newCount > parseInt(document.getElementById('constellation-count').textContent)) {
+                // Play constellation chord
+                if (soundEnabled && audioStarted) {
+                    const lastConstellation = constellations[constellations.length - 1];
+                    const notes = lastConstellation.slice(0, 4).map(idx => stars[idx].pitch);
+                    constellationSynth.triggerAttackRelease(notes, '1n');
+                }
+            }
+            
+            document.getElementById('star-count').textContent = `星辰: ${stars.length}`;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+        
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            mouseX = touch.clientX;
+            mouseY = touch.clientY;
+            canvas.dispatchEvent(new MouseEvent('click', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            }));
+        });
+        
+        // --- Controls ---
+        function toggleSound() {
+            if (!audioStarted) return;
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('btn-sound');
+            btn.textContent = soundEnabled ? '🔊 声音' : '🔇 声音';
+            btn.classList.toggle('active', soundEnabled);
+            
+            if (soundEnabled) {
+                ambientPad.triggerAttack(['C2', 'G2', 'C3', 'E3']);
+            } else {
+                ambientPad.releaseAll();
+            }
+        }
+        
+        function toggleRotation() {
+            rotationEnabled = !rotationEnabled;
+            const btn = document.getElementById('btn-rotate');
+            btn.classList.toggle('active', rotationEnabled);
+        }
+        
+        function toggleLines() {
+            linesEnabled = !linesEnabled;
+            const btn = document.getElementById('btn-lines');
+            btn.classList.toggle('active', linesEnabled);
+        }
+        
+        function clearStars() {
+            stars = [];
+            constellations = [];
+            document.getElementById('star-count').textContent = '星辰: 0';
+            document.getElementById('constellation-count').textContent = '星座: 0';
+        }
+        
+        // --- Init ---
+        initBgStars();
+        initNebulae();
+        
+        // Set initial button states
+        document.getElementById('btn-rotate').classList.add('active');
+        document.getElementById('btn-lines').classList.add('active');
+        
+        // Start animation
+        requestAnimationFrame(animate);
+        
+        // Auto-show controls after 3 seconds
+        setTimeout(() => {
+            if (titleVisible) {
+                // Don't auto-hide title, let user click
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
