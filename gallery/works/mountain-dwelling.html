@@ -1,0 +1,1228 @@
+<!--
+  作品名：山居 · Mountain Dwelling
+  创作日期：2026-08-13
+  Brief 摘要：水墨山水经营模拟——在宣纸上种竹、引水、筑舍、待客，看四季流转、山居自长。
+  Studio 版本：v1.0
+  渲染：Canvas 2D，单文件无外部依赖
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>山居 · Mountain Dwelling</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#f0e9d8;
+  font-family:'PingFang SC','Songti SC','STSong','Microsoft YaHei',serif;
+  -webkit-tap-highlight-color:transparent;touch-action:none;user-select:none}
+#scene{display:block;position:fixed;top:0;left:0;cursor:crosshair}
+
+/* 工具栏 */
+#toolbar{position:fixed;top:18px;left:50%;transform:translateX(-50%);
+  display:flex;gap:4px;padding:6px 10px;
+  background:rgba(244,237,224,.88);border:1px solid rgba(80,60,40,.18);
+  border-radius:28px;backdrop-filter:blur(6px);z-index:10;
+  box-shadow:0 2px 12px rgba(80,60,40,.08)}
+.tbtn{width:44px;height:44px;border:none;background:transparent;border-radius:50%;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#5a4a38;transition:all .35s ease;position:relative}
+.tbtn:hover{background:rgba(90,74,56,.08)}
+.tbtn.active{background:rgba(90,74,56,.14);color:#2c2418}
+.tbtn svg{width:24px;height:24px;stroke:#5a4a38;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tbtn.active svg{stroke:#2c2418;stroke-width:2}
+.tbtn .tip{position:absolute;top:52px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:#8a7a64;white-space:nowrap;opacity:0;transition:opacity .3s;pointer-events:none}
+.tbtn:hover .tip{opacity:1}
+#toolDivider{width:1px;background:rgba(80,60,40,.15);margin:4px 2px}
+
+/* 季节指示 */
+#seasonBar{position:fixed;top:24px;right:24px;display:flex;align-items:center;gap:10px;z-index:10}
+.seasonDot{width:10px;height:10px;border-radius:50%;border:1px solid rgba(80,60,40,.3);
+  transition:all .6s ease;cursor:pointer}
+.seasonDot.active{transform:scale(1.4);border-color:rgba(80,60,40,.6)}
+#seasonLabel{font-size:13px;color:#7a6a54;letter-spacing:3px;min-width:28px;text-align:center}
+
+/* 标题 */
+#titleBlock{position:fixed;bottom:28px;left:28px;z-index:10;pointer-events:none}
+#titleBlock h1{font-size:30px;font-weight:400;color:#3a2e20;letter-spacing:10px;
+  writing-mode:vertical-rl;text-orientation:upright;line-height:1.4;opacity:.85}
+#titleBlock .en{font-size:10px;color:#9a8a74;letter-spacing:2px;margin-top:8px;
+  writing-mode:vertical-rl;opacity:.6}
+
+/* 来客气泡 */
+#visitor{position:fixed;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);
+  padding:14px 26px;background:rgba(244,237,224,.94);border:1px solid rgba(120,60,40,.25);
+  border-radius:4px;font-size:16px;color:#3a2e20;letter-spacing:3px;line-height:1.8;
+  z-index:20;opacity:0;transition:opacity 1.2s ease,transform 1.2s ease;pointer-events:none;
+  box-shadow:0 4px 24px rgba(80,40,20,.12);max-width:80vw;text-align:center}
+#visitor .vname{display:block;font-size:12px;color:#8a4a3a;letter-spacing:4px;margin-bottom:6px}
+#visitor .vline{display:block}
+#visitor.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 提示 */
+#hint{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
+  font-size:11px;color:#a89880;letter-spacing:2px;z-index:10;pointer-events:none;opacity:.7}
+
+/* 印章 canvas 覆盖在右下 */
+#sealCanvas{position:fixed;bottom:20px;right:24px;pointer-events:none;z-index:10}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<canvas id="sealCanvas" width="64" height="64"></canvas>
+
+<div id="toolbar">
+  <button class="tbtn active" data-tool="bamboo" title="竹">
+    <svg viewBox="0 0 24 24"><path d="M12 3v18M12 8c-2 0-3-1-3-2M12 8c2 0 3-1 3-2M12 13c-2 0-3-1-3-2M12 13c2 0 3-1 3-2M12 18c-2 0-3-1-3-2M12 18c2 0 3-1 3-2"/></svg>
+    <span class="tip">竹</span>
+  </button>
+  <button class="tbtn" data-tool="pine" title="松">
+    <svg viewBox="0 0 24 24"><path d="M12 3 L6 11 H9 L5 16 H9 L6 20 H18 L15 16 H19 L15 11 H18 Z"/></svg>
+    <span class="tip">松</span>
+  </button>
+  <button class="tbtn" data-tool="plum" title="梅">
+    <svg viewBox="0 0 24 24"><path d="M8 20 C8 20 10 14 14 10 C16 8 18 7 20 7"/><circle cx="20" cy="7" r="2"/></svg>
+    <span class="tip">梅</span>
+  </button>
+  <button class="tbtn" data-tool="rock" title="石">
+    <svg viewBox="0 0 24 24"><path d="M4 18 L6 10 L10 6 L16 7 L20 12 L19 18 Z"/></svg>
+    <span class="tip">石</span>
+  </button>
+  <button class="tbtn" data-tool="stream" title="溪">
+    <svg viewBox="0 0 24 24"><path d="M3 9 C6 7 9 11 12 9 S18 7 21 9M3 14 C6 12 9 16 12 14 S18 12 21 14"/></svg>
+    <span class="tip">溪</span>
+  </button>
+  <button class="tbtn" data-tool="hut" title="舍">
+    <svg viewBox="0 0 24 24"><path d="M4 14 L12 6 L20 14M7 14 V20 H17 V14M10 20 V15H14V20"/></svg>
+    <span class="tip">舍</span>
+  </button>
+  <div id="toolDivider"></div>
+  <button class="tbtn" data-tool="erase" title="移除">
+    <svg viewBox="0 0 24 24"><path d="M6 18 L14 6 L20 12 L12 20 Z M6 18 H18"/></svg>
+    <span class="tip">移</span>
+  </button>
+</div>
+
+<div id="seasonBar">
+  <div class="seasonDot active" data-season="0"></div>
+  <div class="seasonDot" data-season="1"></div>
+  <div class="seasonDot" data-season="2"></div>
+  <div class="seasonDot" data-season="3"></div>
+  <span id="seasonLabel">春</span>
+</div>
+
+<div id="titleBlock">
+  <h1>山居</h1>
+  <div class="en">MOUNTAIN DWELLING</div>
+</div>
+
+<div id="visitor">
+  <span class="vname"></span>
+  <span class="vline"></span>
+</div>
+
+<div id="hint">选择元素 · 点击山水放置 · 拖拽移动</div>
+
+<script>
+"use strict";
+/* =========================================================
+   山居 — Canvas 2D 水墨山水
+   ========================================================= */
+
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+const sealCv = document.getElementById('sealCanvas');
+const sealCtx = sealCv.getContext('2d');
+
+let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+function resize() {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  buildMountains();
+  buildPaper();
+}
+window.addEventListener('resize', resize);
+
+/* ---------- 五级墨色 ---------- */
+const INK = {
+  jiao: '#1a1612',   // 焦
+  nong:  '#2e2820',  // 浓
+  zhong: '#4a4034',  // 重
+  dan:   '#7a6e5c',  // 淡
+  qing:  '#b0a490'   // 清
+};
+
+/* ---------- 季节调色 ---------- */
+const SEASONS = [
+  { name:'春', tint:[200,220,190], tintA:.10, sky:'#eef2e4', mountain:['#9aa890','#84947a','#6e7e64'], mist:'rgba(210,225,200,', accent:'#6f8f5e' },
+  { name:'夏', tint:[120,170,100], tintA:.14, sky:'#e6ead4', mountain:['#7e9470','#627854','#4a5e3e'], mist:'rgba(180,205,160,', accent:'#4a6e3a' },
+  { name:'秋', tint:[190,130,70],  tintA:.13, sky:'#f0e6d0', mountain:['#a89070','#8e7458','#745a40'], mist:'rgba(220,190,150,', accent:'#a06030' },
+  { name:'冬', tint:[180,195,215], tintA:.18, sky:'#e8e8ec', mountain:['#a8acb4','#8e929c','#747884'], mist:'rgba(200,210,225,', accent:'#6a7488' }
+];
+
+let currentSeason = 0;
+let targetSeason = 0;
+let seasonT = 1; // 1 = settled, 0 -> 1 transition
+let seasonTimer = 0;
+const SEASON_DURATION = 30; // seconds per season
+
+function lerp(a,b,t){return a+(b-a)*t}
+function lerpColor(a,b,t){
+  const pa=parseColor(a),pb=parseColor(b);
+  return `rgb(${Math.round(lerp(pa[0],pb[0],t))},${Math.round(lerp(pa[1],pb[1],t))},${Math.round(lerp(pa[2],pb[2],t))})`;
+}
+function parseColor(c){
+  if(c.startsWith('#')){
+    const h=c.slice(1);
+    return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+  }
+  const m=c.match(/\d+/g);return [parseInt(m[0]),parseInt(m[1]),parseInt(m[2])];
+}
+
+function seasonConfig(){
+  if(seasonT>=1) return SEASONS[currentSeason];
+  const f=SEASONS[currentSeason], t=SEASONS[targetSeason], k=1-seasonT;
+  return {
+    name: seasonT>=.5? f.name:t.name,
+    sky: lerpColor(f.sky,t.sky,k),
+    mountain: f.mountain.map((c,i)=>lerpColor(c,t.mountain[i],k)),
+    mist: (k<.5? f.mist:t.mist),
+    tint: f.tint.map((v,i)=>Math.round(lerp(v,t.tint[i],k))),
+    tintA: lerp(f.tintA,t.tintA,k),
+    accent: lerpColor(f.accent,t.accent,k)
+  };
+}
+
+/* ---------- Perlin Noise ---------- */
+class Noise {
+  constructor(seed){
+    this.p=new Uint8Array(512);
+    const q=new Uint8Array(256);
+    let s=seed||1;
+    for(let i=0;i<256;i++){q[i]=i}
+    for(let i=255;i>0;i--){
+      s=(s*16807)%2147483647;
+      const j=s%(i+1);
+      [q[i],q[j]]=[q[j],q[i]];
+    }
+    for(let i=0;i<512;i++) this.p[i]=q[i&255];
+  }
+  fade(t){return t*t*t*(t*(t*6-15)+10)}
+  lerp(t,a,b){return a+t*(b-a)}
+  grad(h,x,y){const u=h<2?x:y,v=h<2?y:x;return ((h&1)?-u:u)+((h&2)?-v:v)}
+  noise2D(x,y){
+    const X=Math.floor(x)&255, Y=Math.floor(y)&255;
+    x-=Math.floor(x);y-=Math.floor(y);
+    const u=this.fade(x),v=this.fade(y);
+    const a=this.p[X]+Y,b=this.p[X+1]+Y;
+    return this.lerp(v,
+      this.lerp(u,this.grad(this.p[a],x,y),this.grad(this.p[b],x-1,y)),
+      this.lerp(u,this.grad(this.p[a+1],x,y-1),this.grad(this.p[b+1],x-1,y-1)));
+  }
+}
+const noise = new Noise(42);
+
+/* ---------- 山脉（离屏轮廓缓存 + 实时染色） ----------
+   轮廓（形状+山脚渐隐）只在 resize 时生成并缓存为3张白色蒙版；
+   颜色每帧通过 source-in 实时染色，因此季节过渡期间山脉颜色可平滑插值，无跳变。 */
+let mountainShapeLayers = [];  // 每层一张白色蒙版（已含山脚 alpha 渐隐）
+let mountainLineCv = null;    // 山脊线（固定墨色）
+let mountainTmpCv = null;     // 复用的染色临时画布
+const MOUNT_BASE = [0.38, 0.50, 0.62];
+const MOUNT_AMP  = [0.10, 0.08, 0.06];
+const MOUNT_FREQ = [0.8, 1.2, 1.8];
+let mountainPoints = [[],[],[]];
+
+function buildMountains(){
+  mountainPoints = MOUNT_BASE.map((baseY,li)=>{
+    const pts=[];
+    const step=4;
+    for(let x=0;x<=W+step;x+=step){
+      let y=H*baseY;
+      y += noise.noise2D(x*0.0015*MOUNT_FREQ[li]+li*100, 0)*H*MOUNT_AMP[li];
+      y += noise.noise2D(x*0.004*MOUNT_FREQ[li]+li*200, 50)*H*MOUNT_AMP[li]*0.4;
+      if(li===2) y += noise.noise2D(x*0.009,80)*H*0.012;
+      pts.push({x,y});
+    }
+    return pts;
+  });
+  buildMountainCache();
+}
+
+/* 生成山脉轮廓缓存（与颜色无关，仅在 resize 时重建） */
+function buildMountainCache(){
+  if(!mountainLineCv) mountainLineCv=document.createElement('canvas');
+  if(!mountainTmpCv)  mountainTmpCv=document.createElement('canvas');
+  for(const c of [mountainLineCv,mountainTmpCv]){
+    c.width=canvas.width; c.height=canvas.height;
+  }
+  // 每层独立白色蒙版（已含山脚渐隐），仅在 resize 时生成
+  mountainShapeLayers=[];
+  for(let li=0;li<3;li++){
+    const c=document.createElement('canvas');
+    c.width=canvas.width; c.height=canvas.height;
+    const mc=c.getContext('2d');
+    mc.setTransform(DPR,0,0,DPR,0,0);
+    const pts=mountainPoints[li];
+    mc.beginPath();
+    mc.moveTo(0,H);
+    for(const p of pts) mc.lineTo(p.x,p.y);
+    mc.lineTo(W,H);
+    mc.closePath();
+    mc.fillStyle='#fff';
+    mc.fill();
+    // 山脚渐隐
+    mc.globalCompositeOperation='destination-out';
+    const fade=mc.createLinearGradient(0,pts[0].y-20,0,H);
+    fade.addColorStop(0,'rgba(0,0,0,0)');
+    fade.addColorStop(0.5,'rgba(0,0,0,0)');
+    fade.addColorStop(1,'rgba(0,0,0,1)');
+    mc.fillStyle=fade;
+    mc.fillRect(0,0,W,H);
+    mc.globalCompositeOperation='source-over';
+    mountainShapeLayers.push(c);
+  }
+  // 山脊线
+  const lctx=mountainLineCv.getContext('2d');
+  lctx.setTransform(DPR,0,0,DPR,0,0);
+  lctx.clearRect(0,0,W,H);
+  for(let li=0;li<3;li++){
+    const pts=mountainPoints[li];
+    lctx.beginPath();
+    lctx.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++) lctx.lineTo(pts[i].x,pts[i].y);
+    lctx.strokeStyle=li===2?'rgba(40,32,22,.25)':'rgba(40,32,22,.08)';
+    lctx.lineWidth=li===2?1.2:0.6;
+    lctx.stroke();
+  }
+}
+
+function drawMountains(cfg){
+  if(!mountainShapeLayers.length) buildMountainCache();
+  const tc=mountainTmpCv.getContext('2d');
+  tc.setTransform(DPR,0,0,DPR,0,0);
+  for(let li=0;li<3;li++){
+    tc.clearRect(0,0,W,H);
+    // 铺该层颜色
+    tc.fillStyle=cfg.mountain[li];
+    tc.fillRect(0,0,W,H);
+    // 用该层白色蒙版裁剪（destination-in：保留与蒙版重叠处，取蒙版透明度）
+    tc.globalCompositeOperation='destination-in';
+    tc.drawImage(mountainShapeLayers[li],0,0,W,H);
+    tc.globalCompositeOperation='source-over';
+    ctx.drawImage(mountainTmpCv,0,0,W,H);
+  }
+  // 山脊线缓存
+  ctx.drawImage(mountainLineCv,0,0,W,H);
+}
+
+/* ---------- 宣纸纹理（离屏缓存） ---------- */
+let paperCv=null;
+function buildPaper(){
+  paperCv=document.createElement('canvas');
+  paperCv.width=canvas.width;
+  paperCv.height=canvas.height;
+  const pctx=paperCv.getContext('2d');
+  pctx.setTransform(DPR,0,0,DPR,0,0);
+  // 底色
+  pctx.fillStyle='#f0e9d8';
+  pctx.fillRect(0,0,W,H);
+  // 渐变微染
+  const g=pctx.createRadialGradient(W*0.4,H*0.35,Math.min(W,H)*0.1,W*0.5,H*0.5,Math.max(W,H)*0.75);
+  g.addColorStop(0,'rgba(255,250,235,0.5)');
+  g.addColorStop(1,'rgba(200,185,155,0.18)');
+  pctx.fillStyle=g;
+  pctx.fillRect(0,0,W,H);
+  // 纤维
+  const imgData=pctx.getImageData(0,0,W*DPR,H*DPR);
+  const d=imgData.data;
+  for(let i=0;i<d.length;i+=4){
+    const n=(Math.random()-0.5)*14;
+    d[i]+=n;d[i+1]+=n;d[i+2]+=n;
+  }
+  pctx.putImageData(imgData,0,0);
+  // 少量墨点
+  pctx.globalAlpha=0.04;
+  for(let i=0;i<180;i++){
+    pctx.fillStyle=Math.random()>.5?'#5a4a38':'#3a2e20';
+    pctx.beginPath();
+    pctx.arc(Math.random()*W,Math.random()*H,Math.random()*1.2+0.2,0,Math.PI*2);
+    pctx.fill();
+  }
+  pctx.globalAlpha=1;
+}
+
+function drawPaper(){
+  ctx.drawImage(paperCv,0,0,W,H);
+}
+
+/* ---------- 雾气 ---------- */
+function drawMist(time,cfg){
+  ctx.save();
+  for(let i=0;i<3;i++){
+    const y=H*(0.42+i*0.08);
+    ctx.beginPath();
+    for(let x=0;x<=W;x+=8){
+      const wy=y+noise.noise2D(x*0.003+time*0.06+i*30, i*50)*18;
+      if(x===0) ctx.moveTo(x,wy);
+      else ctx.lineTo(x,wy);
+    }
+    for(let x=W;x>=0;x-=8){
+      const wy=y+22+noise.noise2D(x*0.003+time*0.06+i*30+100, i*50)*14;
+      ctx.lineTo(x,wy);
+    }
+    ctx.closePath();
+    const alpha=0.06+i*0.03;
+    ctx.fillStyle=cfg.mist+alpha+')';
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ---------- 季节粒子（春絮/夏萤/秋叶/冬雪） ---------- */
+const particles=[];
+function initParticles(){
+  particles.length=0;
+  const count = W<600?40:80;
+  for(let i=0;i<count;i++){
+    particles.push({
+      // 防御 W=0：初始化时若画布未就绪，先均匀铺开，首帧会被正常驱动
+      x:W>0?Math.random()*W:Math.random()*1200,
+      y:H>0?Math.random()*H:Math.random()*800,
+      vx:(Math.random()-.5)*0.3, vy:0.2+Math.random()*0.4,
+      size:1+Math.random()*2, phase:Math.random()*Math.PI*2,
+      alpha:0.3+Math.random()*0.5
+    });
+  }
+}
+/* initParticles() 在 resize() 之后调用（见文件末尾 init 段），避免 W=0 */
+
+function drawParticles(time,season){
+  const colors=['rgba(180,200,150,','rgba(160,200,100,','rgba(200,130,60,','rgba(220,225,235,'];
+  ctx.save();
+  for(const p of particles){
+    p.x += p.vx + Math.sin(time+p.phase)*0.3;
+    p.y += p.vy * (season===2?0.8:season===3?0.5:0.3);
+    if(season===3) p.x += Math.sin(time*0.5+p.phase)*0.4; // snow drift
+    if(p.y>H){p.y=-5;p.x=Math.random()*W}
+    if(p.x<-10)p.x=W+10; if(p.x>W+10)p.x=-10;
+    ctx.globalAlpha=p.alpha*(season===3?0.8:0.5);
+    ctx.fillStyle=colors[season]+'0.7)';
+    if(season===3){
+      // snowflake
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size*0.8,0,Math.PI*2);
+      ctx.fill();
+    } else if(season===2){
+      // leaf - small ellipse
+      ctx.beginPath();
+      ctx.ellipse(p.x,p.y,p.size*1.5,p.size*0.7,p.phase+time*0.5,0,Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size*0.7,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+/* =========================================================
+   可放置元素
+   ========================================================= */
+const elements = [];
+let nextId = 1;
+const MAX_ELEMENTS = 60;
+
+const groundY = () => H * 0.78;
+
+function makeElement(type, x, y){
+  const e = {
+    id: nextId++, type, x, y,
+    scale: 0.85 + Math.random()*0.3,
+    growth: type==='bamboo'?0.4:1, // bamboo grows over time
+    age: 0,
+    w:0, h:0,
+    phase: Math.random()*Math.PI*2,
+    born: performance.now()
+  };
+  updateBounds(e);
+  return e;
+}
+
+function updateBounds(e){
+  const s=e.scale;
+  switch(e.type){
+    case 'bamboo': e.w=20*s; e.h=120*s*e.growth; break;
+    case 'pine':   e.w=70*s; e.h=100*s; break;
+    case 'plum':   e.w=55*s; e.h=80*s; break;
+    case 'rock':   e.w=55*s; e.h=35*s; break;
+    case 'stream': e.w=90*s; e.h=25*s; break;
+    case 'hut':    e.w=75*s; e.h=55*s; break;
+  }
+}
+
+function hitTest(x,y){
+  for(let i=elements.length-1;i>=0;i--){
+    const e=elements[i];
+    const bx=e.x-e.w/2, by=e.y-e.h;
+    if(x>=bx && x<=bx+e.w && y>=by && y<=e.y) return e;
+  }
+  return null;
+}
+
+/* ---- 绘制各元素 ---- */
+function drawBamboo(e, season, time){
+  const x=e.x, baseY=e.y, h=e.h, s=e.scale;
+  const sway = Math.sin(time*0.8+e.phase)*2*s;
+  ctx.save();
+  ctx.strokeStyle=season===3?INK.dan:INK.zhong;
+  ctx.lineWidth=2.5*s;
+  ctx.lineCap='round';
+  // 主竿
+  ctx.beginPath();
+  ctx.moveTo(x, baseY);
+  ctx.quadraticCurveTo(x+sway*0.5, baseY-h*0.5, x+sway, baseY-h);
+  ctx.stroke();
+  // 竹节
+  const segs=5;
+  ctx.lineWidth=1.5*s;
+  ctx.strokeStyle=season===3?INK.qing:INK.dan;
+  for(let i=1;i<segs;i++){
+    const t=i/segs;
+    const cx=x+sway*t*t;
+    const cy=baseY-h*t;
+    ctx.beginPath();
+    ctx.moveTo(cx-4*s, cy);
+    ctx.lineTo(cx+4*s, cy);
+    ctx.stroke();
+  }
+  // 叶
+  ctx.strokeStyle=season===3?'#9aa4a8':(season===0?'#6f8f5e':(season===1?'#4a6e3a':(season===2?'#8a7040':INK.zhong)));
+  ctx.fillStyle=ctx.strokeStyle;
+  ctx.lineWidth=1.2*s;
+  const leafSets=[
+    {t:0.25,side:-1},{t:0.45,side:1},{t:0.62,side:-1},{t:0.8,side:1}
+  ];
+  for(const ls of leafSets){
+    const cx=x+sway*ls.t*ls.t;
+    const cy=baseY-h*ls.t;
+    for(let k=0;k<4;k++){
+      const ang=ls.side*(0.3+k*0.25)+sway*0.02;
+      const len=(14+k*3)*s;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.quadraticCurveTo(
+        cx+Math.cos(ang)*len*0.5+ls.side*4, cy+Math.sin(ang)*len*0.5-6,
+        cx+Math.cos(ang)*len, cy+Math.sin(ang)*len
+      );
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawPine(e, season, time){
+  const x=e.x, baseY=e.y, h=e.h, w=e.w, s=e.scale;
+  const sway=Math.sin(time*0.5+e.phase)*1.5*s;
+  ctx.save();
+  // 树干
+  ctx.strokeStyle=INK.nong;
+  ctx.lineWidth=4*s;
+  ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(x,baseY);
+  ctx.quadraticCurveTo(x+sway*0.3,baseY-h*0.5,x+sway,baseY-h*0.85);
+  ctx.stroke();
+  // 松冠 - 层叠三角形
+  const foliageColor = season===3 ? '#8a9098'
+    : (season===2 ? '#7a6a48' : (season===1 ? '#3a5a2e' : '#5a7a4a'));
+  ctx.fillStyle=foliageColor;
+  ctx.strokeStyle=season===3?INK.dan:INK.nong;
+  ctx.lineWidth=1*s;
+  const tiers=[
+    {y:-0.85, w:0.9}, {y:-0.6, w:1.0}, {y:-0.35, w:0.9}, {y:-0.12, w:0.6}
+  ];
+  for(const t of tiers){
+    const cy=baseY+h*t.y;
+    const cw=w*t.w;
+    ctx.beginPath();
+    ctx.moveTo(x+sway*0.3, cy-h*0.13);
+    ctx.lineTo(x-cw*0.5+sway, cy+h*0.05);
+    ctx.lineTo(x+cw*0.5+sway, cy+h*0.05);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  // 雪帽
+  if(season===3){
+    ctx.fillStyle='rgba(235,238,242,.7)';
+    for(const t of tiers){
+      const cy=baseY+h*t.y;
+      const cw=w*t.w;
+      ctx.beginPath();
+      ctx.moveTo(x+sway*0.3, cy-h*0.13);
+      ctx.quadraticCurveTo(x, cy-h*0.16, x+cw*0.3+sway, cy-h*0.05);
+      ctx.lineTo(x-cw*0.3+sway, cy-h*0.05);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawPlum(e, season, time){
+  const x=e.x, baseY=e.y, h=e.h, w=e.w, s=e.scale;
+  const sway=Math.sin(time*0.6+e.phase)*2*s;
+  ctx.save();
+  // 梅干 - 曲折
+  ctx.strokeStyle=INK.nong;
+  ctx.lineWidth=3*s;
+  ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(x-2*s, baseY);
+  ctx.quadraticCurveTo(x+8*s, baseY-h*0.3, x-4*s+sway, baseY-h*0.55);
+  ctx.quadraticCurveTo(x+6*s+sway, baseY-h*0.75, x+sway, baseY-h);
+  ctx.stroke();
+  // 小枝
+  ctx.lineWidth=1.2*s;
+  ctx.strokeStyle=INK.zhong;
+  const branches=[
+    {bx:0.3, dx:20, dy:-5},
+    {bx:0.5, dx:-18, dy:-8},
+    {bx:0.7, dx:15, dy:-4},
+    {bx:0.85, dx:-12, dy:-6}
+  ];
+  for(const br of branches){
+    const px=x+sway*(br.bx*br.bx);
+    const py=baseY-h*br.bx;
+    ctx.beginPath();
+    ctx.moveTo(px,py);
+    ctx.quadraticCurveTo(px+br.dx*0.5*s, py+br.dy*s, px+br.dx*s, py+br.dy*s*1.5);
+    ctx.stroke();
+  }
+  // 花/叶
+  const isWinter = season===3;
+  const flowerColor = isWinter ? '#c44a4a' : (season===0?'#d48888':'none');
+  if(season===0 || season===3){
+    // 开花
+    ctx.fillStyle=flowerColor;
+    for(const br of branches){
+      const fx=x+sway*(br.bx*br.bx)+br.dx*s;
+      const fy=baseY-h*br.bx+br.dy*s*1.2;
+      drawPlumBlossom(fx,fy,2.5*s,isWinter);
+    }
+    // 顶部花
+    drawPlumBlossom(x+sway, baseY-h, 2*s, isWinter);
+  } else if(season===1 || season===2){
+    // 叶
+    ctx.fillStyle=season===1?'#5a7a4a':'#8a7040';
+    for(const br of branches){
+      const fx=x+sway*(br.bx*br.bx)+br.dx*s*0.7;
+      const fy=baseY-h*br.bx+br.dy*s*0.8;
+      ctx.beginPath();
+      ctx.ellipse(fx,fy,4*s,2*s,0.3,0,Math.PI*2);
+      ctx.fill();
+    }
+  }
+  // 冬雪
+  if(season===3){
+    ctx.fillStyle='rgba(235,238,242,.6)';
+    ctx.beginPath();
+    ctx.ellipse(x+sway, baseY-h+3, 6*s, 2*s, 0,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawPlumBlossom(x,y,r,isWinter){
+  ctx.save();
+  for(let i=0;i<5;i++){
+    const a=(i/5)*Math.PI*2 - Math.PI/2;
+    ctx.beginPath();
+    ctx.ellipse(x+Math.cos(a)*r, y+Math.sin(a)*r, r*0.85, r*0.55, a, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.fillStyle=isWinter?'#f0d060':'#e0a060';
+  ctx.beginPath();
+  ctx.arc(x,y,r*0.35,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawRock(e, season, time){
+  const x=e.x, baseY=e.y, w=e.w, h=e.h, s=e.scale;
+  ctx.save();
+  // 石身 - 不规则多边形
+  const seed = e.id*7;
+  const pts=[];
+  const sides=8;
+  for(let i=0;i<sides;i++){
+    const ang=(i/sides)*Math.PI*2;
+    const rx=w*0.5*(0.75+0.25*Math.sin(seed+i*1.7));
+    const ry=h*0.5*(0.7+0.3*Math.cos(seed+i*2.3));
+    pts.push({x:x+Math.cos(ang)*rx, y:baseY-h*0.15+Math.sin(ang)*ry*0.85});
+  }
+  // 阴影
+  ctx.fillStyle='rgba(60,50,38,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(x,baseY+2,w*0.45,h*0.12,0,0,Math.PI*2);
+  ctx.fill();
+  // 主体
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+  ctx.closePath();
+  const rockColor = season===3?'#9a9ea6' : (season===2?'#9a8870':(season===1?'#7a8070':'#8a8a7e'));
+  ctx.fillStyle=rockColor;
+  ctx.fill();
+  ctx.strokeStyle=INK.nong;
+  ctx.lineWidth=1.2*s;
+  ctx.stroke();
+  // 石纹
+  ctx.strokeStyle='rgba(40,32,22,0.25)';
+  ctx.lineWidth=0.8*s;
+  ctx.beginPath();
+  ctx.moveTo(x-w*0.2,baseY-h*0.3);
+  ctx.quadraticCurveTo(x,baseY-h*0.1,x+w*0.15,baseY-h*0.45);
+  ctx.stroke();
+  // 雪
+  if(season===3){
+    ctx.fillStyle='rgba(235,238,242,.65)';
+    ctx.beginPath();
+    ctx.moveTo(pts[3].x,pts[3].y);
+    ctx.quadraticCurveTo(x,pts[3].y-4*s,pts[4].x,pts[4].y);
+    ctx.quadraticCurveTo(x,pts[3].y,pts[3].x,pts[3].y);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawStream(e, season, time){
+  const x=e.x, y=e.y, w=e.w, h=e.h, s=e.scale;
+  ctx.save();
+  const frozen = season===3;
+  if(frozen){
+    // 冰面
+    ctx.fillStyle='rgba(200,215,230,0.7)';
+    ctx.strokeStyle='rgba(140,160,180,0.5)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(x-w*0.5,y-h*0.3);
+    ctx.quadraticCurveTo(x, y-h*0.6, x+w*0.5, y-h*0.3);
+    ctx.quadraticCurveTo(x+w*0.4, y+h*0.2, x+w*0.5, y+h*0.3);
+    ctx.quadraticCurveTo(x, y+h*0.5, x-w*0.5, y+h*0.3);
+    ctx.quadraticCurveTo(x-w*0.4, y+h*0.1, x-w*0.5, y-h*0.3);
+    ctx.fill();
+    ctx.stroke();
+    // 冰裂纹
+    ctx.strokeStyle='rgba(120,140,160,.35)';
+    ctx.beginPath();
+    ctx.moveTo(x-w*0.2,y);
+    ctx.lineTo(x+w*0.1,y-h*0.1);
+    ctx.lineTo(x+w*0.3,y+h*0.05);
+    ctx.stroke();
+  } else {
+    // 水流
+    ctx.strokeStyle=season===2?'rgba(160,130,80,.5)':'rgba(90,120,140,.45)';
+    ctx.lineWidth=1.5*s;
+    ctx.lineCap='round';
+    for(let i=0;i<4;i++){
+      const yy=y-h*0.2+i*h*0.18;
+      ctx.beginPath();
+      ctx.moveTo(x-w*0.45, yy);
+      for(let px=x-w*0.4; px<=x+w*0.45; px+=6){
+        ctx.lineTo(px, yy+Math.sin((px+time*30+i*20)*0.05)*2);
+      }
+      ctx.stroke();
+    }
+    // 水底色块
+    ctx.fillStyle='rgba(150,170,185,.12)';
+    ctx.beginPath();
+    ctx.ellipse(x,y,w*0.45,h*0.35,0,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawHut(e, season, time){
+  const x=e.x, baseY=e.y, w=e.w, h=e.h, s=e.scale;
+  ctx.save();
+  // 阴影
+  ctx.fillStyle='rgba(60,50,38,.12)';
+  ctx.beginPath();
+  ctx.ellipse(x,baseY+2,w*0.4,h*0.1,0,0,Math.PI*2);
+  ctx.fill();
+  // 屋身
+  const bodyW=w*0.6, bodyH=h*0.45;
+  const bodyX=x-bodyW/2, bodyY=baseY-bodyH;
+  ctx.fillStyle=season===3?'#d8d4c8':'#e8dcc4';
+  ctx.strokeStyle=INK.nong;
+  ctx.lineWidth=1.2*s;
+  ctx.fillRect(bodyX,bodyY,bodyW,bodyH);
+  ctx.strokeRect(bodyX,bodyY,bodyW,bodyH);
+  // 门
+  ctx.fillStyle=INK.zhong;
+  const doorW=bodyW*0.25, doorH=bodyH*0.65;
+  ctx.fillRect(x-doorW/2, baseY-doorH, doorW, doorH);
+  // 窗
+  ctx.strokeStyle=INK.zhong;
+  ctx.lineWidth=0.8*s;
+  const winSize=bodyW*0.18;
+  ctx.strokeRect(bodyX+bodyW*0.12, bodyY+bodyH*0.25, winSize, winSize);
+  ctx.beginPath();
+  ctx.moveTo(bodyX+bodyW*0.12+winSize/2, bodyY+bodyH*0.25);
+  ctx.lineTo(bodyX+bodyW*0.12+winSize/2, bodyY+bodyH*0.25+winSize);
+  ctx.moveTo(bodyX+bodyW*0.12, bodyY+bodyH*0.25+winSize/2);
+  ctx.lineTo(bodyX+bodyW*0.12+winSize, bodyY+bodyH*0.25+winSize/2);
+  ctx.stroke();
+  // 屋顶 - 三角形
+  ctx.fillStyle=season===3?'#8a8e96':'#5a4030';
+  ctx.beginPath();
+  ctx.moveTo(x-w*0.55, bodyY);
+  ctx.lineTo(x, baseY-h);
+  ctx.lineTo(x+w*0.55, bodyY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle=INK.jiao;
+  ctx.lineWidth=1.5*s;
+  ctx.stroke();
+  // 屋檐
+  ctx.strokeStyle=INK.jiao;
+  ctx.lineWidth=2*s;
+  ctx.beginPath();
+  ctx.moveTo(x-w*0.55, bodyY);
+  ctx.quadraticCurveTo(x-w*0.6, bodyY+4*s, x-w*0.5, bodyY+6*s);
+  ctx.moveTo(x+w*0.55, bodyY);
+  ctx.quadraticCurveTo(x+w*0.6, bodyY+4*s, x+w*0.5, bodyY+6*s);
+  ctx.stroke();
+  // 雪
+  if(season===3){
+    ctx.fillStyle='rgba(235,238,242,.7)';
+    ctx.beginPath();
+    ctx.moveTo(x-w*0.5,bodyY);
+    ctx.quadraticCurveTo(x,baseY-h+5,x+w*0.5,bodyY);
+    ctx.lineTo(x+w*0.35,bodyY+3);
+    ctx.quadraticCurveTo(x,baseY-h+10,x-w*0.35,bodyY+3);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // 炊烟（如果舍旁有竹或松，显示有人居住）
+  const hasCompany = elements.some(el=>el!==e && el.type!=='rock' && el.type!=='stream' &&
+    Math.abs(el.x-e.x)<150 && Math.abs(el.y-e.y)<120);
+  if(hasCompany && season!==3){
+    // 稳定的慢周期呼吸（不逐帧随机），烟柱随时间缓慢摆动，透明度周期性起伏
+    const breath = 0.12 + 0.08*(0.5+0.5*Math.sin(time*0.7+e.phase));
+    ctx.strokeStyle=`rgba(120,110,90,${breath})`;
+    ctx.lineWidth=1.5*s;
+    ctx.beginPath();
+    const sx=x+bodyW*0.2, sy=bodyY-5;
+    ctx.moveTo(sx,sy);
+    for(let k=0;k<5;k++){
+      ctx.quadraticCurveTo(sx+Math.sin(time*0.6+k+e.phase)*6, sy-8*k,
+                           sx+Math.cos(k+e.phase)*4, sy-8*(k+1));
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+const DRAWERS={bamboo:drawBamboo,pine:drawPine,plum:drawPlum,rock:drawRock,stream:drawStream,hut:drawHut};
+
+function drawElements(time){
+  const cfg=seasonConfig();
+  // sort by y for depth
+  const sorted=[...elements].sort((a,b)=>a.y-b.y);
+  for(const e of sorted){
+    // grow bamboo in spring/summer
+    if(e.type==='bamboo'){
+      const target = (currentSeason===0||currentSeason===1)?1:0.8;
+      e.growth += (target-e.growth)*0.002;
+      updateBounds(e);
+    }
+    // appear animation
+    const age=(performance.now()-e.born)/1000;
+    let appear=1;
+    if(age<0.6) appear=age/0.6;
+    ctx.save();
+    ctx.globalAlpha=appear;
+    DRAWERS[e.type](e, currentSeason, time);
+    ctx.restore();
+  }
+  // selection highlight
+  if(dragging || hoverElem){
+    const e=dragging||hoverElem;
+    ctx.save();
+    ctx.strokeStyle='rgba(90,74,56,.35)';
+    ctx.lineWidth=1;
+    ctx.setLineDash([4,4]);
+    ctx.strokeRect(e.x-e.w/2-4, e.y-e.h-4, e.w+8, e.h+8);
+    ctx.restore();
+  }
+}
+
+/* =========================================================
+   交互：放置/拖拽/触摸
+   ========================================================= */
+let currentTool='bamboo';
+let dragging=null;
+let dragOffX=0, dragOffY=0;
+let hoverElem=null;
+let placePreview=null;
+
+document.querySelectorAll('.tbtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTool=btn.dataset.tool;
+    canvas.style.cursor=currentTool==='erase'?'not-allowed':'crosshair';
+  });
+});
+
+function getPos(e){
+  const t=e.touches?e.touches[0]:e;
+  return {x:t.clientX, y:t.clientY};
+}
+
+function onPointerDown(e){
+  e.preventDefault();
+  const {x,y}=getPos(e);
+  const hit=hitTest(x,y);
+  if(currentTool==='erase'){
+    if(hit){ removeElement(hit); }
+    return;
+  }
+  if(hit){
+    dragging=hit;
+    dragOffX=x-hit.x;
+    dragOffY=y-hit.y;
+    canvas.style.cursor='grabbing';
+  } else {
+    // place
+    if(elements.length<MAX_ELEMENTS){
+      const ne=makeElement(currentTool, x, Math.min(y, groundY()+10));
+      elements.push(ne);
+      playInkDrop(x,y);
+      dragging=ne;
+      dragOffX=0; dragOffY=0;
+    }
+  }
+}
+
+function onPointerMove(e){
+  const {x,y}=getPos(e);
+  placePreview={x,y};
+  if(dragging){
+    e.preventDefault();
+    dragging.x=x-dragOffX;
+    dragging.y=Math.min(y-dragOffY, groundY()+20);
+    // keep in screen
+    dragging.x=Math.max(30,Math.min(W-30,dragging.x));
+    updateBounds(dragging);
+  } else {
+    hoverElem=hitTest(x,y);
+    canvas.style.cursor = hoverElem ? 'grab' : (currentTool==='erase'?'not-allowed':'crosshair');
+  }
+}
+
+function onPointerUp(){
+  if(dragging){
+    canvas.style.cursor=hoverElem?'grab':'crosshair';
+    dragging=null;
+  }
+}
+
+canvas.addEventListener('mousedown',onPointerDown);
+canvas.addEventListener('mousemove',onPointerMove);
+canvas.addEventListener('mouseup',onPointerUp);
+canvas.addEventListener('mouseleave',onPointerUp);
+canvas.addEventListener('touchstart',onPointerDown,{passive:false});
+canvas.addEventListener('touchmove',onPointerMove,{passive:false});
+canvas.addEventListener('touchend',onPointerUp);
+canvas.addEventListener('touchcancel',onPointerUp);
+
+function removeElement(e){
+  playInkDrop(e.x,e.y-e.h/2,true);
+  const idx=elements.indexOf(e);
+  if(idx>=0) elements.splice(idx,1);
+}
+
+/* 墨点动画 */
+const inkDrops=[];
+function playInkDrop(x,y,fade){
+  inkDrops.push({x,y,r:0,maxR:20+Math.random()*15,life:1,fade:!!fade});
+}
+function drawInkDrops(){
+  for(let i=inkDrops.length-1;i>=0;i--){
+    const d=inkDrops[i];
+    d.r+=0.8;
+    d.life=1-d.r/d.maxR;
+    if(d.life<=0){inkDrops.splice(i,1);continue}
+    ctx.save();
+    ctx.globalAlpha=d.life*0.4;
+    ctx.strokeStyle=INK.nong;
+    ctx.lineWidth=d.fade?0.8:1.2;
+    ctx.beginPath();
+    ctx.arc(d.x,d.y,d.r,0,Math.PI*2);
+    ctx.stroke();
+    if(!d.fade){
+      ctx.globalAlpha=d.life*0.15;
+      ctx.fillStyle=INK.dan;
+      ctx.beginPath();
+      ctx.arc(d.x,d.y,d.r*0.6,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+/* =========================================================
+   来客事件
+   ========================================================= */
+const VISITORS=[
+  {
+    name:'隐士',
+    evaluate(counts, layout){
+      // 隐士喜幽静：有舍有松，元素少
+      if(counts.hut>=1 && counts.pine>=1 && elements.length<=15)
+        return {text:'倚松独坐，悠然忘言。'};
+      if(counts.hut>=1 && counts.bamboo>=1)
+        return {text:'竹里烹茶，山中日永。'};
+      if(elements.length<=5)
+        return {text:'空山无人，水流花开。'};
+      return null;
+    }
+  },
+  {
+    name:'诗人',
+    evaluate(counts){
+      if(counts.plum>=1 && counts.stream>=1)
+        return {text:'疏影横斜水清浅，暗香浮动月黄昏。'};
+      if(counts.bamboo>=2)
+        return {text:'宁可食无肉，不可居无竹。'};
+      if(counts.hut>=1 && counts.pine>=1)
+        return {text:'明月松间照，清泉石上流。'};
+      if(counts.plum>=1)
+        return {text:'遥知不是雪，为有暗香来。'};
+      if(counts.stream>=1)
+        return {text:'行到水穷处，坐看云起时。'};
+      return null;
+    }
+  },
+  {
+    name:'行者',
+    evaluate(counts, layout){
+      // 行者喜壮阔：元素多或有石有溪
+      if(elements.length>=12)
+        return {text:'长啸一声，山谷回应。'};
+      if(counts.rock>=1 && counts.stream>=1)
+        return {text:'扪萝登石，临流观化。'};
+      if(counts.pine>=2)
+        return {text:'穿林打叶，何妨吟啸。'};
+      return null;
+    }
+  }
+];
+
+let visitorTimer = 15 + Math.random()*15;
+let visitorActive = null;
+let visitorActiveT = 0;
+const VISITOR_DURATION = 8;
+
+function triggerVisitor(){
+  const counts={bamboo:0,pine:0,plum:0,rock:0,stream:0,hut:0};
+  for(const e of elements) counts[e.type]++;
+  // layout analysis
+  const layout = {
+    hasWater: counts.stream>=1,
+    hasShelter: counts.hut>=1,
+    density: elements.length,
+    hasLife: counts.bamboo+counts.pine+counts.plum
+  };
+  // shuffle visitors
+  const order=[...VISITORS].sort(()=>Math.random()-0.5);
+  for(const v of order){
+    const r=v.evaluate(counts,layout);
+    if(r){
+      showVisitor(v.name, r.text);
+      return;
+    }
+  }
+  // fallback - generic
+  const v=order[0];
+  const generic=['山静似太古，日长如小年。','偶来松树下，高枕石头眠。','清溪流过碧山头。'];
+  showVisitor(v.name, generic[Math.floor(Math.random()*generic.length)]);
+}
+
+function showVisitor(name,text){
+  visitorActive={name,text};
+  visitorActiveT=VISITOR_DURATION;
+  const el=document.getElementById('visitor');
+  el.querySelector('.vname').textContent=name+'到访';
+  el.querySelector('.vline').textContent=text;
+  el.classList.add('show');
+}
+
+function hideVisitor(){
+  visitorActive=null;
+  document.getElementById('visitor').classList.remove('show');
+}
+
+/* =========================================================
+   印章
+   ========================================================= */
+function drawSeal(){
+  const c=sealCtx, s=64;
+  c.clearRect(0,0,s,s);
+  // 印底
+  c.fillStyle='#a8322a';
+  c.fillRect(6,6,s-12,s-12);
+  // 斑驳
+  c.globalCompositeOperation='destination-out';
+  for(let i=0;i<40;i++){
+    c.fillStyle='rgba(0,0,0,'+(0.1+Math.random()*0.3)+')';
+    c.beginPath();
+    c.arc(10+Math.random()*(s-20),10+Math.random()*(s-20),Math.random()*3+0.5,0,Math.PI*2);
+    c.fill();
+  }
+  c.globalCompositeOperation='source-over';
+  // 文字 山居
+  c.fillStyle='#f4ede0';
+  c.font='bold 22px "Songti SC","STSong",serif';
+  c.textAlign='center';
+  c.textBaseline='middle';
+  c.fillText('山',s/2,s*0.32);
+  c.fillText('居',s/2,s*0.68);
+}
+
+/* =========================================================
+   主循环
+   ========================================================= */
+let lastTime=0;
+let animTime=0;
+
+function update(dt){
+  // season timer
+  seasonTimer+=dt;
+  if(seasonT<1){
+    seasonT=Math.min(1,seasonT+dt*0.5); // 2s transition
+    if(seasonT>=1) currentSeason=targetSeason;
+  } else if(seasonTimer>=SEASON_DURATION){
+    targetSeason=(currentSeason+1)%4;
+    seasonT=0;
+    seasonTimer=0;
+    updateSeasonUI();
+    // winter snow: extra particles
+    if(targetSeason===3) initParticles();
+  }
+  // visitors
+  if(visitorActive){
+    visitorActiveT-=dt;
+    if(visitorActiveT<=0) hideVisitor();
+  } else {
+    visitorTimer-=dt;
+    if(visitorTimer<=0 && elements.length>0){
+      triggerVisitor();
+      visitorTimer=20+Math.random()*25;
+    }
+  }
+}
+
+function updateSeasonUI(){
+  document.querySelectorAll('.seasonDot').forEach((d,i)=>{
+    d.classList.toggle('active',i===targetSeason);
+  });
+  document.getElementById('seasonLabel').textContent=SEASONS[targetSeason].name;
+}
+
+// season dot click
+document.querySelectorAll('.seasonDot').forEach((d,i)=>{
+  d.addEventListener('click',()=>{
+    if(i!==currentSeason){
+      targetSeason=i;
+      seasonT=0;
+      seasonTimer=0;
+      updateSeasonUI();
+      if(i===3) initParticles();
+    }
+  });
+});
+
+function render(){
+  const cfg=seasonConfig();
+  // paper
+  drawPaper();
+  // sky / season tint wash
+  ctx.save();
+  ctx.globalAlpha=cfg.tintA;
+  ctx.fillStyle=`rgb(${cfg.tint[0]},${cfg.tint[1]},${cfg.tint[2]})`;
+  ctx.fillRect(0,0,W,H);
+  ctx.restore();
+  // mountains
+  drawMountains(cfg);
+  // ground wash
+  const groundGrad=ctx.createLinearGradient(0,H*0.72,0,H);
+  groundGrad.addColorStop(0,'rgba(240,233,216,0)');
+  groundGrad.addColorStop(1,`rgba(${cfg.tint[0]},${cfg.tint[1]},${cfg.tint[2]},0.12)`);
+  ctx.fillStyle=groundGrad;
+  ctx.fillRect(0,H*0.7,W,H*0.3);
+  // mist
+  drawMist(animTime,cfg);
+  // elements
+  drawElements(animTime);
+  // ink drops
+  drawInkDrops();
+  // particles
+  drawParticles(animTime,currentSeason);
+  // placement preview
+  if(placePreview && !dragging && currentTool!=='erase'){
+    ctx.save();
+    ctx.globalAlpha=0.35;
+    ctx.strokeStyle=INK.dan;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.arc(placePreview.x, Math.min(placePreview.y,groundY()+10), 12, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function loop(now){
+  if(!lastTime) lastTime=now;
+  const dt=Math.min((now-lastTime)/1000,0.05);
+  lastTime=now;
+  animTime+=dt;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- init ---------- */
+resize();
+initParticles();
+drawSeal();
+updateSeasonUI();
+// Pre-seed a few elements for initial landscape
+setTimeout(()=>{
+  const cx=W*0.5;
+  elements.push(makeElement('pine',cx-180,groundY()));
+  elements.push(makeElement('rock',cx-60,groundY()+5));
+  elements.push(makeElement('hut',cx+80,groundY()-5));
+  elements.push(makeElement('bamboo',cx+200,groundY()));
+  elements.push(makeElement('stream',cx-120,groundY()+25));
+},300);
+
+requestAnimationFrame(loop);
+
+// 防止双指缩放
+document.addEventListener('gesturestart',e=>e.preventDefault());
+</script>
+</body>
+</html>

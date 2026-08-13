@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>绒球水墨集 · Rongball Ink Studio</title>
-  <meta name="description" content="绒球水墨集——东方美学 × 程序生成的互动作品集：水墨粒子、山水间、水墨2048、弈·水墨五子棋、墨音。">
+  <meta name="description" content="绒球水墨集——东方美学 × 程序生成的互动作品集：水墨粒子、山水间、水墨2048、弈·水墨五子棋、墨音、山居。">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;500;600;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
@@ -175,6 +175,7 @@
     .cv-sound .glyph{color:rgba(245,235,210,.92);text-shadow:0 0 24px rgba(245,210,140,.35)}
     .cv-sound .corner{background:rgba(20,24,34,.55);color:#d8cdb6;border-color:rgba(255,255,255,.08)}
     .cv-sound .stamp{background:#c04632}
+    .cv-dwelling{background:linear-gradient(180deg,#eef0e6 0%,#d9e0d0 42%,#bcc9b4 70%,#9aab92 100%)}
 
     /* body */
     .body{padding:22px 22px 24px;display:flex;flex-direction:column;flex:1}
@@ -271,7 +272,7 @@
       <div class="en">R O N G B A L L · I N K · S T U D I O</div>
       <p class="desc">
         以代码为笔，以屏幕为纸。<br>
-        五件互动小品，游走于粒子、山水、棋局与琴弦之间，<br>
+        六件互动小品，游走于粒子、山水、棋局、琴弦与山居之间，<br>
         试把东方水墨的留白与肌理，请进数字的光里。
       </p>
       <div class="divider"></div>
@@ -284,9 +285,9 @@
     </header>
 
     <div class="section-head">
-      <h2>作品 · 五则</h2>
+      <h2>作品 · 六则</h2>
       <span class="sub">Selected Works</span>
-      <span class="count">05 Pieces</span>
+      <span class="count">06 Pieces</span>
     </div>
 
     <div class="grid" id="grid">
@@ -386,6 +387,26 @@
             <span class="tag">五声音阶</span>
             <span class="tag">卷积混响</span>
             <span class="tag accent">可演奏</span>
+          </div>
+          <span class="enter">入画 <span class="arrow">→</span></span>
+        </div>
+      </a>
+
+      <a class="card" href="works/mountain-dwelling.html">
+        <div class="cover cv-dwelling">
+          <canvas data-cover="dwelling"></canvas>
+          <span class="corner">2026.08.13</span>
+          <span class="glyph">居</span>
+          <span class="stamp">隐</span>
+        </div>
+        <div class="body">
+          <div class="title"><h3>山居</h3><span class="en-title">Mountain Dwelling</span></div>
+          <div class="date">水墨经营 · 四时来客</div>
+          <p>一方可居的山水。竹、松、梅、石、溪、舍随心布置拖拽，四季三十秒轮转，春淡青、夏浓绿、秋赭石、冬素白，元素应时而变——竹春夏拔节、梅冬着花、溪冬结冰、松冬戴雪。隐士、诗人、行者循着你的布局来访，各题其句。留白生境，经营成画。</p>
+          <div class="tags">
+            <span class="tag">经营模拟</span>
+            <span class="tag">四季系统</span>
+            <span class="tag accent">来客事件</span>
           </div>
           <span class="enter">入画 <span class="arrow">→</span></span>
         </div>
@@ -566,6 +587,41 @@
         mt(h*0.6,18,'rgba(40,46,60,0.85)',0.3);
         mt(h*0.72,22,'rgba(28,32,44,0.92)',0.5);
         mt(h*0.86,14,'rgba(15,18,28,1)',0.8);
+        t+=0.01;
+        if(!prefersReduced) requestAnimationFrame(frame);
+      }
+      frame();
+    }
+    else if(kind==='dwelling'){
+      let t=0;
+      function frame(){
+        ctx.clearRect(0,0,w,h);
+        // distant mountains
+        function mt(base, amp, color, speed){
+          ctx.beginPath();ctx.moveTo(0,h);
+          for(let x=0;x<=w;x+=8){
+            const y=base+Math.sin(x*0.01+t*speed)*amp+Math.sin(x*0.024+t*speed*0.7)*amp*0.4;
+            ctx.lineTo(x,y);
+          }
+          ctx.lineTo(w,h);ctx.closePath();ctx.fillStyle=color;ctx.fill();
+        }
+        mt(h*0.5,20,'rgba(150,168,142,0.5)',0.25);
+        mt(h*0.64,24,'rgba(112,132,104,0.68)',0.4);
+        mt(h*0.8,18,'rgba(78,96,72,0.82)',0.6);
+        // a little hut
+        const hx=w*0.5, hy=h*0.74;
+        ctx.fillStyle='rgba(60,50,38,0.8)';
+        ctx.beginPath();
+        ctx.moveTo(hx-14, hy); ctx.lineTo(hx, hy-12); ctx.lineTo(hx+14, hy);
+        ctx.closePath(); ctx.fill();
+        ctx.fillRect(hx-9, hy, 18, 12);
+        // drifting petals / leaves
+        for(let i=0;i<14;i++){
+          const px=((i*53+t*12)%w);
+          const py=(h*0.35 + Math.sin(t*0.6+i)*14 + i*7)%h;
+          ctx.fillStyle='rgba(163,58,44,0.35)';
+          ctx.beginPath();ctx.arc(px,py,1.4,0,Math.PI*2);ctx.fill();
+        }
         t+=0.01;
         if(!prefersReduced) requestAnimationFrame(frame);
       }
