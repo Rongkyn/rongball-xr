@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>绒球水墨集 · Rongball Ink Studio</title>
-  <meta name="description" content="绒球水墨集——东方美学 × 程序生成的互动作品集：水墨粒子、山水间、水墨2048、弈·水墨五子棋、墨音、山居。">
+  <meta name="description" content="绒球水墨集——东方美学 × 程序生成的互动作品集：水墨粒子、山水间、水墨2048、弈·水墨五子棋、墨音、山居、墨园。">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;500;600;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
@@ -176,6 +176,7 @@
     .cv-sound .corner{background:rgba(20,24,34,.55);color:#d8cdb6;border-color:rgba(255,255,255,.08)}
     .cv-sound .stamp{background:#c04632}
     .cv-dwelling{background:linear-gradient(180deg,#eef0e6 0%,#d9e0d0 42%,#bcc9b4 70%,#9aab92 100%)}
+    .cv-garden{background:linear-gradient(180deg,#f0ede4 0%,#e2dccb 45%,#c8c4a8 75%,#a8a888 100%)}
 
     /* body */
     .body{padding:22px 22px 24px;display:flex;flex-direction:column;flex:1}
@@ -272,7 +273,7 @@
       <div class="en">R O N G B A L L · I N K · S T U D I O</div>
       <p class="desc">
         以代码为笔，以屏幕为纸。<br>
-        六件互动小品，游走于粒子、山水、棋局、琴弦与山居之间，<br>
+        七件互动小品，游走于粒子、山水、棋局、琴弦、山居与草木之间，<br>
         试把东方水墨的留白与肌理，请进数字的光里。
       </p>
       <div class="divider"></div>
@@ -285,9 +286,9 @@
     </header>
 
     <div class="section-head">
-      <h2>作品 · 六则</h2>
+      <h2>作品 · 七则</h2>
       <span class="sub">Selected Works</span>
-      <span class="count">06 Pieces</span>
+      <span class="count">07 Pieces</span>
     </div>
 
     <div class="grid" id="grid">
@@ -409,6 +410,26 @@
             <span class="tag accent">来客事件</span>
           </div>
           <span class="enter">入画 <span class="arrow">→</span></span>
+        </div>
+      </a>
+
+      <a class="card" href="works/ink-garden.html">
+        <div class="cover cv-garden">
+          <canvas data-cover="garden"></canvas>
+          <span class="corner">2026.08.14</span>
+          <span class="glyph">园</span>
+          <span class="stamp">生</span>
+        </div>
+        <div class="body">
+          <div class="title"><h3>墨园</h3><span class="en-title">Ink Garden</span></div>
+          <div class="date">生成艺术 · 递归生息</div>
+          <p>宣纸上点击，草木便从落点生长。竹、松、柳、梅、兰、枯木六种植物由递归分形生成，每株受种子控制，没有两棵相同。枝叶逐节抽长，随风轻摆，偶有落叶飘零。右键或长按可移除单株，亦可随缘成林、一键清园。留白处，生机自现。</p>
+          <div class="tags">
+            <span class="tag">递归分形</span>
+            <span class="tag">种子随机</span>
+            <span class="tag accent">生成种植</span>
+          </div>
+          <span class="enter">入园 <span class="arrow">→</span></span>
         </div>
       </a>
 
@@ -623,6 +644,56 @@
           ctx.beginPath();ctx.arc(px,py,1.4,0,Math.PI*2);ctx.fill();
         }
         t+=0.01;
+        if(!prefersReduced) requestAnimationFrame(frame);
+      }
+      frame();
+    }
+    else if(kind==='garden'){
+      let t=0;
+      // simple seeded fractal trees
+      function seededRand(s){ s=Math.sin(s*127.1)*43758.5453; return s-Math.floor(s); }
+      function branch(ctx,x,y,len,angle,depth,seed){
+        if(depth<=0||len<2) return;
+        const x2=x+Math.cos(angle)*len;
+        const y2=y+Math.sin(angle)*len;
+        const sway=Math.sin(t*0.8+seed)*0.03*(6-depth);
+        ctx.beginPath();
+        ctx.moveTo(x,y);
+        ctx.lineTo(x2+Math.sin(angle)*sway*len*0.3,y2);
+        ctx.strokeStyle='rgba(40,36,28,'+(0.35+depth*0.1)+')';
+        ctx.lineWidth=Math.max(0.6,depth*0.7);
+        ctx.lineCap='round';
+        ctx.stroke();
+        const nAngle=0.35+seededRand(seed+depth)*0.25;
+        const nLen=0.68+seededRand(seed+depth*3)*0.12;
+        branch(ctx,x2,y2,len*nLen,angle-nAngle,depth-1,seed+11);
+        branch(ctx,x2,y2,len*nLen,angle+nAngle,depth-1,seed+23);
+      }
+      function frame(){
+        ctx.clearRect(0,0,w,h);
+        // ground wash
+        const gg=ctx.createLinearGradient(0,h*0.7,0,h);
+        gg.addColorStop(0,'rgba(140,130,100,0.12)');
+        gg.addColorStop(1,'rgba(100,90,65,0.22)');
+        ctx.fillStyle=gg;
+        ctx.fillRect(0,h*0.7,w,h*0.3);
+        // 3 trees at different positions/sizes
+        const trees=[
+          {x:w*0.25, h:46, seed:1.3},
+          {x:w*0.5, h:62, seed:3.7},
+          {x:w*0.75, h:40, seed:5.1}
+        ];
+        for(const tr of trees){
+          branch(ctx,tr.x,h*0.78,tr.h,-Math.PI/2,6,tr.seed);
+        }
+        // falling leaves
+        for(let i=0;i<8;i++){
+          const lx=((i*67+t*18)%w);
+          const ly=(h*0.3+Math.sin(t*0.5+i*1.7)*18+i*11)%h;
+          ctx.fillStyle='rgba(140,80,40,0.3)';
+          ctx.beginPath();ctx.ellipse(lx,ly,2,1,t*0.5+i,0,Math.PI*2);ctx.fill();
+        }
+        t+=0.012;
         if(!prefersReduced) requestAnimationFrame(frame);
       }
       frame();

@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>墨园 · Ink Garden</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3ece0;
+    --paper-2:#ebe2d1;
+    --ink:#1c1a17;
+    --ink-soft:#3a352e;
+    --ink-mid:#6b6358;
+    --ink-light:#9a9082;
+    --seal:#a33a2c;
+    --seal-deep:#852a1f;
+    --line:rgba(40,34,28,.18);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{
+    width:100%;height:100%;overflow:hidden;background:var(--paper);
+    font-family:"Noto Serif SC","Songti SC","STSong",serif;
+    -webkit-tap-highlight-color:transparent;touch-action:none;user-select:none;
+  }
+  canvas#scene{display:block;position:fixed;top:0;left:0;cursor:crosshair}
+
+  /* 左上角标题 */
+  #titleBlock{
+    position:fixed;top:22px;left:26px;z-index:10;pointer-events:none;
+    color:var(--ink);
+  }
+  #titleBlock h1{
+    font-family:"Ma Shan Zheng","STKaiti","KaiTi",serif;
+    font-size:34px;font-weight:400;letter-spacing:8px;line-height:1;
+    text-shadow:0 1px 0 rgba(255,255,255,.5);
+  }
+  #titleBlock .en{
+    margin-top:6px;font-family:"ZCOOL XiaoWei",serif;
+    font-size:10px;color:var(--ink-light);letter-spacing:3px;
+  }
+
+  /* 右上角统计 */
+  #stats{
+    position:fixed;top:22px;right:26px;z-index:10;pointer-events:none;
+    padding:7px 14px;background:rgba(243,236,224,.82);
+    border:1px solid var(--line);border-radius:2px;
+    font-size:12px;color:var(--ink-soft);letter-spacing:2px;line-height:1.7;
+    backdrop-filter:blur(4px);text-align:right;
+    box-shadow:0 2px 10px rgba(80,60,40,.06);
+  }
+  #stats .count{color:var(--seal-deep);font-weight:500}
+  #stats .time{color:var(--ink-mid);font-size:10px;letter-spacing:1px}
+
+  /* 右侧风指示 */
+  #wind-indicator{
+    position:fixed;top:50%;right:22px;transform:translateY(-50%);
+    z-index:10;display:flex;flex-direction:column;align-items:center;gap:6px;
+    cursor:pointer;pointer-events:auto;padding:6px 4px;
+  }
+  .wind-bar{
+    width:3px;background:var(--ink-light);border-radius:2px;
+    transition:height .5s ease,background .5s ease;
+  }
+  #wind-label{
+    margin-top:4px;font-size:10px;color:var(--ink-light);
+    letter-spacing:1px;writing-mode:vertical-rl;font-family:"ZCOOL XiaoWei",serif;
+  }
+
+  /* 提示 */
+  #hint{
+    position:fixed;bottom:92px;left:50%;transform:translateX(-50%);
+    z-index:10;color:var(--ink-light);font-size:11px;letter-spacing:4px;
+    pointer-events:none;opacity:.75;
+  }
+
+  /* 底部植物选择栏 */
+  #plantBar{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10;
+    display:flex;gap:4px;padding:6px 10px;
+    background:rgba(243,236,224,.9);border:1px solid var(--line);
+    border-radius:28px;backdrop-filter:blur(6px);
+    box-shadow:0 4px 20px rgba(80,60,40,.1);
+    max-width:calc(100vw - 110px);overflow-x:auto;overflow-y:hidden;
+    scrollbar-width:none;
+  }
+  #plantBar::-webkit-scrollbar{display:none}
+  .pbtn{
+    width:42px;height:42px;border:1px solid transparent;background:transparent;
+    border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    font-family:"Ma Shan Zheng","STKaiti","KaiTi",serif;
+    font-size:20px;color:var(--ink-soft);transition:all .3s ease;
+    position:relative;flex-shrink:0;
+  }
+  .pbtn:hover{background:rgba(90,74,56,.08)}
+  .pbtn.active{
+    background:var(--seal);color:#f7efe2;border-color:var(--seal-deep);
+    box-shadow:0 2px 8px rgba(163,58,44,.35);
+  }
+  .pbtn .tip{
+    position:absolute;top:48px;left:50%;transform:translateX(-50%);
+    font-size:10px;color:var(--ink-mid);white-space:nowrap;
+    opacity:0;transition:opacity .3s;pointer-events:none;
+    font-family:"Noto Serif SC",serif;letter-spacing:1px;
+  }
+  .pbtn:hover .tip{opacity:1}
+  #barDivider{width:1px;background:var(--line);margin:6px 4px;flex-shrink:0}
+  .pbtn.icon-btn{
+    font-family:"ZCOOL XiaoWei",serif;font-size:16px;
+  }
+
+  /* 印章 */
+  #sealCanvas{position:fixed;bottom:20px;right:26px;pointer-events:none;z-index:10}
+
+  @media (max-width:640px){
+    #titleBlock h1{font-size:28px;letter-spacing:6px}
+    #stats{top:18px;right:18px;padding:5px 10px;font-size:11px}
+    #sealCanvas{bottom:18px;right:18px;width:48px;height:48px}
+    #plantBar{bottom:16px;left:auto;right:78px;transform:none;max-width:calc(100vw - 96px);padding:5px 8px}
+    .pbtn{width:38px;height:38px;font-size:18px}
+    .pbtn.icon-btn{font-size:14px}
+    #hint{bottom:78px;font-size:10px;letter-spacing:3px}
+    #wind-indicator{right:14px}
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<canvas id="sealCanvas" width="64" height="64"></canvas>
+
+<div id="titleBlock">
+  <h1>墨园</h1>
+  <div class="en">INK&nbsp;&nbsp;GARDEN</div>
+</div>
+
+<div id="stats">
+  <div>草木 <span class="count" id="plant-count">0</span></div>
+  <div class="time" id="time-display"></div>
+</div>
+
+<div id="wind-indicator" title="点击调风">
+  <div class="wind-bar" id="wb1" style="height:12px"></div>
+  <div class="wind-bar" id="wb2" style="height:18px"></div>
+  <div class="wind-bar" id="wb3" style="height:24px"></div>
+  <div class="wind-bar" id="wb4" style="height:18px"></div>
+  <div class="wind-bar" id="wb5" style="height:12px"></div>
+  <div id="wind-label">风</div>
+</div>
+
+<div id="hint">点 击 栽 种 · 右 键 / 长 按 移 除</div>
+
+<div id="plantBar">
+  <button class="pbtn active" data-plant="0"><span>竹</span><span class="tip">竹</span></button>
+  <button class="pbtn" data-plant="1"><span>松</span><span class="tip">松</span></button>
+  <button class="pbtn" data-plant="2"><span>柳</span><span class="tip">柳</span></button>
+  <button class="pbtn" data-plant="3"><span>梅</span><span class="tip">梅</span></button>
+  <button class="pbtn" data-plant="4"><span>兰</span><span class="tip">兰</span></button>
+  <button class="pbtn" data-plant="5"><span>枯</span><span class="tip">枯</span></button>
+  <button class="pbtn" data-plant="random"><span>缘</span><span class="tip">随缘</span></button>
+  <div id="barDivider"></div>
+  <button class="pbtn icon-btn" id="btn-clear" title="清园"><span>清</span><span class="tip">清园</span></button>
+  <button class="pbtn icon-btn" id="btn-wind" title="调风"><span>风</span><span class="tip">调风</span></button>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  const sealCv = document.getElementById('sealCanvas');
+  const sealCtx = sealCv.getContext('2d');
+  let W, H;
+
+  // ---- Paper texture (cached, debounced rebuild on resize) ----
+  let paperCanvas;
+  let paperW = 0, paperH = 0;
+  let resizeTimer = null;
+  let firstResize = true;
+
+  function createPaperTexture() {
+    paperCanvas = document.createElement('canvas');
+    paperCanvas.width = W;
+    paperCanvas.height = H;
+    paperW = W; paperH = H;
+    const pc = paperCanvas.getContext('2d');
+    // Base warm paper color
+    pc.fillStyle = '#f0ebe0';
+    pc.fillRect(0, 0, W, H);
+    // Fiber noise
+    const imgData = pc.getImageData(0, 0, W, H);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() - 0.5) * 16;
+      d[i] = Math.max(0, Math.min(255, d[i] + n));
+      d[i+1] = Math.max(0, Math.min(255, d[i+1] + n));
+      d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
+    }
+    pc.putImageData(imgData, 0, 0);
+    // Subtle larger splotches
+    for (let i = 0; i < 18; i++) {
+      const x = Math.random() * W, y = Math.random() * H;
+      const r = 50 + Math.random() * 150;
+      const grad = pc.createRadialGradient(x, y, 0, x, y, r);
+      const tone = Math.random() > 0.5 ? '200,190,170' : '230,220,200';
+      grad.addColorStop(0, 'rgba(' + tone + ',0.13)');
+      grad.addColorStop(1, 'rgba(' + tone + ',0)');
+      pc.fillStyle = grad;
+      pc.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  }
+
+  // ---- Plant species definitions ----
+  const species = [
+    { // 竹 Bamboo
+      name: '竹',
+      maxDepth: 7,
+      branchAngle: 0.12,
+      angleVariance: 0.08,
+      lengthRatio: 0.78,
+      baseLen: 55,
+      baseWidth: 4.5,
+      widthRatio: 0.62,
+      branchChance: 0.85,
+      doubleBranchChance: 0.3,
+      curve: 0.015,
+      color: '#3a3530',
+      leafColor: '#5a7a50',
+      leafSize: 1.0,
+      leafDensity: 0.7,
+      segments: 5,
+      growSpeed: 1.8,
+    },
+    { // 松 Pine
+      name: '松',
+      maxDepth: 6,
+      branchAngle: 0.55,
+      angleVariance: 0.2,
+      lengthRatio: 0.72,
+      baseLen: 60,
+      baseWidth: 6,
+      widthRatio: 0.65,
+      branchChance: 0.9,
+      doubleBranchChance: 0.6,
+      curve: 0.04,
+      color: '#2e2a25',
+      leafColor: '#4a6040',
+      leafSize: 0.6,
+      leafDensity: 0.9,
+      segments: 6,
+      growSpeed: 1.4,
+    },
+    { // 柳 Willow
+      name: '柳',
+      maxDepth: 6,
+      branchAngle: 0.35,
+      angleVariance: 0.15,
+      lengthRatio: 0.82,
+      baseLen: 70,
+      baseWidth: 3.5,
+      widthRatio: 0.55,
+      branchChance: 0.8,
+      doubleBranchChance: 0.2,
+      curve: -0.06,
+      color: '#4a4035',
+      leafColor: '#7a9060',
+      leafSize: 0.8,
+      leafDensity: 0.6,
+      segments: 8,
+      growSpeed: 1.2,
+    },
+    { // 梅 Plum
+      name: '梅',
+      maxDepth: 5,
+      branchAngle: 0.7,
+      angleVariance: 0.25,
+      lengthRatio: 0.68,
+      baseLen: 45,
+      baseWidth: 5,
+      widthRatio: 0.6,
+      branchChance: 0.95,
+      doubleBranchChance: 0.7,
+      curve: 0.02,
+      color: '#352e28',
+      leafColor: '#c46060',
+      blossomColor: '#d4808a',
+      leafSize: 0.5,
+      leafDensity: 0.8,
+      segments: 4,
+      growSpeed: 1.6,
+    },
+    { // 兰 Orchid grass
+      name: '兰',
+      maxDepth: 4,
+      branchAngle: 0.25,
+      angleVariance: 0.35,
+      lengthRatio: 0.6,
+      baseLen: 80,
+      baseWidth: 2.5,
+      widthRatio: 0.4,
+      branchChance: 0.4,
+      doubleBranchChance: 0.1,
+      curve: 0.08,
+      color: '#4a5540',
+      leafColor: '#608050',
+      leafSize: 1.2,
+      leafDensity: 0.3,
+      segments: 10,
+      growSpeed: 2.0,
+    },
+    { // 枯 Withered tree
+      name: '枯',
+      maxDepth: 8,
+      branchAngle: 0.4,
+      angleVariance: 0.3,
+      lengthRatio: 0.74,
+      baseLen: 50,
+      baseWidth: 4,
+      widthRatio: 0.68,
+      branchChance: 0.88,
+      doubleBranchChance: 0.5,
+      curve: 0.025,
+      color: '#5a4e40',
+      leafColor: null,
+      leafSize: 0,
+      leafDensity: 0,
+      segments: 4,
+      growSpeed: 1.5,
+    },
+  ];
+
+  // ---- Plants ----
+  let plants = [];
+  let particles = [];
+  let fallingLeaves = [];
+
+  class Plant {
+    constructor(x, y, speciesIndex) {
+      this.x = x;
+      this.y = y;
+      this.species = species[speciesIndex];
+      this.maxGrowth = 0;
+      this.growth = 0;
+      this.branches = [];
+      this.seed = Math.random() * 10000;
+      this.age = 0;
+      this.dying = false;
+      this.fade = 1; // 1 = fully visible, 0 = gone
+      this.buildBranches();
+      this.maxGrowth = this.branches.length;
+      this.leafTimer = 200 + Math.random() * 400;
+    }
+
+    rand(offset) {
+      const s = Math.sin(this.seed + offset * 127.1) * 43758.5453;
+      return s - Math.floor(s);
+    }
+
+    buildBranches() {
+      const sp = this.species;
+      this.branches = [];
+      this.growBranch(0, this.x, this.y, -Math.PI / 2 + (this.rand(0) - 0.5) * 0.15,
+        sp.baseLen, sp.baseWidth, sp.maxDepth, 0, 0);
+    }
+
+    growBranch(id, x, y, angle, length, width, depth, parentId, offset) {
+      const sp = this.species;
+      const segments = sp.segments;
+      const points = [{x: x, y: y}];
+      let cx = x, cy = y;
+      let curAngle = angle;
+
+      for (let i = 0; i < segments; i++) {
+        const curveAmt = sp.curve * (0.5 + this.rand(offset + i * 3.7) * 0.8);
+        curAngle += curveAmt;
+        const segLen = length / segments;
+        cx += Math.cos(curAngle) * segLen;
+        cy += Math.sin(curAngle) * segLen;
+        points.push({x: cx, y: cy});
+      }
+
+      const branch = {
+        id: id, points: points, angle: curAngle, length: length, width: width, depth: depth,
+        children: [], hasLeaf: sp.leafColor !== null && depth <= 2 &&
+          this.rand(offset + 99) < sp.leafDensity,
+        leafAngle: this.rand(offset + 50) * Math.PI * 2,
+        order: this.branches.length,
+      };
+      this.branches.push(branch);
+
+      if (depth <= 0) return;
+
+      const willBranch = this.rand(offset + 7) < sp.branchChance;
+      if (!willBranch) return;
+
+      const baseAngle = curAngle;
+      const bAngle = sp.branchAngle + (this.rand(offset + 11) - 0.5) * sp.angleVariance * 2;
+      const childLen = length * (sp.lengthRatio + (this.rand(offset + 13) - 0.5) * 0.08);
+      const childWidth = width * sp.widthRatio;
+      const endX = points[points.length - 1].x;
+      const endY = points[points.length - 1].y;
+
+      if (depth > 2 && this.rand(offset + 17) < 0.3) {
+        const midIdx = Math.floor(segments / 2);
+        const midPt = points[midIdx];
+        const midAngle = baseAngle + (this.rand(offset + 19) - 0.5) * 0.4;
+        const childId1 = this.branches.length;
+        branch.children.push(childId1);
+        this.growBranch(childId1, midPt.x, midPt.y, midAngle + bAngle * 0.7,
+          childLen * 0.6, childWidth * 0.7, depth - 1, id, offset + 100);
+      }
+
+      const childId1 = this.branches.length;
+      branch.children.push(childId1);
+      this.growBranch(childId1, endX, endY, baseAngle - bAngle,
+        childLen, childWidth, depth - 1, id, offset + 200);
+
+      const willDouble = this.rand(offset + 23) < sp.doubleBranchChance;
+      if (willDouble) {
+        const childId2 = this.branches.length;
+        branch.children.push(childId2);
+        this.growBranch(childId2, endX, endY, baseAngle + bAngle,
+          childLen * (0.85 + this.rand(offset + 29) * 0.2), childWidth, depth - 1, id, offset + 300);
+      }
+
+      if (this.rand(offset + 31) < 0.5) {
+        const childId3 = this.branches.length;
+        branch.children.push(childId3);
+        this.growBranch(childId3, endX, endY, baseAngle + (this.rand(offset + 37) - 0.5) * 0.15,
+          childLen * 0.9, childWidth * 0.95, depth - 1, id, offset + 400);
+      }
+    }
+
+    update(dt, wind) {
+      if (!this.dying && this.growth < this.maxGrowth) {
+        this.growth += sp_growSpeed(this.species) * dt * 60;
+        if (Math.random() < 0.3) {
+          const visibleBranches = Math.floor(this.growth);
+          if (visibleBranches < this.branches.length) {
+            const b = this.branches[visibleBranches];
+            if (b && b.points.length > 0) {
+              const tip = b.points[b.points.length - 1];
+              particles.push({
+                x: tip.x + (Math.random() - 0.5) * 4,
+                y: tip.y + (Math.random() - 0.5) * 4,
+                vx: (Math.random() - 0.5) * 0.5,
+                vy: -Math.random() * 0.5,
+                life: 1,
+                size: 1 + Math.random() * 2,
+                color: this.species.leafColor || '#5a4e3e',
+              });
+            }
+          }
+        }
+      }
+      this.age += dt;
+
+      if (this.dying) {
+        this.fade -= dt * 1.5;
+        return;
+      }
+
+      if (this.species.leafColor && this.growth >= this.maxGrowth * 0.8) {
+        this.leafTimer -= dt * 60;
+        if (this.leafTimer <= 0) {
+          this.leafTimer = 400 + Math.random() * 800;
+          const endBranches = this.branches.filter(b => b.depth <= 1 && b.hasLeaf);
+          if (endBranches.length > 0) {
+            const b = endBranches[Math.floor(Math.random() * endBranches.length)];
+            const tip = b.points[b.points.length - 1];
+            fallingLeaves.push({
+              x: tip.x, y: tip.y,
+              vx: wind.strength * 0.3 + (Math.random() - 0.5) * 0.3,
+              vy: 0.2 + Math.random() * 0.3,
+              rot: Math.random() * Math.PI * 2,
+              rotV: (Math.random() - 0.5) * 0.05,
+              life: 1,
+              size: 3 + Math.random() * 4,
+              color: this.species.leafColor,
+              sway: Math.random() * Math.PI * 2,
+              swaySpeed: 0.02 + Math.random() * 0.02,
+            });
+          }
+        }
+      }
+    }
+
+    draw(ctx, wind, time) {
+      const visibleCount = Math.min(Math.floor(this.growth) + 1, this.branches.length);
+
+      for (let i = 0; i < visibleCount; i++) {
+        const b = this.branches[i];
+        const partialGrowth = i === visibleCount - 1 ? (this.growth - Math.floor(this.growth)) : 1;
+
+        ctx.beginPath();
+        const pts = b.points;
+        if (pts.length < 2) continue;
+
+        const swayFactor = (1 - b.depth / this.species.maxDepth) * 0.5;
+        const windX = Math.sin(time * 0.001 + b.id * 0.3 + this.seed * 0.01) * wind.strength * 8 * swayFactor;
+        const windY = Math.cos(time * 0.0013 + b.id * 0.2) * wind.strength * 2 * swayFactor;
+
+        ctx.moveTo(pts[0].x, pts[0].y);
+
+        for (let j = 1; j < pts.length; j++) {
+          const growthFactor = j / (pts.length - 1);
+          if (i === visibleCount - 1 && growthFactor > partialGrowth) {
+            const prev = pts[j - 1];
+            const t = (partialGrowth - (j - 1) / (pts.length - 1)) / (1 / (pts.length - 1));
+            const px = prev.x + (pts[j].x - prev.x) * t + windX * t;
+            const py = prev.y + (pts[j].y - prev.y) * t + windY * t;
+            ctx.lineTo(px, py);
+            break;
+          }
+          ctx.lineTo(pts[j].x + windX * growthFactor, pts[j].y + windY * growthFactor);
+        }
+
+        const depthFactor = b.depth / this.species.maxDepth;
+        const r = parseInt(this.species.color.slice(1, 3), 16);
+        const g = parseInt(this.species.color.slice(3, 5), 16);
+        const bl = parseInt(this.species.color.slice(5, 7), 16);
+        const inkMix = 0.3 + depthFactor * 0.4;
+        ctx.strokeStyle = 'rgba(' + Math.floor(r + (180 - r) * inkMix) + ',' +
+          Math.floor(g + (170 - g) * inkMix) + ',' +
+          Math.floor(bl + (150 - bl) * inkMix) + ',' +
+          ((0.6 + (1 - depthFactor) * 0.4) * this.fade) + ')';
+        ctx.lineWidth = b.width * (i === visibleCount - 1 ? partialGrowth : 1);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+
+        if (b.hasLeaf && partialGrowth >= 0.8 && this.species.leafColor) {
+          const tip = pts[pts.length - 1];
+          const lx = tip.x + windX;
+          const ly = tip.y + windY;
+          const leafSize = this.species.leafSize * (3 + (1 - b.depth / this.species.maxDepth) * 4);
+          const sway = Math.sin(time * 0.002 + b.id + this.seed) * 0.15;
+
+          ctx.save();
+          ctx.globalAlpha = this.fade;
+          ctx.translate(lx, ly);
+          ctx.rotate(b.leafAngle + sway);
+
+          if (this.species.name === '松') {
+            ctx.strokeStyle = this.species.leafColor;
+            ctx.lineWidth = 0.8;
+            ctx.globalAlpha = 0.7 * this.fade;
+            for (let n = 0; n < 5; n++) {
+              const na = (n / 5) * Math.PI * 2;
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.lineTo(Math.cos(na) * leafSize, Math.sin(na) * leafSize);
+              ctx.stroke();
+            }
+          } else if (this.species.name === '梅') {
+            const petalColor = this.species.blossomColor || '#d4808a';
+            ctx.fillStyle = petalColor;
+            ctx.globalAlpha = 0.75 * this.fade;
+            for (let p = 0; p < 5; p++) {
+              const pa = (p / 5) * Math.PI * 2;
+              ctx.beginPath();
+              ctx.ellipse(Math.cos(pa) * leafSize * 0.4, Math.sin(pa) * leafSize * 0.4,
+                leafSize * 0.35, leafSize * 0.25, pa, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.fillStyle = '#f0d060';
+            ctx.beginPath();
+            ctx.arc(0, 0, leafSize * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (this.species.name === '竹') {
+            ctx.fillStyle = this.species.leafColor;
+            ctx.globalAlpha = 0.7 * this.fade;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, leafSize * 1.2, leafSize * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.fillStyle = this.species.leafColor;
+            ctx.globalAlpha = 0.65 * this.fade;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, leafSize * 0.8, leafSize * 0.35, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+    }
+  }
+
+  function sp_growSpeed(sp) { return sp.growSpeed || 1.5; }
+
+  // ---- Wind system ----
+  const wind = {
+    strength: 0.3,
+    targetStrength: 0.3,
+    direction: 1,
+  };
+
+  function updateWind(dt) {
+    if (Math.random() < 0.003) {
+      wind.targetStrength = Math.random() * 0.8;
+      wind.direction = Math.random() > 0.3 ? 1 : -1;
+    }
+    wind.strength += (wind.targetStrength - wind.strength) * dt * 0.5;
+
+    const wb = wind.strength;
+    for (let i = 1; i <= 5; i++) {
+      const bar = document.getElementById('wb' + i);
+      if (!bar) continue;
+      const baseH = [10, 16, 22, 16, 10][i - 1];
+      bar.style.height = (baseH + wb * 20 * (i % 2 === 0 ? 1.3 : 0.8)) + 'px';
+      bar.style.background = wb > 0.5 ? '#a08060' : '#9a9082';
+    }
+  }
+
+  function randomizeWind() {
+    wind.targetStrength = 0.1 + Math.random() * 0.9;
+    wind.direction = Math.random() > 0.5 ? 1 : -1;
+  }
+
+  // ---- Ground line ----
+  let groundY;
+  function drawGround(ctx) {
+    const grad = ctx.createLinearGradient(0, groundY - 40, 0, H);
+    grad.addColorStop(0, 'rgba(180,165,135,0)');
+    grad.addColorStop(0.3, 'rgba(180,165,135,0.08)');
+    grad.addColorStop(1, 'rgba(160,145,115,0.15)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, groundY - 40, W, H - groundY + 40);
+
+    ctx.strokeStyle = 'rgba(100,85,65,0.25)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 4) {
+      const y = groundY + Math.sin(x * 0.02) * 3 + Math.sin(x * 0.005) * 5;
+      if (x === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // ---- Background distant mountains ----
+  function drawMountains(ctx, time) {
+    ctx.globalAlpha = 0.12;
+    for (let layer = 0; layer < 2; layer++) {
+      ctx.fillStyle = layer === 0 ? '#8a9a8a' : '#a0ab9a';
+      ctx.beginPath();
+      const baseY = groundY - 30 - layer * 25;
+      ctx.moveTo(0, H);
+      ctx.lineTo(0, baseY);
+      for (let x = 0; x <= W; x += 8) {
+        const y = baseY
+          - Math.sin(x * 0.003 + layer * 2) * (40 - layer * 10)
+          - Math.sin(x * 0.008 + layer) * (20 - layer * 5)
+          - Math.sin(x * 0.001 + time * 0.0001 * (layer + 1)) * (10 - layer * 3);
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---- Ink splatter on click ----
+  function createInkSplatter(x, y, color) {
+    for (let i = 0; i < 8; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 2;
+      particles.push({
+        x: x, y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.5,
+        life: 1,
+        size: 1 + Math.random() * 3,
+        color: color || '#3a3530',
+        splatter: true,
+      });
+    }
+    particles.push({
+      x: x, y: y, vx: 0, vy: 0,
+      life: 1, size: 2,
+      color: color || '#3a3530',
+      ripple: true,
+    });
+  }
+
+  // ---- Removal: find nearest plant ----
+  function findNearestPlant(x, y, maxDist) {
+    let best = null, bestDist = maxDist;
+    for (let i = 0; i < plants.length; i++) {
+      const p = plants[i];
+      if (p.dying) continue;
+      const dx = p.x - x;
+      const dy = p.y - y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < bestDist) { bestDist = d; best = p; }
+    }
+    return best;
+  }
+
+  function removePlantAt(x, y) {
+    const p = findNearestPlant(x, y, 60);
+    if (p) {
+      p.dying = true;
+      createInkSplatter(p.x, p.y, '#8a7a68');
+      if (navigator.vibrate) { try { navigator.vibrate(20); } catch(e){} }
+    }
+  }
+
+  function clearGarden() {
+    for (const p of plants) {
+      if (!p.dying) { p.dying = true; }
+    }
+    particles = [];
+  }
+
+  // ---- Main loop ----
+  let lastTime = performance.now();
+  function loop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+
+    updateWind(dt);
+
+    if (paperCanvas && paperW === W && paperH === H) {
+      ctx.drawImage(paperCanvas, 0, 0);
+    } else {
+      // fallback fill while texture is being rebuilt
+      ctx.fillStyle = '#f0ebe0';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    drawMountains(ctx, now);
+    drawGround(ctx);
+
+    // Update & draw plants (reverse iterate so we can remove)
+    for (let i = plants.length - 1; i >= 0; i--) {
+      const p = plants[i];
+      p.update(dt, wind);
+      if (p.fade > 0) {
+        ctx.save();
+        p.draw(ctx, wind, now);
+        ctx.restore();
+      }
+      if (p.dying && p.fade <= 0) {
+        plants.splice(i, 1);
+      }
+    }
+
+    // Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.02;
+      p.life -= dt * 1.5;
+      if (p.ripple) p.size += dt * 60;
+      if (p.life <= 0) {
+        particles.splice(i, 1);
+        continue;
+      }
+      ctx.globalAlpha = p.life * 0.6;
+      if (p.ripple) {
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    // Falling leaves
+    for (let i = fallingLeaves.length - 1; i >= 0; i--) {
+      const l = fallingLeaves[i];
+      l.sway += l.swaySpeed;
+      l.vx += Math.sin(l.sway) * 0.02 + wind.strength * 0.01 * wind.direction;
+      l.x += l.vx;
+      l.y += l.vy;
+      l.rot += l.rotV;
+      l.life -= dt * 0.15;
+      if (l.y > H + 20 || l.life <= 0 || l.x < -20 || l.x > W + 20) {
+        fallingLeaves.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.translate(l.x, l.y);
+      ctx.rotate(l.rot);
+      ctx.globalAlpha = l.life * 0.7;
+      ctx.fillStyle = l.color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, l.size, l.size * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // Vignette
+    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.9);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(80,65,40,0.08)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+
+    // Stats
+    document.getElementById('plant-count').textContent = plants.length;
+    const d = new Date();
+    const h = d.getHours();
+    const m = d.getMinutes();
+    document.getElementById('time-display').textContent =
+      h.toString().padStart(2, '0') + ':' + m.toString().padStart(2, '0');
+
+    requestAnimationFrame(loop);
+  }
+
+  // ---- Resize with debounced paper rebuild ----
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W;
+    canvas.height = H;
+    groundY = H * 0.82;
+
+    if (firstResize) {
+      createPaperTexture();
+      firstResize = false;
+    } else {
+      // Scale existing paper to fill immediately, then rebuild after debounce
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function() {
+        createPaperTexture();
+      }, 200);
+    }
+  }
+  window.addEventListener('resize', resize);
+
+  // ---- Selected plant ----
+  let selectedPlant = 0; // index or 'random'
+
+  function resolvePlantIndex() {
+    if (selectedPlant === 'random') {
+      return Math.floor(Math.random() * species.length);
+    }
+    return selectedPlant;
+  }
+
+  // ---- Interactions ----
+  function plantAt(x, y) {
+    if (y > groundY + 10) y = groundY;
+    if (y < groundY - 300) y = groundY - 300;
+    y = Math.max(groundY - 250, Math.min(groundY, y));
+    const si = resolvePlantIndex();
+    plants.push(new Plant(x, y, si));
+    createInkSplatter(x, y, species[si].color);
+  }
+
+  // Desktop: left-click to plant, right-click to remove
+  canvas.addEventListener('mousedown', function(e) {
+    if (e.button === 2) return; // handled by contextmenu
+    plantAt(e.clientX, e.clientY);
+  });
+  canvas.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    removePlantAt(e.clientX, e.clientY);
+  });
+
+  // Mobile: tap to plant, long-press (300ms) to remove
+  let touchTimer = null;
+  let touchMoved = false;
+  let touchStartX = 0, touchStartY = 0;
+  const LONG_PRESS_MS = 300;
+
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (e.changedTouches.length === 0) return;
+    const t = e.changedTouches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+    touchMoved = false;
+    if (touchTimer) clearTimeout(touchTimer);
+    touchTimer = setTimeout(function() {
+      if (!touchMoved) {
+        removePlantAt(touchStartX, touchStartY);
+        touchTimer = null;
+      }
+    }, LONG_PRESS_MS);
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', function(e) {
+    if (e.changedTouches.length === 0) return;
+    const t = e.changedTouches[0];
+    if (Math.abs(t.clientX - touchStartX) > 10 || Math.abs(t.clientY - touchStartY) > 10) {
+      touchMoved = true;
+      if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    if (touchTimer) {
+      clearTimeout(touchTimer);
+      touchTimer = null;
+      if (!touchMoved && e.changedTouches.length > 0) {
+        const t = e.changedTouches[0];
+        plantAt(t.clientX, t.clientY);
+      }
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchcancel', function() {
+    if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+    touchMoved = false;
+  });
+
+  // Plant selection bar
+  document.querySelectorAll('.pbtn[data-plant]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.pbtn[data-plant]').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+      const v = btn.dataset.plant;
+      selectedPlant = v === 'random' ? 'random' : parseInt(v, 10);
+    });
+  });
+
+  // Clear garden
+  document.getElementById('btn-clear').addEventListener('click', clearGarden);
+
+  // Randomize wind
+  document.getElementById('btn-wind').addEventListener('click', randomizeWind);
+  document.getElementById('wind-indicator').addEventListener('click', randomizeWind);
+
+  // ---- Seal ----
+  function drawSeal() {
+    const c = sealCtx, s = 64;
+    c.clearRect(0, 0, s, s);
+    // 印底
+    c.fillStyle = '#a33a2c';
+    c.fillRect(6, 6, s - 12, s - 12);
+    // 斑驳
+    c.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 50; i++) {
+      c.fillStyle = 'rgba(0,0,0,' + (0.08 + Math.random() * 0.28) + ')';
+      c.beginPath();
+      c.arc(8 + Math.random() * (s - 16), 8 + Math.random() * (s - 16),
+        Math.random() * 2.8 + 0.4, 0, Math.PI * 2);
+      c.fill();
+    }
+    // 边角磨损
+    c.fillStyle = 'rgba(0,0,0,0.35)';
+    c.fillRect(0, 0, s, 4);
+    c.fillRect(0, s - 4, s, 4);
+    c.fillRect(0, 0, 4, s);
+    c.fillRect(s - 4, 0, 4, s);
+    c.globalCompositeOperation = 'source-over';
+    // 边框
+    c.strokeStyle = 'rgba(255,240,225,0.35)';
+    c.lineWidth = 1.5;
+    c.strokeRect(9, 9, s - 18, s - 18);
+    // 文字 墨园
+    c.fillStyle = '#f7efe2';
+    c.font = 'bold 22px "Ma Shan Zheng","Songti SC","STSong",serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('墨', s / 2, s * 0.32);
+    c.fillText('园', s / 2, s * 0.68);
+  }
+
+  // ---- Init ----
+  resize();
+  drawSeal();
+  // Redraw seal after webfonts (Ma Shan Zheng) are ready
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function() { drawSeal(); });
+  }
+
+  // Plant a few starter seeds
+  setTimeout(function() {
+    const starters = [
+      { x: 0.25, si: 0 },
+      { x: 0.5, si: 1 },
+      { x: 0.75, si: 2 },
+    ];
+    starters.forEach(function(s, i) {
+      setTimeout(function() {
+        const x = W * s.x;
+        const y = groundY - 5;
+        plants.push(new Plant(x, y, s.si));
+        createInkSplatter(x, y, species[s.si].color);
+      }, i * 400);
+    });
+  }, 500);
+
+  requestAnimationFrame(loop);
+
+  // prevent pinch zoom
+  document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+})();
+</script>
+</body>
+</html>
