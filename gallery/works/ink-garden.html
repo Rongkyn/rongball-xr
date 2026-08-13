@@ -27,7 +27,6 @@
   }
   canvas#scene{display:block;position:fixed;top:0;left:0;cursor:crosshair}
 
-  /* 左上角标题 */
   #titleBlock{
     position:fixed;top:22px;left:26px;z-index:10;pointer-events:none;
     color:var(--ink);
@@ -42,7 +41,6 @@
     font-size:10px;color:var(--ink-light);letter-spacing:3px;
   }
 
-  /* 右上角统计 */
   #stats{
     position:fixed;top:22px;right:26px;z-index:10;pointer-events:none;
     padding:7px 14px;background:rgba(243,236,224,.82);
@@ -54,11 +52,15 @@
   #stats .count{color:var(--seal-deep);font-weight:500}
   #stats .time{color:var(--ink-mid);font-size:10px;letter-spacing:1px}
 
-  /* 右侧风指示 */
   #wind-indicator{
     position:fixed;top:50%;right:22px;transform:translateY(-50%);
-    z-index:10;display:flex;flex-direction:column;align-items:center;gap:6px;
+    z-index:10;display:flex;flex-direction:column;align-items:center;gap:4px;
     cursor:pointer;pointer-events:auto;padding:6px 4px;
+    transition:transform .5s ease;
+  }
+  #wind-arrow{
+    font-size:13px;color:var(--ink-light);line-height:1;
+    transition:transform .5s ease,color .5s ease;
   }
   .wind-bar{
     width:3px;background:var(--ink-light);border-radius:2px;
@@ -69,21 +71,36 @@
     letter-spacing:1px;writing-mode:vertical-rl;font-family:"ZCOOL XiaoWei",serif;
   }
 
-  /* 提示 */
   #hint{
-    position:fixed;bottom:92px;left:50%;transform:translateX(-50%);
-    z-index:10;color:var(--ink-light);font-size:11px;letter-spacing:4px;
-    pointer-events:none;opacity:.75;
+    position:fixed;bottom:96px;left:50%;transform:translateX(-50%);
+    z-index:10;color:var(--ink-mid);font-size:13px;letter-spacing:4px;
+    pointer-events:none;opacity:.8;transition:opacity .6s ease;
   }
+  @keyframes hintBreathe{
+    0%,100%{opacity:.25}
+    50%{opacity:.95}
+  }
+  #hint.breathe{animation:hintBreathe 1.3s ease-in-out 3}
 
-  /* 底部植物选择栏 */
-  #plantBar{
+  #toast{
+    position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-12px);
+    z-index:30;padding:8px 22px;background:rgba(28,26,23,.88);
+    color:#f3ece0;border-radius:2px;font-size:13px;letter-spacing:3px;
+    opacity:0;transition:opacity .4s,transform .4s;pointer-events:none;
+    white-space:nowrap;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  #barWrap{
     position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10;
-    display:flex;gap:4px;padding:6px 10px;
+    max-width:calc(100vw - 110px);
+  }
+  #plantBar{
+    position:relative;display:flex;gap:8px;padding:6px 10px;
     background:rgba(243,236,224,.9);border:1px solid var(--line);
     border-radius:28px;backdrop-filter:blur(6px);
     box-shadow:0 4px 20px rgba(80,60,40,.1);
-    max-width:calc(100vw - 110px);overflow-x:auto;overflow-y:hidden;
+    max-width:100%;overflow-x:auto;overflow-y:hidden;
     scrollbar-width:none;
   }
   #plantBar::-webkit-scrollbar{display:none}
@@ -91,44 +108,52 @@
     width:42px;height:42px;border:1px solid transparent;background:transparent;
     border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;
     font-family:"Ma Shan Zheng","STKaiti","KaiTi",serif;
-    font-size:20px;color:var(--ink-soft);transition:all .3s ease;
-    position:relative;flex-shrink:0;
+    font-size:20px;color:var(--ink-soft);transition:background .3s ease;
+    position:relative;flex-shrink:0;padding:0;
   }
   .pbtn:hover{background:rgba(90,74,56,.08)}
   .pbtn.active{
     background:var(--seal);color:#f7efe2;border-color:var(--seal-deep);
     box-shadow:0 2px 8px rgba(163,58,44,.35);
   }
-  .pbtn .tip{
-    position:absolute;top:48px;left:50%;transform:translateX(-50%);
-    font-size:10px;color:var(--ink-mid);white-space:nowrap;
-    opacity:0;transition:opacity .3s;pointer-events:none;
-    font-family:"Noto Serif SC",serif;letter-spacing:1px;
+  .pbtn::after{
+    content:attr(data-label);position:absolute;top:46px;left:50%;
+    transform:translateX(-50%);font-size:10px;color:var(--ink-mid);
+    letter-spacing:0;opacity:0;pointer-events:none;white-space:nowrap;
+    font-family:"Noto Serif SC",serif;
   }
-  .pbtn:hover .tip{opacity:1}
+  .pbtn.icon-btn{font-family:"ZCOOL XiaoWei",serif;font-size:16px}
+  @keyframes armedPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+  .pbtn.armed{
+    background:var(--seal)!important;color:#f7efe2!important;
+    animation:armedPulse .5s ease-in-out infinite;
+  }
   #barDivider{width:1px;background:var(--line);margin:6px 4px;flex-shrink:0}
-  .pbtn.icon-btn{
-    font-family:"ZCOOL XiaoWei",serif;font-size:16px;
+  #barFade{
+    position:absolute;right:0;top:0;bottom:0;width:40px;
+    background:linear-gradient(to right,rgba(243,236,224,0),rgba(243,236,224,.95));
+    pointer-events:none;border-radius:0 28px 28px 0;
   }
 
-  /* 印章 */
   #sealCanvas{position:fixed;bottom:20px;right:26px;pointer-events:none;z-index:10}
 
   @media (max-width:640px){
     #titleBlock h1{font-size:28px;letter-spacing:6px}
     #stats{top:18px;right:18px;padding:5px 10px;font-size:11px}
-    #sealCanvas{bottom:18px;right:18px;width:48px;height:48px}
-    #plantBar{bottom:16px;left:auto;right:78px;transform:none;max-width:calc(100vw - 96px);padding:5px 8px}
-    .pbtn{width:38px;height:38px;font-size:18px}
+    #sealCanvas{bottom:18px;right:18px}
+    #barWrap{bottom:16px;left:auto;right:90px;transform:none;max-width:calc(100vw - 108px)}
+    #plantBar{padding:5px 8px 6px}
+    .pbtn{width:44px;height:44px;font-size:18px}
     .pbtn.icon-btn{font-size:14px}
-    #hint{bottom:78px;font-size:10px;letter-spacing:3px}
+    .pbtn::after{opacity:.75;top:44px;font-size:10px}
+    #hint{bottom:82px;font-size:12px;letter-spacing:3px}
     #wind-indicator{right:14px}
   }
 </style>
 </head>
 <body>
 <canvas id="scene"></canvas>
-<canvas id="sealCanvas" width="64" height="64"></canvas>
+<canvas id="sealCanvas"></canvas>
 
 <div id="titleBlock">
   <h1>墨园</h1>
@@ -140,7 +165,10 @@
   <div class="time" id="time-display"></div>
 </div>
 
+<div id="toast"></div>
+
 <div id="wind-indicator" title="点击调风">
+  <div id="wind-arrow">→</div>
   <div class="wind-bar" id="wb1" style="height:12px"></div>
   <div class="wind-bar" id="wb2" style="height:18px"></div>
   <div class="wind-bar" id="wb3" style="height:24px"></div>
@@ -149,24 +177,31 @@
   <div id="wind-label">风</div>
 </div>
 
-<div id="hint">点 击 栽 种 · 右 键 / 长 按 移 除</div>
+<div id="hint">点 击 栽 种 · 长 按 / 右 键 可 除 草</div>
 
-<div id="plantBar">
-  <button class="pbtn active" data-plant="0"><span>竹</span><span class="tip">竹</span></button>
-  <button class="pbtn" data-plant="1"><span>松</span><span class="tip">松</span></button>
-  <button class="pbtn" data-plant="2"><span>柳</span><span class="tip">柳</span></button>
-  <button class="pbtn" data-plant="3"><span>梅</span><span class="tip">梅</span></button>
-  <button class="pbtn" data-plant="4"><span>兰</span><span class="tip">兰</span></button>
-  <button class="pbtn" data-plant="5"><span>枯</span><span class="tip">枯</span></button>
-  <button class="pbtn" data-plant="random"><span>缘</span><span class="tip">随缘</span></button>
-  <div id="barDivider"></div>
-  <button class="pbtn icon-btn" id="btn-clear" title="清园"><span>清</span><span class="tip">清园</span></button>
-  <button class="pbtn icon-btn" id="btn-wind" title="调风"><span>风</span><span class="tip">调风</span></button>
+<div id="barWrap">
+  <div id="plantBar">
+    <button class="pbtn active" data-plant="0" data-label="竹"><span>竹</span></button>
+    <button class="pbtn" data-plant="1" data-label="松"><span>松</span></button>
+    <button class="pbtn" data-plant="2" data-label="柳"><span>柳</span></button>
+    <button class="pbtn" data-plant="3" data-label="梅"><span>梅</span></button>
+    <button class="pbtn" data-plant="4" data-label="兰"><span>兰</span></button>
+    <button class="pbtn" data-plant="5" data-label="枯枝"><span>枯</span></button>
+    <button class="pbtn" data-plant="random" data-label="随"><span>随</span></button>
+    <div id="barDivider"></div>
+    <button class="pbtn icon-btn" id="btn-clear" title="清园" data-label="清"><span>清</span></button>
+    <button class="pbtn icon-btn" id="btn-wind" title="调风" data-label="风"><span>风</span></button>
+    <button class="pbtn icon-btn" id="btn-save" title="留影" data-label="影"><span>影</span></button>
+  </div>
+  <div id="barFade"></div>
 </div>
 
 <script>
 (function() {
   'use strict';
+
+  // ---- DPR ----
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
   const canvas = document.getElementById('scene');
   const ctx = canvas.getContext('2d');
@@ -174,23 +209,35 @@
   const sealCtx = sealCv.getContext('2d');
   let W, H;
 
-  // ---- Paper texture (cached, debounced rebuild on resize) ----
-  let paperCanvas;
-  let paperW = 0, paperH = 0;
-  let resizeTimer = null;
-  let firstResize = true;
+  // ---- Cached DOM refs ----
+  const dom = {
+    plantCount: document.getElementById('plant-count'),
+    timeDisplay: document.getElementById('time-display'),
+    toast: document.getElementById('toast'),
+    btnClear: document.getElementById('btn-clear'),
+    btnWind: document.getElementById('btn-wind'),
+    btnSave: document.getElementById('btn-save'),
+    windIndicator: document.getElementById('wind-indicator'),
+    windArrow: document.getElementById('wind-arrow'),
+    windBars: [1,2,3,4,5].map(i => document.getElementById('wb'+i)),
+    hint: document.getElementById('hint'),
+    plantBar: document.getElementById('plantBar'),
+  };
+
+  // ---- Paper texture (DPR-aware) ----
+  let paperCanvas, paperW = 0, paperH = 0;
+  let resizeTimer = null, firstResize = true;
 
   function createPaperTexture() {
     paperCanvas = document.createElement('canvas');
-    paperCanvas.width = W;
-    paperCanvas.height = H;
+    paperCanvas.width = Math.round(W * dpr);
+    paperCanvas.height = Math.round(H * dpr);
     paperW = W; paperH = H;
     const pc = paperCanvas.getContext('2d');
-    // Base warm paper color
+    pc.setTransform(dpr, 0, 0, dpr, 0, 0);
     pc.fillStyle = '#f0ebe0';
     pc.fillRect(0, 0, W, H);
-    // Fiber noise
-    const imgData = pc.getImageData(0, 0, W, H);
+    const imgData = pc.getImageData(0, 0, Math.round(W*dpr), Math.round(H*dpr));
     const d = imgData.data;
     for (let i = 0; i < d.length; i += 4) {
       const n = (Math.random() - 0.5) * 16;
@@ -199,7 +246,6 @@
       d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
     }
     pc.putImageData(imgData, 0, 0);
-    // Subtle larger splotches
     for (let i = 0; i < 18; i++) {
       const x = Math.random() * W, y = Math.random() * H;
       const r = 50 + Math.random() * 150;
@@ -212,142 +258,128 @@
     }
   }
 
-  // ---- Plant species definitions ----
+  // ---- Vignette offscreen cache (DPR-aware) ----
+  let vignetteCanvas;
+  function buildVignette() {
+    vignetteCanvas = document.createElement('canvas');
+    vignetteCanvas.width = Math.round(W * dpr);
+    vignetteCanvas.height = Math.round(H * dpr);
+    const vc = vignetteCanvas.getContext('2d');
+    vc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const vg = vc.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.9);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(80,65,40,0.08)');
+    vc.fillStyle = vg;
+    vc.fillRect(0, 0, W, H);
+  }
+
+  // ---- Color pre-parser ----
+  function hexToRgb(hex) {
+    return {
+      r: parseInt(hex.slice(1,3), 16),
+      g: parseInt(hex.slice(3,5), 16),
+      b: parseInt(hex.slice(5,7), 16)
+    };
+  }
+
+  // ---- Plant species ----
   const species = [
-    { // 竹 Bamboo
-      name: '竹',
-      maxDepth: 7,
-      branchAngle: 0.12,
-      angleVariance: 0.08,
-      lengthRatio: 0.78,
-      baseLen: 55,
-      baseWidth: 4.5,
-      widthRatio: 0.62,
-      branchChance: 0.85,
-      doubleBranchChance: 0.3,
-      curve: 0.015,
-      color: '#3a3530',
-      leafColor: '#5a7a50',
-      leafSize: 1.0,
-      leafDensity: 0.7,
-      segments: 5,
-      growSpeed: 1.8,
-    },
-    { // 松 Pine
-      name: '松',
-      maxDepth: 6,
-      branchAngle: 0.55,
-      angleVariance: 0.2,
-      lengthRatio: 0.72,
-      baseLen: 60,
-      baseWidth: 6,
-      widthRatio: 0.65,
-      branchChance: 0.9,
-      doubleBranchChance: 0.6,
-      curve: 0.04,
-      color: '#2e2a25',
-      leafColor: '#4a6040',
-      leafSize: 0.6,
-      leafDensity: 0.9,
-      segments: 6,
-      growSpeed: 1.4,
-    },
-    { // 柳 Willow
-      name: '柳',
-      maxDepth: 6,
-      branchAngle: 0.35,
-      angleVariance: 0.15,
-      lengthRatio: 0.82,
-      baseLen: 70,
-      baseWidth: 3.5,
-      widthRatio: 0.55,
-      branchChance: 0.8,
-      doubleBranchChance: 0.2,
-      curve: -0.06,
-      color: '#4a4035',
-      leafColor: '#7a9060',
-      leafSize: 0.8,
-      leafDensity: 0.6,
-      segments: 8,
-      growSpeed: 1.2,
-    },
-    { // 梅 Plum
-      name: '梅',
-      maxDepth: 5,
-      branchAngle: 0.7,
-      angleVariance: 0.25,
-      lengthRatio: 0.68,
-      baseLen: 45,
-      baseWidth: 5,
-      widthRatio: 0.6,
-      branchChance: 0.95,
-      doubleBranchChance: 0.7,
-      curve: 0.02,
-      color: '#352e28',
-      leafColor: '#c46060',
-      blossomColor: '#d4808a',
-      leafSize: 0.5,
-      leafDensity: 0.8,
-      segments: 4,
-      growSpeed: 1.6,
-    },
-    { // 兰 Orchid grass
-      name: '兰',
-      maxDepth: 4,
-      branchAngle: 0.25,
-      angleVariance: 0.35,
-      lengthRatio: 0.6,
-      baseLen: 80,
-      baseWidth: 2.5,
-      widthRatio: 0.4,
-      branchChance: 0.4,
-      doubleBranchChance: 0.1,
-      curve: 0.08,
-      color: '#4a5540',
-      leafColor: '#608050',
-      leafSize: 1.2,
-      leafDensity: 0.3,
-      segments: 10,
-      growSpeed: 2.0,
-    },
-    { // 枯 Withered tree
-      name: '枯',
-      maxDepth: 8,
-      branchAngle: 0.4,
-      angleVariance: 0.3,
-      lengthRatio: 0.74,
-      baseLen: 50,
-      baseWidth: 4,
-      widthRatio: 0.68,
-      branchChance: 0.88,
-      doubleBranchChance: 0.5,
-      curve: 0.025,
-      color: '#5a4e40',
-      leafColor: null,
-      leafSize: 0,
-      leafDensity: 0,
-      segments: 4,
-      growSpeed: 1.5,
-    },
+    { name:'竹', maxDepth:7, branchAngle:0.12, angleVariance:0.08, lengthRatio:0.78,
+      baseLen:55, baseWidth:4.5, widthRatio:0.62, branchChance:0.85, doubleBranchChance:0.3,
+      curve:0.015, color:'#3a3530', leafColor:'#6b7a60', leafSize:1.0, leafDensity:0.7,
+      segments:5, growSpeed:1.8 },
+    { name:'松', maxDepth:6, branchAngle:0.55, angleVariance:0.2, lengthRatio:0.72,
+      baseLen:60, baseWidth:6, widthRatio:0.65, branchChance:0.9, doubleBranchChance:0.6,
+      curve:0.04, color:'#2e2a25', leafColor:'#5a6550', leafSize:0.6, leafDensity:0.9,
+      segments:6, growSpeed:1.4 },
+    { name:'柳', maxDepth:6, branchAngle:0.35, angleVariance:0.15, lengthRatio:0.82,
+      baseLen:70, baseWidth:3.5, widthRatio:0.55, branchChance:0.8, doubleBranchChance:0.2,
+      curve:-0.06, color:'#4a4035', leafColor:'#8a9070', leafSize:0.8, leafDensity:0.6,
+      segments:8, growSpeed:1.2 },
+    { name:'梅', maxDepth:5, branchAngle:0.7, angleVariance:0.25, lengthRatio:0.68,
+      baseLen:45, baseWidth:5, widthRatio:0.6, branchChance:0.95, doubleBranchChance:0.7,
+      curve:0.02, color:'#352e28', leafColor:null, blossomColor:'#8a8075',
+      leafSize:0.5, leafDensity:0.8, segments:4, growSpeed:1.6 },
+    { name:'兰', maxDepth:4, branchAngle:0.25, angleVariance:0.35, lengthRatio:0.6,
+      baseLen:80, baseWidth:2.5, widthRatio:0.4, branchChance:0.4, doubleBranchChance:0.1,
+      curve:0.08, color:'#4a5540', leafColor:'#608050', leafSize:1.2, leafDensity:0.3,
+      segments:10, growSpeed:2.0 },
+    { name:'枯', maxDepth:8, branchAngle:0.4, angleVariance:0.3, lengthRatio:0.74,
+      baseLen:50, baseWidth:4, widthRatio:0.68, branchChance:0.88, doubleBranchChance:0.5,
+      curve:0.025, color:'#5a4e40', leafColor:null, leafSize:0, leafDensity:0,
+      segments:4, growSpeed:1.5 },
   ];
 
-  // ---- Plants ----
+  // Pre-parse colors (only main branch color needed for draw)
+  species.forEach(function(sp) {
+    sp.rgb = hexToRgb(sp.color);
+  });
+
+  // ---- State ----
   let plants = [];
   let particles = [];
   let fallingLeaves = [];
+  const MAX_PLANTS = 60;
+  let groundY;
+  let hasPlanted = false;
 
+  // ---- Depth layer (reusable cached object, no per-frame allocation) ----
+  const _layer = { scale:1.0, inkMix:0, detail:true, detailAlpha:1 };
+  function getDepthLayer(y) {
+    const ratio = Math.max(0, Math.min(1, (groundY - y) / 280));
+    if (ratio <= 0.25) {
+      _layer.scale = 1.0;
+      _layer.inkMix = 0;
+      _layer.detailAlpha = 1;
+    } else if (ratio <= 0.5) {
+      const t = (ratio - 0.25) / 0.25;
+      _layer.scale = 1.0 - t * 0.15;
+      _layer.inkMix = t * 0.15;
+      _layer.detailAlpha = 1;
+    } else if (ratio <= 0.75) {
+      const t = (ratio - 0.5) / 0.25;
+      _layer.scale = 0.85 - t * 0.15;
+      _layer.inkMix = 0.15 + t * 0.2;
+      _layer.detailAlpha = 1 - t * 0.5;
+    } else {
+      const t = (ratio - 0.75) / 0.25;
+      _layer.scale = 0.7 - t * 0.1;
+      _layer.inkMix = 0.35 + t * 0.25;
+      _layer.detailAlpha = Math.max(0, 0.5 - t * 0.5);
+    }
+    _layer.detail = _layer.detailAlpha > 0.05;
+    return _layer;
+  }
+
+  // ---- Mountain noise (pre-generated random nodes + smooth interpolation) ----
+  const mountainNoise = [[], []];
+  (function initMountainNoise() {
+    for (let l = 0; l < 2; l++) {
+      for (let i = 0; i < 24; i++) {
+        mountainNoise[l].push((Math.random() - 0.5) * 22);
+      }
+    }
+  })();
+  function getMountainNoise(x, layer) {
+    const arr = mountainNoise[layer];
+    const idx = ((x * 0.004) % arr.length + arr.length) % arr.length;
+    const i = Math.floor(idx);
+    const f = idx - i;
+    const a = arr[i];
+    const b = arr[(i + 1) % arr.length];
+    const sf = f * f * (3 - 2 * f);
+    return a + (b - a) * sf;
+  }
+
+  // ---- Plant ----
   class Plant {
-    constructor(x, y, speciesIndex) {
-      this.x = x;
-      this.y = y;
-      this.species = species[speciesIndex];
-      this.maxGrowth = 0;
+    constructor(x, y, si) {
+      this.x = x; this.y = y;
+      this.species = species[si];
       this.growth = 0;
       this.branches = [];
       this.seed = Math.random() * 10000;
-      this.age = 0;
-      this.dying = false;
-      this.fade = 1; // 1 = fully visible, 0 = gone
+      this.age = 0; this.dying = false; this.fade = 1;
       this.buildBranches();
       this.maxGrowth = this.branches.length;
       this.leafTimer = 200 + Math.random() * 400;
@@ -361,299 +393,385 @@
     buildBranches() {
       const sp = this.species;
       this.branches = [];
-      this.growBranch(0, this.x, this.y, -Math.PI / 2 + (this.rand(0) - 0.5) * 0.15,
-        sp.baseLen, sp.baseWidth, sp.maxDepth, 0, 0);
+      this.growBranch(0, this.x, this.y, -Math.PI/2 + (this.rand(0)-0.5)*0.15,
+        sp.baseLen, sp.baseWidth, sp.maxDepth, 0);
     }
 
-    growBranch(id, x, y, angle, length, width, depth, parentId, offset) {
+    growBranch(id, x, y, angle, length, width, depth, offset) {
       const sp = this.species;
-      const segments = sp.segments;
-      const points = [{x: x, y: y}];
-      let cx = x, cy = y;
-      let curAngle = angle;
-
-      for (let i = 0; i < segments; i++) {
-        const curveAmt = sp.curve * (0.5 + this.rand(offset + i * 3.7) * 0.8);
-        curAngle += curveAmt;
-        const segLen = length / segments;
-        cx += Math.cos(curAngle) * segLen;
-        cy += Math.sin(curAngle) * segLen;
-        points.push({x: cx, y: cy});
+      const segCount = sp.segments;
+      const points = [{x:x, y:y}];
+      let cx = x, cy = y, curAngle = angle;
+      for (let i = 0; i < segCount; i++) {
+        curAngle += sp.curve * (0.5 + this.rand(offset + i*3.7) * 0.8);
+        const sl = length / segCount;
+        cx += Math.cos(curAngle) * sl;
+        cy += Math.sin(curAngle) * sl;
+        points.push({x:cx, y:cy});
       }
-
       const branch = {
-        id: id, points: points, angle: curAngle, length: length, width: width, depth: depth,
-        children: [], hasLeaf: sp.leafColor !== null && depth <= 2 &&
-          this.rand(offset + 99) < sp.leafDensity,
-        leafAngle: this.rand(offset + 50) * Math.PI * 2,
-        order: this.branches.length,
+        id, points, angle:curAngle, length, width, depth,
+        children: [],
+        hasLeaf: sp.leafColor !== null && depth <= 2 && this.rand(offset+99) < sp.leafDensity,
+        leafAngle: this.rand(offset+50) * Math.PI * 2,
       };
       this.branches.push(branch);
-
       if (depth <= 0) return;
+      if (this.rand(offset+7) >= sp.branchChance) return;
 
-      const willBranch = this.rand(offset + 7) < sp.branchChance;
-      if (!willBranch) return;
-
+      // Child width inherits from parent's actual tip width.
+      // With single-path constant-width strokes, the tip width = base width.
+      // (Previously intra-branch taper made tip = width*0.3, causing lollipop jump.)
+      const parentTipWidth = width;
       const baseAngle = curAngle;
-      const bAngle = sp.branchAngle + (this.rand(offset + 11) - 0.5) * sp.angleVariance * 2;
-      const childLen = length * (sp.lengthRatio + (this.rand(offset + 13) - 0.5) * 0.08);
-      const childWidth = width * sp.widthRatio;
-      const endX = points[points.length - 1].x;
-      const endY = points[points.length - 1].y;
+      const bAngle = sp.branchAngle + (this.rand(offset+11)-0.5) * sp.angleVariance * 2;
+      const childLen = length * (sp.lengthRatio + (this.rand(offset+13)-0.5) * 0.08);
+      const childWidth = parentTipWidth * sp.widthRatio;
+      const end = points[points.length-1];
 
-      if (depth > 2 && this.rand(offset + 17) < 0.3) {
-        const midIdx = Math.floor(segments / 2);
-        const midPt = points[midIdx];
-        const midAngle = baseAngle + (this.rand(offset + 19) - 0.5) * 0.4;
-        const childId1 = this.branches.length;
-        branch.children.push(childId1);
-        this.growBranch(childId1, midPt.x, midPt.y, midAngle + bAngle * 0.7,
-          childLen * 0.6, childWidth * 0.7, depth - 1, id, offset + 100);
+      if (depth > 2 && this.rand(offset+17) < 0.3) {
+        const mid = points[Math.floor(segCount/2)];
+        const midAngle = baseAngle + (this.rand(offset+19)-0.5)*0.4;
+        const cid = this.branches.length;
+        branch.children.push(cid);
+        this.growBranch(cid, mid.x, mid.y, midAngle + bAngle*0.7,
+          childLen*0.6, childWidth*0.7, depth-1, offset+100);
       }
+      const cid1 = this.branches.length;
+      branch.children.push(cid1);
+      this.growBranch(cid1, end.x, end.y, baseAngle - bAngle,
+        childLen, childWidth, depth-1, offset+200);
 
-      const childId1 = this.branches.length;
-      branch.children.push(childId1);
-      this.growBranch(childId1, endX, endY, baseAngle - bAngle,
-        childLen, childWidth, depth - 1, id, offset + 200);
-
-      const willDouble = this.rand(offset + 23) < sp.doubleBranchChance;
-      if (willDouble) {
-        const childId2 = this.branches.length;
-        branch.children.push(childId2);
-        this.growBranch(childId2, endX, endY, baseAngle + bAngle,
-          childLen * (0.85 + this.rand(offset + 29) * 0.2), childWidth, depth - 1, id, offset + 300);
+      if (this.rand(offset+23) < sp.doubleBranchChance) {
+        const cid2 = this.branches.length;
+        branch.children.push(cid2);
+        this.growBranch(cid2, end.x, end.y, baseAngle + bAngle,
+          childLen*(0.85+this.rand(offset+29)*0.2), childWidth, depth-1, offset+300);
       }
-
-      if (this.rand(offset + 31) < 0.5) {
-        const childId3 = this.branches.length;
-        branch.children.push(childId3);
-        this.growBranch(childId3, endX, endY, baseAngle + (this.rand(offset + 37) - 0.5) * 0.15,
-          childLen * 0.9, childWidth * 0.95, depth - 1, id, offset + 400);
+      if (this.rand(offset+31) < 0.5) {
+        const cid3 = this.branches.length;
+        branch.children.push(cid3);
+        this.growBranch(cid3, end.x, end.y, baseAngle + (this.rand(offset+37)-0.5)*0.15,
+          childLen*0.9, childWidth*0.95, depth-1, offset+400);
       }
     }
 
     update(dt, wind) {
       if (!this.dying && this.growth < this.maxGrowth) {
-        this.growth += sp_growSpeed(this.species) * dt * 60;
+        this.growth += this.species.growSpeed * dt * 60;
         if (Math.random() < 0.3) {
-          const visibleBranches = Math.floor(this.growth);
-          if (visibleBranches < this.branches.length) {
-            const b = this.branches[visibleBranches];
+          const vb = Math.floor(this.growth);
+          if (vb < this.branches.length) {
+            const b = this.branches[vb];
             if (b && b.points.length > 0) {
-              const tip = b.points[b.points.length - 1];
+              const tip = b.points[b.points.length-1];
+              // Transform tip by layer scale to match visual position
+              const layer = getDepthLayer(this.y);
+              const vx = this.x + (tip.x - this.x) * layer.scale;
+              const vy = this.y + (tip.y - this.y) * layer.scale;
               particles.push({
-                x: tip.x + (Math.random() - 0.5) * 4,
-                y: tip.y + (Math.random() - 0.5) * 4,
-                vx: (Math.random() - 0.5) * 0.5,
-                vy: -Math.random() * 0.5,
-                life: 1,
-                size: 1 + Math.random() * 2,
-                color: this.species.leafColor || '#5a4e3e',
+                x:vx+(Math.random()-0.5)*4, y:vy+(Math.random()-0.5)*4,
+                vx:(Math.random()-0.5)*0.5, vy:-Math.random()*0.5,
+                life:1, size:1+Math.random()*2,
+                color:this.species.leafColor||'#5a4e3e'
               });
             }
           }
         }
       }
       this.age += dt;
-
       if (this.dying) {
-        this.fade -= dt * 1.5;
+        // Ease-in fade: slow start, fast end
+        const dp = 1 - this.fade;
+        this.fade -= dt * 1.5 * (0.4 + dp * 2.5);
         return;
       }
-
-      if (this.species.leafColor && this.growth >= this.maxGrowth * 0.8) {
-        this.leafTimer -= dt * 60;
+      if (this.species.leafColor && this.growth >= this.maxGrowth*0.8) {
+        this.leafTimer -= dt*60;
         if (this.leafTimer <= 0) {
-          this.leafTimer = 400 + Math.random() * 800;
-          const endBranches = this.branches.filter(b => b.depth <= 1 && b.hasLeaf);
-          if (endBranches.length > 0) {
-            const b = endBranches[Math.floor(Math.random() * endBranches.length)];
-            const tip = b.points[b.points.length - 1];
+          this.leafTimer = 400 + Math.random()*800;
+          const ends = this.branches.filter(b => b.depth <= 1 && b.hasLeaf);
+          if (ends.length) {
+            const b = ends[Math.floor(Math.random()*ends.length)];
+            const tip = b.points[b.points.length-1];
+            const layer = getDepthLayer(this.y);
+            const vx = this.x + (tip.x - this.x) * layer.scale;
+            const vy = this.y + (tip.y - this.y) * layer.scale;
             fallingLeaves.push({
-              x: tip.x, y: tip.y,
-              vx: wind.strength * 0.3 + (Math.random() - 0.5) * 0.3,
-              vy: 0.2 + Math.random() * 0.3,
-              rot: Math.random() * Math.PI * 2,
-              rotV: (Math.random() - 0.5) * 0.05,
-              life: 1,
-              size: 3 + Math.random() * 4,
-              color: this.species.leafColor,
-              sway: Math.random() * Math.PI * 2,
-              swaySpeed: 0.02 + Math.random() * 0.02,
+              x:vx, y:vy,
+              vx:(wind.strength*0.3+(Math.random()-0.5)*0.3)*wind.direction,
+              vy:0.2+Math.random()*0.3,
+              rot:Math.random()*Math.PI*2,
+              rotV:(Math.random()-0.5)*0.05,
+              life:1, size:3+Math.random()*4,
+              color:this.species.leafColor,
+              sway:Math.random()*Math.PI*2,
+              swaySpeed:0.02+Math.random()*0.02,
             });
           }
         }
       }
     }
 
-    draw(ctx, wind, time) {
-      const visibleCount = Math.min(Math.floor(this.growth) + 1, this.branches.length);
+    draw(ctx, wind, time, layer) {
+      const visCount = Math.min(Math.floor(this.growth)+1, this.branches.length);
+      const rgb = this.species.rgb;
+      const useShadow = layer.detail && this.species.baseWidth >= 4;
 
-      for (let i = 0; i < visibleCount; i++) {
+      for (let i = 0; i < visCount; i++) {
         const b = this.branches[i];
-        const partialGrowth = i === visibleCount - 1 ? (this.growth - Math.floor(this.growth)) : 1;
-
-        ctx.beginPath();
+        const partial = i === visCount-1 ? (this.growth - Math.floor(this.growth)) : 1;
         const pts = b.points;
         if (pts.length < 2) continue;
 
-        const swayFactor = (1 - b.depth / this.species.maxDepth) * 0.5;
-        const windX = Math.sin(time * 0.001 + b.id * 0.3 + this.seed * 0.01) * wind.strength * 8 * swayFactor;
-        const windY = Math.cos(time * 0.0013 + b.id * 0.2) * wind.strength * 2 * swayFactor;
+        const swayFactor = (1 - b.depth/this.species.maxDepth) * 0.5;
+        const effWind = wind.strength + wind.gust;
+        const wave1 = Math.sin(time*0.001 + b.id*0.3 + this.seed*0.01);
+        const wave2 = Math.sin(time*0.0027 + b.id*0.5 + this.seed*0.02) * 0.5;
+        const windX = (wave1+wave2) * effWind * 8 * swayFactor * wind.direction;
+        const windY = Math.cos(time*0.0013+b.id*0.2) * effWind * 2 * swayFactor;
 
-        ctx.moveTo(pts[0].x, pts[0].y);
-
-        for (let j = 1; j < pts.length; j++) {
-          const growthFactor = j / (pts.length - 1);
-          if (i === visibleCount - 1 && growthFactor > partialGrowth) {
-            const prev = pts[j - 1];
-            const t = (partialGrowth - (j - 1) / (pts.length - 1)) / (1 / (pts.length - 1));
-            const px = prev.x + (pts[j].x - prev.x) * t + windX * t;
-            const py = prev.y + (pts[j].y - prev.y) * t + windY * t;
-            ctx.lineTo(px, py);
-            break;
-          }
-          ctx.lineTo(pts[j].x + windX * growthFactor, pts[j].y + windY * growthFactor);
-        }
+        // Death droop: branches sag as plant fades
+        const droop = this.dying ? (1 - this.fade) * 6 * (1 - b.depth/this.species.maxDepth) : 0;
 
         const depthFactor = b.depth / this.species.maxDepth;
-        const r = parseInt(this.species.color.slice(1, 3), 16);
-        const g = parseInt(this.species.color.slice(3, 5), 16);
-        const bl = parseInt(this.species.color.slice(5, 7), 16);
-        const inkMix = 0.3 + depthFactor * 0.4;
-        ctx.strokeStyle = 'rgba(' + Math.floor(r + (180 - r) * inkMix) + ',' +
-          Math.floor(g + (170 - g) * inkMix) + ',' +
-          Math.floor(bl + (150 - bl) * inkMix) + ',' +
-          ((0.6 + (1 - depthFactor) * 0.4) * this.fade) + ')';
-        ctx.lineWidth = b.width * (i === visibleCount - 1 ? partialGrowth : 1);
-        ctx.lineCap = 'round';
+        const inkMix = Math.min(1, 0.3 + depthFactor*0.4 + layer.inkMix);
+        const alpha = (0.6+(1-depthFactor)*0.4) * (1-layer.inkMix*0.3) * this.fade;
+        const cr = Math.floor(rgb.r + (180-rgb.r)*inkMix);
+        const cg = Math.floor(rgb.g + (170-rgb.g)*inkMix);
+        const cb = Math.floor(rgb.b + (150-rgb.b)*inkMix);
+        const strokeColor = 'rgba('+cr+','+cg+','+cb+','+alpha+')';
+
+        if (useShadow && b.depth <= 2) {
+          ctx.shadowColor = 'rgba(30,28,25,0.2)';
+          ctx.shadowBlur = 4;
+        } else {
+          ctx.shadowColor = 'transparent';
+          ctx.shadowBlur = 0;
+        }
+        ctx.strokeStyle = strokeColor;
+        ctx.lineCap = b.depth === 0 ? 'round' : 'butt';
         ctx.lineJoin = 'round';
+        // Clamp minimum line width AFTER scale transform
+        const minRenderedW = 0.5;
+        ctx.lineWidth = Math.max(b.width, minRenderedW / layer.scale);
+
+        // Build displaced points for the visible portion of this branch
+        const totalSegs = pts.length - 1;
+        const fullSegs = Math.min(Math.floor(partial * totalSegs), totalSegs);
+        const frac = partial * totalSegs - fullSegs;
+        const dpts = [];
+
+        for (let j = 0; j <= fullSegs; j++) {
+          const t = j / totalSegs;
+          dpts.push({
+            x: pts[j].x + windX * t,
+            y: pts[j].y + windY * t + droop * t
+          });
+        }
+        if (frac > 0.001 && fullSegs < totalSegs) {
+          const p0 = pts[fullSegs], p1 = pts[fullSegs+1];
+          const t = partial;
+          dpts.push({
+            x: p0.x + (p1.x - p0.x) * frac + windX * t,
+            y: p0.y + (p1.y - p0.y) * frac + windY * t + droop * t
+          });
+        }
+
+        // Single path for entire branch (eliminates bead effect)
+        ctx.beginPath();
+        ctx.moveTo(dpts[0].x, dpts[0].y);
+        for (let j = 1; j < dpts.length; j++) {
+          ctx.lineTo(dpts[j].x, dpts[j].y);
+        }
         ctx.stroke();
 
-        if (b.hasLeaf && partialGrowth >= 0.8 && this.species.leafColor) {
-          const tip = pts[pts.length - 1];
+        // Flywhite (飞白): depth<=1 branches, last 30% with dashed line
+        if (b.depth <= 1 && partial >= 0.7 && dpts.length >= 3) {
+          const startIdx = Math.max(1, Math.floor(dpts.length * 0.7));
+          if (startIdx < dpts.length - 1) {
+            ctx.save();
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = alpha * 0.45;
+            const r1 = this.rand(b.id * 7.3 + 41);
+            const r2 = this.rand(b.id * 7.3 + 42);
+            const r3 = this.rand(b.id * 7.3 + 43);
+            ctx.setLineDash([2 + r1*3, 2 + r2*4]);
+            ctx.lineDashOffset = r3 * 20;
+            ctx.beginPath();
+            ctx.moveTo(dpts[startIdx].x, dpts[startIdx].y);
+            for (let j = startIdx+1; j < dpts.length; j++) {
+              ctx.lineTo(dpts[j].x, dpts[j].y);
+            }
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+
+        ctx.globalAlpha = 1;
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+
+        // Leaves / blossoms (with detailAlpha for smooth fade)
+        if (b.hasLeaf && partial >= 0.8 && this.species.leafColor && layer.detailAlpha > 0.05) {
+          const tip = pts[pts.length-1];
           const lx = tip.x + windX;
-          const ly = tip.y + windY;
-          const leafSize = this.species.leafSize * (3 + (1 - b.depth / this.species.maxDepth) * 4);
-          const sway = Math.sin(time * 0.002 + b.id + this.seed) * 0.15;
+          const ly = tip.y + windY + droop;
+          const baseLeafSize = this.species.leafSize * (3+(1-b.depth/this.species.maxDepth)*4);
+          const sway = Math.sin(time*0.002+b.id+this.seed)*0.15;
+          const leafAlpha = this.fade * layer.detailAlpha;
 
           ctx.save();
-          ctx.globalAlpha = this.fade;
           ctx.translate(lx, ly);
           ctx.rotate(b.leafAngle + sway);
 
           if (this.species.name === '松') {
             ctx.strokeStyle = this.species.leafColor;
             ctx.lineWidth = 0.8;
-            ctx.globalAlpha = 0.7 * this.fade;
+            ctx.globalAlpha = 0.7*leafAlpha;
+            ctx.lineCap = 'round';
             for (let n = 0; n < 5; n++) {
-              const na = (n / 5) * Math.PI * 2;
+              const na = (n/5)*Math.PI*2;
               ctx.beginPath();
-              ctx.moveTo(0, 0);
-              ctx.lineTo(Math.cos(na) * leafSize, Math.sin(na) * leafSize);
+              ctx.moveTo(0,0);
+              ctx.lineTo(Math.cos(na)*baseLeafSize, Math.sin(na)*baseLeafSize);
+              ctx.stroke();
+            }
+          } else if (this.species.name === '竹') {
+            // Opposite leaf arrangement (left/right), no hardcoded upward bias
+            ctx.strokeStyle = this.species.leafColor;
+            ctx.lineWidth = 1.3;
+            ctx.globalAlpha = 0.7*leafAlpha;
+            ctx.lineCap = 'round';
+            const cnt = 3 + Math.floor(this.rand(b.id*7)*3);
+            for (let n = 0; n < cnt; n++) {
+              const side = (n % 2 === 0) ? 1 : -1;
+              const na = side * (0.3 + n*0.15 + this.rand(b.id+n*3)*0.15);
+              const len = baseLeafSize*(0.7+this.rand(b.id+n*5)*0.5);
+              ctx.beginPath();
+              ctx.moveTo(0,0);
+              ctx.quadraticCurveTo(
+                Math.cos(na)*len*0.4, Math.sin(na)*len*0.4,
+                Math.cos(na)*len, Math.sin(na)*len);
               ctx.stroke();
             }
           } else if (this.species.name === '梅') {
-            const petalColor = this.species.blossomColor || '#d4808a';
-            ctx.fillStyle = petalColor;
-            ctx.globalAlpha = 0.75 * this.fade;
+            // Larger visible blossoms: ink-grey petals + dark stamens
+            const blossomSize = baseLeafSize * 1.5;
+            const pr = Math.max(2, blossomSize * 0.30);
+            const petalDist = blossomSize * 0.58;
+            ctx.strokeStyle = this.species.blossomColor;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = 0.6*leafAlpha;
             for (let p = 0; p < 5; p++) {
-              const pa = (p / 5) * Math.PI * 2;
+              const pa = (p/5)*Math.PI*2 - Math.PI/2;
               ctx.beginPath();
-              ctx.ellipse(Math.cos(pa) * leafSize * 0.4, Math.sin(pa) * leafSize * 0.4,
-                leafSize * 0.35, leafSize * 0.25, pa, 0, Math.PI * 2);
+              ctx.arc(Math.cos(pa)*petalDist, Math.sin(pa)*petalDist, pr, 0, Math.PI*2);
+              ctx.stroke();
+            }
+            ctx.fillStyle = '#2a2018';
+            ctx.globalAlpha = 0.8*leafAlpha;
+            for (let s = 0; s < 7; s++) {
+              const sa = (s/7)*Math.PI*2;
+              ctx.beginPath();
+              ctx.arc(Math.cos(sa)*blossomSize*0.22, Math.sin(sa)*blossomSize*0.22, 0.8, 0, Math.PI*2);
               ctx.fill();
             }
-            ctx.fillStyle = '#f0d060';
-            ctx.beginPath();
-            ctx.arc(0, 0, leafSize * 0.12, 0, Math.PI * 2);
-            ctx.fill();
-          } else if (this.species.name === '竹') {
-            ctx.fillStyle = this.species.leafColor;
-            ctx.globalAlpha = 0.7 * this.fade;
-            ctx.beginPath();
-            ctx.ellipse(0, 0, leafSize * 1.2, leafSize * 0.3, 0, 0, Math.PI * 2);
-            ctx.fill();
           } else {
             ctx.fillStyle = this.species.leafColor;
-            ctx.globalAlpha = 0.65 * this.fade;
+            ctx.globalAlpha = 0.65*leafAlpha;
             ctx.beginPath();
-            ctx.ellipse(0, 0, leafSize * 0.8, leafSize * 0.35, 0, 0, Math.PI * 2);
+            ctx.ellipse(0,0, baseLeafSize*0.8, baseLeafSize*0.3, 0, 0, Math.PI*2);
             ctx.fill();
           }
           ctx.restore();
+          ctx.globalAlpha = 1;
         }
       }
     }
   }
 
-  function sp_growSpeed(sp) { return sp.growSpeed || 1.5; }
-
-  // ---- Wind system ----
+  // ---- Wind system with gust envelope ----
   const wind = {
-    strength: 0.3,
-    targetStrength: 0.3,
-    direction: 1,
+    strength: 0.3, targetStrength: 0.3, direction: 1,
+    gust: 0, gustStart: 0, gustStrength: 0,
   };
+  let windDomAccum = 0;
 
-  function updateWind(dt) {
+  function updateWind(dt, now) {
     if (Math.random() < 0.003) {
-      wind.targetStrength = Math.random() * 0.8;
+      wind.targetStrength = Math.random()*0.8;
       wind.direction = Math.random() > 0.3 ? 1 : -1;
     }
+    if (Math.random() < 0.002 && now - wind.gustStart > 4000) {
+      wind.gustStrength = 0.4 + Math.random()*0.6;
+      wind.gustStart = now;
+    }
     wind.strength += (wind.targetStrength - wind.strength) * dt * 0.5;
+    const gustAge = (now - wind.gustStart) / 1000;
+    wind.gust = wind.gustStrength * Math.exp(-gustAge * 1.2);
 
-    const wb = wind.strength;
-    for (let i = 1; i <= 5; i++) {
-      const bar = document.getElementById('wb' + i);
-      if (!bar) continue;
-      const baseH = [10, 16, 22, 16, 10][i - 1];
-      bar.style.height = (baseH + wb * 20 * (i % 2 === 0 ? 1.3 : 0.8)) + 'px';
-      bar.style.background = wb > 0.5 ? '#a08060' : '#9a9082';
+    windDomAccum += dt * 1000;
+    if (windDomAccum >= 200) {
+      windDomAccum = 0;
+      const wb = wind.strength + wind.gust * 0.3;
+      const heights = [10,16,22,16,10];
+      for (let i = 0; i < 5; i++) {
+        const bar = dom.windBars[i];
+        if (!bar) continue;
+        bar.style.height = (heights[i] + wb*20*(i%2===0?1.3:0.8))+'px';
+        bar.style.background = wb > 0.5 ? '#a08060' : '#9a9082';
+      }
+      // Wind direction: arrow + skew
+      dom.windArrow.textContent = wind.direction > 0 ? '→' : '←';
+      dom.windArrow.style.transform = wind.direction > 0 ? 'translateX(2px)' : 'translateX(-2px)';
+      dom.windIndicator.style.transform = 'translateY(-50%) skewX(' + (wind.direction * -8) + 'deg)';
     }
   }
 
   function randomizeWind() {
-    wind.targetStrength = 0.1 + Math.random() * 0.9;
-    wind.direction = Math.random() > 0.5 ? 1 : -1;
+    wind.targetStrength = 0.1+Math.random()*0.9;
+    wind.direction = Math.random()>0.5?1:-1;
+    wind.gustStrength = 0.5+Math.random()*0.5;
+    wind.gustStart = performance.now();
   }
 
-  // ---- Ground line ----
-  let groundY;
+  // ---- Ground ----
   function drawGround(ctx) {
-    const grad = ctx.createLinearGradient(0, groundY - 40, 0, H);
+    const grad = ctx.createLinearGradient(0, groundY-40, 0, H);
     grad.addColorStop(0, 'rgba(180,165,135,0)');
     grad.addColorStop(0.3, 'rgba(180,165,135,0.08)');
     grad.addColorStop(1, 'rgba(160,145,115,0.15)');
     ctx.fillStyle = grad;
-    ctx.fillRect(0, groundY - 40, W, H - groundY + 40);
-
+    ctx.fillRect(0, groundY-40, W, H-groundY+40);
     ctx.strokeStyle = 'rgba(100,85,65,0.25)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     for (let x = 0; x <= W; x += 4) {
-      const y = groundY + Math.sin(x * 0.02) * 3 + Math.sin(x * 0.005) * 5;
-      if (x === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
+      const y = groundY + Math.sin(x*0.02)*3 + Math.sin(x*0.005)*5;
+      if (x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
     }
     ctx.stroke();
   }
 
-  // ---- Background distant mountains ----
-  function drawMountains(ctx, time) {
-    ctx.globalAlpha = 0.12;
-    for (let layer = 0; layer < 2; layer++) {
-      ctx.fillStyle = layer === 0 ? '#8a9a8a' : '#a0ab9a';
+  // ---- Distant mountains (Perlin-like noise, two-tone atmospheric perspective) ----
+  function drawMountains(ctx) {
+    // layer 0 = nearer (warm grey), layer 1 = farther (cool grey)
+    var colors = ['#9a9080', '#8a8a90'];
+    for (var layer = 0; layer < 2; layer++) {
+      ctx.fillStyle = colors[layer];
+      ctx.globalAlpha = 0.22 - layer*0.08;
       ctx.beginPath();
-      const baseY = groundY - 30 - layer * 25;
+      var baseY = groundY - 30 - layer*25;
       ctx.moveTo(0, H);
       ctx.lineTo(0, baseY);
-      for (let x = 0; x <= W; x += 8) {
-        const y = baseY
-          - Math.sin(x * 0.003 + layer * 2) * (40 - layer * 10)
-          - Math.sin(x * 0.008 + layer) * (20 - layer * 5)
-          - Math.sin(x * 0.001 + time * 0.0001 * (layer + 1)) * (10 - layer * 3);
+      for (var x = 0; x <= W; x += 8) {
+        var y = baseY
+          - Math.sin(x*0.003+layer*2)*(40-layer*10)
+          - Math.sin(x*0.008+layer)*(20-layer*5)
+          - Math.sin(x*0.015+layer*3.7)*8
+          - getMountainNoise(x, layer);
         ctx.lineTo(x, y);
       }
       ctx.lineTo(W, H);
@@ -663,207 +781,330 @@
     ctx.globalAlpha = 1;
   }
 
-  // ---- Ink splatter on click ----
+  // ---- Ink splatter ----
   function createInkSplatter(x, y, color) {
+    var c = color || '#3a3530';
     for (let i = 0; i < 8; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.5 + Math.random() * 2;
+      const angle = Math.random()*Math.PI*2;
+      const speed = 0.5+Math.random()*2;
       particles.push({
-        x: x, y: y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 0.5,
-        life: 1,
-        size: 1 + Math.random() * 3,
-        color: color || '#3a3530',
-        splatter: true,
+        x,y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed-0.5,
+        life:1, size:1+Math.random()*3, color:c, splatter:true
       });
     }
-    particles.push({
-      x: x, y: y, vx: 0, vy: 0,
-      life: 1, size: 2,
-      color: color || '#3a3530',
-      ripple: true,
-    });
+    particles.push({x,y,vx:0,vy:0,life:1,size:2,color:c,ripple:true});
   }
 
-  // ---- Removal: find nearest plant ----
+  // ---- Removal ----
+  const REMOVE_DIST = 40;
   function findNearestPlant(x, y, maxDist) {
     let best = null, bestDist = maxDist;
     for (let i = 0; i < plants.length; i++) {
       const p = plants[i];
       if (p.dying) continue;
-      const dx = p.x - x;
-      const dy = p.y - y;
-      const d = Math.sqrt(dx * dx + dy * dy);
+      const dx = p.x-x, dy = p.y-y;
+      const d = Math.sqrt(dx*dx+dy*dy);
       if (d < bestDist) { bestDist = d; best = p; }
     }
     return best;
   }
-
   function removePlantAt(x, y) {
-    const p = findNearestPlant(x, y, 60);
+    const p = findNearestPlant(x, y, REMOVE_DIST);
     if (p) {
       p.dying = true;
-      createInkSplatter(p.x, p.y, '#8a7a68');
-      if (navigator.vibrate) { try { navigator.vibrate(20); } catch(e){} }
+      createInkSplatter(p.x, p.y, p.species.color);
+      if (navigator.vibrate) { try{navigator.vibrate(20)}catch(e){} }
     }
   }
 
   function clearGarden() {
-    for (const p of plants) {
-      if (!p.dying) { p.dying = true; }
-    }
-    particles = [];
+    for (const p of plants) { if (!p.dying) p.dying = true; }
+    fallingLeaves = [];
+    showToast('园已清');
+  }
+
+  // ---- Toast ----
+  let toastTimer = null;
+  function showToast(msg) {
+    dom.toast.textContent = msg;
+    dom.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ dom.toast.classList.remove('show'); }, 2500);
+  }
+
+  // ---- Shichen (十二时辰) ----
+  const shichenNames = ['子时','丑时','寅时','卯时','辰时','巳时','午时','未时','申时','酉时','戌时','亥时'];
+  function getShichen() {
+    const h = new Date().getHours();
+    return shichenNames[Math.floor(((h + 1) % 24) / 2)];
   }
 
   // ---- Main loop ----
   let lastTime = performance.now();
-  function loop(now) {
-    const dt = Math.min((now - lastTime) / 1000, 0.05);
-    lastTime = now;
+  let rafId = null;
+  let lastShichen = -1, lastCount = -1;
 
-    updateWind(dt);
+  // Long-press progress ring
+  const pressRing = { active:false, x:0, y:0, start:0, triggered:false };
+  const PRESS_DURATION = 500;
+
+  function loop(now) {
+    const dt = Math.min((now - lastTime)/1000, 0.05);
+    lastTime = now;
+    updateWind(dt, now);
 
     if (paperCanvas && paperW === W && paperH === H) {
-      ctx.drawImage(paperCanvas, 0, 0);
+      ctx.drawImage(paperCanvas, 0, 0, W, H);
     } else {
-      // fallback fill while texture is being rebuilt
       ctx.fillStyle = '#f0ebe0';
       ctx.fillRect(0, 0, W, H);
     }
 
-    drawMountains(ctx, now);
+    drawMountains(ctx);
     drawGround(ctx);
 
-    // Update & draw plants (reverse iterate so we can remove)
-    for (let i = plants.length - 1; i >= 0; i--) {
+    // Update all plants first
+    for (let i = plants.length-1; i >= 0; i--) {
+      plants[i].update(dt, wind);
+    }
+
+    // Draw plants sorted by y (farther/smaller y first), then remove dead
+    const visiblePlants = [];
+    for (let i = plants.length-1; i >= 0; i--) {
       const p = plants[i];
-      p.update(dt, wind);
-      if (p.fade > 0) {
-        ctx.save();
-        p.draw(ctx, wind, now);
-        ctx.restore();
-      }
-      if (p.dying && p.fade <= 0) {
-        plants.splice(i, 1);
-      }
+      if (p.fade <= 0) { plants.splice(i, 1); continue; }
+      visiblePlants.push(p);
+    }
+    visiblePlants.sort(function(a, b) { return a.y - b.y; });
+    for (const p of visiblePlants) {
+      const layer = getDepthLayer(p.y);
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.scale(layer.scale, layer.scale);
+      ctx.translate(-p.x, -p.y);
+      p.draw(ctx, wind, now, layer);
+      ctx.restore();
     }
 
     // Particles
-    for (let i = particles.length - 1; i >= 0; i--) {
+    for (let i = particles.length-1; i >= 0; i--) {
       const p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.02;
-      p.life -= dt * 1.5;
-      if (p.ripple) p.size += dt * 60;
-      if (p.life <= 0) {
-        particles.splice(i, 1);
-        continue;
-      }
-      ctx.globalAlpha = p.life * 0.6;
+      p.x += p.vx; p.y += p.vy; p.vy += 0.02;
+      p.life -= dt*1.5;
+      if (p.ripple) p.size += dt*60;
+      if (p.life <= 0) { particles.splice(i,1); continue; }
+      ctx.globalAlpha = p.life*0.6;
       if (p.ripple) {
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.strokeStyle = p.color; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.stroke();
       } else {
         ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size*p.life, 0, Math.PI*2); ctx.fill();
       }
       ctx.globalAlpha = 1;
     }
 
-    // Falling leaves
-    for (let i = fallingLeaves.length - 1; i >= 0; i--) {
+    // Falling leaves — willow shape, turning with alpha compensation, gust-affected
+    for (let i = fallingLeaves.length-1; i >= 0; i--) {
       const l = fallingLeaves[i];
       l.sway += l.swaySpeed;
-      l.vx += Math.sin(l.sway) * 0.02 + wind.strength * 0.01 * wind.direction;
-      l.x += l.vx;
-      l.y += l.vy;
-      l.rot += l.rotV;
-      l.life -= dt * 0.15;
-      if (l.y > H + 20 || l.life <= 0 || l.x < -20 || l.x > W + 20) {
-        fallingLeaves.splice(i, 1);
-        continue;
+      l.vx += Math.sin(l.sway)*0.02 + (wind.strength + wind.gust)*0.01*wind.direction;
+      l.vx *= 0.98;
+      l.rotV += (Math.random()-0.5)*0.001;
+      l.rotV *= 0.99;
+      l.x += l.vx; l.y += l.vy; l.rot += l.rotV;
+      l.life -= dt*0.15;
+      if (l.y > H+20 || l.life <= 0 || l.x < -20 || l.x > W+20) {
+        fallingLeaves.splice(i,1); continue;
       }
       ctx.save();
       ctx.translate(l.x, l.y);
       ctx.rotate(l.rot);
-      ctx.globalAlpha = l.life * 0.7;
+      const turn = Math.cos(l.sway*0.8);
+      const sx = Math.max(0.15, Math.abs(turn));
+      ctx.scale(sx, 1);
+      ctx.globalAlpha = l.life*0.7*(0.5 + sx*0.5);
       ctx.fillStyle = l.color;
       ctx.beginPath();
-      ctx.ellipse(0, 0, l.size, l.size * 0.4, 0, 0, Math.PI * 2);
+      ctx.moveTo(0, -l.size);
+      ctx.quadraticCurveTo(l.size*0.35, 0, 0, l.size);
+      ctx.quadraticCurveTo(-l.size*0.35, 0, 0, -l.size);
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.restore();
     }
 
-    // Vignette
-    const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.9);
-    vg.addColorStop(0, 'rgba(0,0,0,0)');
-    vg.addColorStop(1, 'rgba(80,65,40,0.08)');
-    ctx.fillStyle = vg;
-    ctx.fillRect(0, 0, W, H);
+    // Vignette (cached, DPR-aware)
+    if (vignetteCanvas) ctx.drawImage(vignetteCanvas, 0, 0, W, H);
 
-    // Stats
-    document.getElementById('plant-count').textContent = plants.length;
-    const d = new Date();
-    const h = d.getHours();
-    const m = d.getMinutes();
-    document.getElementById('time-display').textContent =
-      h.toString().padStart(2, '0') + ':' + m.toString().padStart(2, '0');
+    // Long-press progress ring (ink color, 3px)
+    if (pressRing.active) {
+      const elapsed = now - pressRing.start;
+      const progress = Math.min(elapsed / PRESS_DURATION, 1);
+      if (progress >= 1 && !pressRing.triggered) {
+        pressRing.triggered = true;
+        removePlantAt(pressRing.x, pressRing.y);
+      }
+      ctx.save();
+      ctx.strokeStyle = '#3a3530';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(pressRing.x, pressRing.y, 20, -Math.PI/2, -Math.PI/2 + progress*Math.PI*2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(58,53,48,0.3)';
+      ctx.beginPath();
+      ctx.arc(pressRing.x, pressRing.y, 3, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
 
-    requestAnimationFrame(loop);
+    // Stats (throttled)
+    if (plants.length !== lastCount) {
+      lastCount = plants.length;
+      dom.plantCount.textContent = lastCount;
+    }
+    const sc = getShichen();
+    if (sc !== lastShichen) {
+      lastShichen = sc;
+      dom.timeDisplay.textContent = sc;
+    }
+
+    rafId = requestAnimationFrame(loop);
   }
 
-  // ---- Resize with debounced paper rebuild ----
+  // ---- Resize with DPR + plant reposition ----
   function resize() {
     W = window.innerWidth;
     H = window.innerHeight;
-    canvas.width = W;
-    canvas.height = H;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W+'px';
+    canvas.style.height = H+'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const oldGroundY = groundY;
     groundY = H * 0.82;
+
+    // Shift plants and airborne objects with new ground line
+    if (oldGroundY !== undefined && oldGroundY !== groundY) {
+      const dy = groundY - oldGroundY;
+      for (const p of plants) {
+        p.y += dy;
+        for (const b of p.branches) {
+          for (const pt of b.points) pt.y += dy;
+        }
+      }
+      for (const pt of particles) pt.y += dy;
+      for (const l of fallingLeaves) l.y += dy;
+    }
+
+    // Build vignette immediately (cheap), debounce paper texture
+    buildVignette();
 
     if (firstResize) {
       createPaperTexture();
       firstResize = false;
     } else {
-      // Scale existing paper to fill immediately, then rebuild after debounce
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(function() {
         createPaperTexture();
+        buildVignette();
       }, 200);
     }
   }
   window.addEventListener('resize', resize);
 
-  // ---- Selected plant ----
-  let selectedPlant = 0; // index or 'random'
-
-  function resolvePlantIndex() {
-    if (selectedPlant === 'random') {
-      return Math.floor(Math.random() * species.length);
+  // ---- Visibility: pause/resume RAF + reset pressRing ----
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      pressRing.active = false;
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    } else {
+      lastTime = performance.now();
+      if (!rafId) rafId = requestAnimationFrame(loop);
     }
-    return selectedPlant;
+  });
+
+  // ---- Plant selection ----
+  let selectedPlant = 0;
+  function resolvePlantIndex() {
+    return selectedPlant === 'random' ? Math.floor(Math.random()*species.length) : selectedPlant;
   }
 
-  // ---- Interactions ----
+  // ---- Plant at position ----
   function plantAt(x, y) {
-    if (y > groundY + 10) y = groundY;
-    if (y < groundY - 300) y = groundY - 300;
-    y = Math.max(groundY - 250, Math.min(groundY, y));
+    y = Math.max(groundY-250, Math.min(groundY, y));
+
+    // Density check: reject if >3 plants within 100px radius
+    var nearby = 0;
+    for (var i = 0; i < plants.length; i++) {
+      if (plants[i].dying) continue;
+      var dx = plants[i].x - x, dy2 = plants[i].y - y;
+      if (dx*dx + dy2*dy2 < 10000) nearby++;
+    }
+    if (nearby > 3) {
+      showToast('此处已密');
+      return;
+    }
+
+    // Soft cap: only count alive (non-dying) plants
+    var aliveCount = 0;
+    for (var j = 0; j < plants.length; j++) {
+      if (!plants[j].dying) aliveCount++;
+    }
+    if (aliveCount >= MAX_PLANTS) {
+      let oldest = null;
+      for (const p of plants) {
+        if (p.dying) continue;
+        if (!oldest || p.age > oldest.age) oldest = p;
+      }
+      if (oldest) {
+        oldest.dying = true;
+        createInkSplatter(oldest.x, oldest.y, oldest.species.color);
+      }
+      showToast('园满，新草替旧株');
+    }
     const si = resolvePlantIndex();
     plants.push(new Plant(x, y, si));
     createInkSplatter(x, y, species[si].color);
+
+    // Hide hint after user's first plant
+    if (!hasPlanted) {
+      hasPlanted = true;
+      dom.hint.style.opacity = '0';
+      setTimeout(function(){ dom.hint.style.display = 'none'; }, 600);
+    }
   }
 
-  // Desktop: left-click to plant, right-click to remove
+  // ---- Screenshot / 留影 ----
+  function saveSnapshot() {
+    try {
+      const sealRect = sealCv.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      ctx.drawImage(sealCv,
+        sealRect.left - canvasRect.left,
+        sealRect.top - canvasRect.top,
+        sealRect.width, sealRect.height);
+      const link = document.createElement('a');
+      const d = new Date();
+      const ts = d.getFullYear()
+        + String(d.getMonth()+1).padStart(2,'0')
+        + String(d.getDate()).padStart(2,'0') + '-'
+        + String(d.getHours()).padStart(2,'0')
+        + String(d.getMinutes()).padStart(2,'0')
+        + String(d.getSeconds()).padStart(2,'0');
+      link.download = 'ink-garden-' + ts + '.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch(e) {
+      showToast('留影失败');
+    }
+  }
+
+  // ---- Interactions ----
   canvas.addEventListener('mousedown', function(e) {
-    if (e.button === 2) return; // handled by contextmenu
+    if (e.button !== 0) return;
     plantAt(e.clientX, e.clientY);
   });
   canvas.addEventListener('contextmenu', function(e) {
@@ -871,138 +1112,150 @@
     removePlantAt(e.clientX, e.clientY);
   });
 
-  // Mobile: tap to plant, long-press (300ms) to remove
-  let touchTimer = null;
+  // Touch: tap to plant, long-press (500ms) with ring to remove
   let touchMoved = false;
   let touchStartX = 0, touchStartY = 0;
-  const LONG_PRESS_MS = 300;
 
   canvas.addEventListener('touchstart', function(e) {
     e.preventDefault();
     if (e.changedTouches.length === 0) return;
     const t = e.changedTouches[0];
-    touchStartX = t.clientX;
-    touchStartY = t.clientY;
+    touchStartX = t.clientX; touchStartY = t.clientY;
     touchMoved = false;
-    if (touchTimer) clearTimeout(touchTimer);
-    touchTimer = setTimeout(function() {
-      if (!touchMoved) {
-        removePlantAt(touchStartX, touchStartY);
-        touchTimer = null;
-      }
-    }, LONG_PRESS_MS);
-  }, { passive: false });
+    pressRing.active = true;
+    pressRing.x = t.clientX; pressRing.y = t.clientY;
+    pressRing.start = performance.now();
+    pressRing.triggered = false;
+  }, {passive:false});
 
   canvas.addEventListener('touchmove', function(e) {
     if (e.changedTouches.length === 0) return;
     const t = e.changedTouches[0];
-    if (Math.abs(t.clientX - touchStartX) > 10 || Math.abs(t.clientY - touchStartY) > 10) {
+    if (Math.abs(t.clientX-touchStartX)>10 || Math.abs(t.clientY-touchStartY)>10) {
       touchMoved = true;
-      if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+      pressRing.active = false;
     }
-  }, { passive: false });
+  }, {passive:false});
 
   canvas.addEventListener('touchend', function(e) {
     e.preventDefault();
-    if (touchTimer) {
-      clearTimeout(touchTimer);
-      touchTimer = null;
-      if (!touchMoved && e.changedTouches.length > 0) {
-        const t = e.changedTouches[0];
-        plantAt(t.clientX, t.clientY);
-      }
+    const wasLong = pressRing.triggered;
+    pressRing.active = false;
+    if (!touchMoved && !wasLong && e.changedTouches.length > 0) {
+      plantAt(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
     }
-  }, { passive: false });
+  }, {passive:false});
 
   canvas.addEventListener('touchcancel', function() {
-    if (touchTimer) { clearTimeout(touchTimer); touchTimer = null; }
+    pressRing.active = false;
     touchMoved = false;
   });
 
-  // Plant selection bar
+  // Plant bar
   document.querySelectorAll('.pbtn[data-plant]').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      document.querySelectorAll('.pbtn[data-plant]').forEach(function(b) {
-        b.classList.remove('active');
-      });
+      document.querySelectorAll('.pbtn[data-plant]').forEach(function(b){ b.classList.remove('active'); });
       btn.classList.add('active');
-      const v = btn.dataset.plant;
+      var v = btn.dataset.plant;
       selectedPlant = v === 'random' ? 'random' : parseInt(v, 10);
     });
   });
 
-  // Clear garden
-  document.getElementById('btn-clear').addEventListener('click', clearGarden);
+  // Clear with 2-step confirmation (3s timeout)
+  let clearArmed = false, clearArmedTimer = null;
+  dom.btnClear.addEventListener('click', function() {
+    var span = dom.btnClear.querySelector('span');
+    if (!clearArmed) {
+      clearArmed = true;
+      dom.btnClear.classList.add('armed');
+      span.textContent = '确';
+      clearArmedTimer = setTimeout(function() {
+        clearArmed = false;
+        dom.btnClear.classList.remove('armed');
+        span.textContent = '清';
+      }, 3000);
+    } else {
+      clearTimeout(clearArmedTimer);
+      clearArmed = false;
+      dom.btnClear.classList.remove('armed');
+      span.textContent = '清';
+      clearGarden();
+    }
+  });
 
-  // Randomize wind
-  document.getElementById('btn-wind').addEventListener('click', randomizeWind);
-  document.getElementById('wind-indicator').addEventListener('click', randomizeWind);
+  dom.btnWind.addEventListener('click', randomizeWind);
+  dom.windIndicator.addEventListener('click', randomizeWind);
+  dom.btnSave.addEventListener('click', saveSnapshot);
 
   // ---- Seal ----
   function drawSeal() {
     const c = sealCtx, s = 64;
     c.clearRect(0, 0, s, s);
-    // 印底
     c.fillStyle = '#a33a2c';
-    c.fillRect(6, 6, s - 12, s - 12);
-    // 斑驳
+    c.fillRect(6, 6, s-12, s-12);
     c.globalCompositeOperation = 'destination-out';
     for (let i = 0; i < 50; i++) {
-      c.fillStyle = 'rgba(0,0,0,' + (0.08 + Math.random() * 0.28) + ')';
+      c.fillStyle = 'rgba(0,0,0,'+(0.08+Math.random()*0.28)+')';
       c.beginPath();
-      c.arc(8 + Math.random() * (s - 16), 8 + Math.random() * (s - 16),
-        Math.random() * 2.8 + 0.4, 0, Math.PI * 2);
+      c.arc(8+Math.random()*(s-16), 8+Math.random()*(s-16), Math.random()*2.8+0.4, 0, Math.PI*2);
       c.fill();
     }
-    // 边角磨损
     c.fillStyle = 'rgba(0,0,0,0.35)';
-    c.fillRect(0, 0, s, 4);
-    c.fillRect(0, s - 4, s, 4);
-    c.fillRect(0, 0, 4, s);
-    c.fillRect(s - 4, 0, 4, s);
+    c.fillRect(0,0,s,4); c.fillRect(0,s-4,s,4);
+    c.fillRect(0,0,4,s); c.fillRect(s-4,0,4,s);
     c.globalCompositeOperation = 'source-over';
-    // 边框
     c.strokeStyle = 'rgba(255,240,225,0.35)';
     c.lineWidth = 1.5;
-    c.strokeRect(9, 9, s - 18, s - 18);
-    // 文字 墨园
+    c.strokeRect(9, 9, s-18, s-18);
     c.fillStyle = '#f7efe2';
     c.font = 'bold 22px "Ma Shan Zheng","Songti SC","STSong",serif';
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.fillText('墨', s / 2, s * 0.32);
-    c.fillText('园', s / 2, s * 0.68);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('墨', s/2, s*0.32);
+    c.fillText('园', s/2, s*0.68);
   }
 
   // ---- Init ----
+  // Seal DPR
+  sealCv.width = Math.round(64 * dpr);
+  sealCv.height = Math.round(64 * dpr);
+  sealCv.style.width = '64px';
+  sealCv.style.height = '64px';
+  sealCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
   resize();
   drawSeal();
-  // Redraw seal after webfonts (Ma Shan Zheng) are ready
   if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(function() { drawSeal(); });
+    document.fonts.ready.then(function(){ drawSeal(); });
   }
 
-  // Plant a few starter seeds
+  // Hint: breathe 3 times, then settle to 0.25; hide after first plant
+  dom.hint.classList.add('breathe');
+  setTimeout(function(){
+    dom.hint.classList.remove('breathe');
+    if (!hasPlanted) dom.hint.style.opacity = '0.25';
+  }, 4200);
+
+  // Starter seeds — bamboo & pine near, willow in middle layer, with ±5% random offset
   setTimeout(function() {
-    const starters = [
-      { x: 0.25, si: 0 },
-      { x: 0.5, si: 1 },
-      { x: 0.75, si: 2 },
+    var starters = [
+      { x:0.20, yOff:0,    si:0 },  // bamboo near
+      { x:0.55, yOff:0,    si:1 },  // pine near
+      { x:0.82, yOff:-100, si:2 },  // willow middle layer
     ];
     starters.forEach(function(s, i) {
       setTimeout(function() {
-        const x = W * s.x;
-        const y = groundY - 5;
+        var rx = s.x + (Math.random()-0.5)*0.1;
+        var x = W * rx;
+        var y = groundY - 5 + s.yOff;
         plants.push(new Plant(x, y, s.si));
         createInkSplatter(x, y, species[s.si].color);
-      }, i * 400);
+      }, i*400);
     });
   }, 500);
 
-  requestAnimationFrame(loop);
+  rafId = requestAnimationFrame(loop);
 
-  // prevent pinch zoom
-  document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+  document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 })();
 </script>
 </body>
