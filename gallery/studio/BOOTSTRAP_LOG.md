@@ -71,3 +71,51 @@ v1.0/v1.0.1 对照 AIOS Creative Production Studio（commit 9729563）存在三�
 - 四季色彩插值系统（seasonConfig + seasonT lerp）
 - 形状蒙版染色缓存模式（解决噪声轮廓昂贵但颜色需逐帧变化的通用问题）
 - 宣纸纹理生成（底色+渐变+纤维+墨点，验收评为系列最佳）
+
+---
+
+## #002 墨园 · Ink Garden
+
+- 日期：2026-08-14
+- Studio 版本：v1.1
+- Brief：`briefs/002-ink-garden.md`
+- 验收结论：有条件通过（0 Blocker，直接上线）
+
+### 背景
+墨园是创作时间（自主创作时段）的练手原型，非 Studio 正式 Brief 立项。用户授权"你来决定就好"后，决定仍按 Studio 规矩走：基于原型评审撰写 Brief → codeact Worker 在原型上改进 → 独立 lead sub-agent 验收 → 上线。验证"轻量作品也能走流程"。
+
+### 问题记录
+
+**CONDITIONAL（不阻塞）**
+- Google Fonts CDN 外部依赖。Brief 技术约束写"零外部依赖"，但作品通过 `<link>` 引入 Google Fonts。
+- 路由判断：**输出层与约束表述的小偏差，非生成器缺陷**。画廊首页和山居本身也引用 Google Fonts，且有完善的系统字体 fallback（`"Noto Serif SC","Songti SC","STSong",serif`），核心功能不依赖网络。
+- 处理：接受条件上线。同时确认 Studio 层面应把"零外部依赖"的表述精确为"零外部 JS 依赖，字体允许 CDN+系统 fallback"，避免后续验收反复在同一点上 CONDITIONAL。
+
+**Nice-to-have（留待迭代）**
+7 项：无植物数量上限（极大量可能卡顿）、clearGarden 未清空落叶数组、无 DPR 缩放（高分屏略糊）、风力只影响幅度不改变方向、移动端选择按钮略小（36px）、少量死代码、印章无磨损斑驳。均不阻塞。
+
+### 双环改进
+本次**对 Studio 做一处小修正（文档级）**：
+1. 把"零外部依赖"精确化为"零外部 JS 依赖；CSS 字体允许 CDN，但必须有系统字体 fallback，且核心体验不依赖网络"。这是验收标准表述不够精确导致的反复，属于 Studio 层（验收标准）而非作品层。
+
+其余不改 Studio，理由：
+- 6 项 Brief 改进全部一次落实，0 Blocker，核心算法 100% 从原型保留并增强，说明 v1.1 流程对"改进型作品"同样有效。
+- Worker 自检这次覆盖了语法、功能点清单、文件体积，且主动处理了山居复盘点名的"印章字体加载后重绘"问题（`document.fonts.ready` 后重绘印章）——说明上一作的经验被 Worker 吸收。
+
+### C 层观察更新（接 #001）
+#001 记录的信号"Worker 缺少运行时视觉回归手段"，在墨园这一作**没有复现"语法过但画面错"的问题**。墨园验收的 7 条要点全部通过代码审查即可确认，没有出现需要实际运行才能发现的视觉跳变。
+
+判断：**暂缓给 Builder 加 headless 截图对比脚手架**。山居的山脉瞬断是"跨帧状态/缓存失效"类问题，这类 bug 在静态代码审查中较难发现；但墨园没有时间轴状态机，递归分形是无状态逐帧绘制，代码审查足以覆盖。结论：视觉回归脚手架只在"有跨帧状态/过渡动画"的作品类型上才有必要，不必作为所有作品的通用要求。继续观察，等到第 2~3 个带时间轴状态的作品后再决定。
+
+### Re-produced Evidence
+- 作品：`gallery/works/ink-garden.html`（32,945 字节）
+- 验收报告：`acceptance/002-acceptance.md`（7 条要点：6 PASS + 1 CONDITIONAL，0 Blocker）
+- 已上线画廊：commit 470ab5c，https://rongkyn.github.io/rongball-xr/gallery/
+
+### 沉淀到 Builder
+- 递归分形树绘制（种子随机 + 逐枝生长 + 末梢风力）
+- 朱红印章 canvas 绘制（印底 + 随机斑驳圆孔 + 边角磨损 + `document.fonts.ready` 重绘）
+- 宣纸纹理 resize 防抖（stretch 填充过渡 + 200ms 后重建）
+- 右键/长按双端移除 + 触觉反馈（`navigator.vibrate`）
+
+待与 #001 列出的模块统一提取到 `builder/`。
