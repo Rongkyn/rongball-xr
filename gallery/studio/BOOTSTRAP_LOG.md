@@ -39,13 +39,35 @@ v1.0/v1.0.1 对照 AIOS Creative Production Studio（commit 9729563）存在三�
 - 日期：2026-08-13
 - Studio 版本：v1.1
 - Brief：`briefs/001-mountain-dwelling.md`
-- 验收结论：待验收
+- 验收结论：有条件通过 → 修复后通过（2026-08-13）
 
 ### 问题记录
-（验收后填写）
+
+**Blocker（单环 · 作品缺陷）**
+- 山脉颜色季节切换瞬断。`drawMountains()` 离屏缓存失效条件只检查 `currentSeason`，而 `currentSeason` 在 2 秒过渡结束后才更新；过渡期天空平滑变色、山脉却画旧缓存，过渡结束瞬间跳变。直接损害"缓慢有机"的核心体验。
+- 路由判断：**输出层缺陷，不是生成器缺陷**。属于该作品特定实现的 bug，不是 Studio 工作流或验收标准的问题 → 单环修复，由生产 Worker 修。
+- 修复：缓存架构重构为"白色形状蒙版（resize 时生成）+ 每帧 destination-in 铺插值色"，过渡期逐帧跟随 `seasonT`。
+
+**附带修复（低风险）**
+- 粒子初始位置 (0,0)：`initParticles()` 早于 `resize()` 调用 → 调整顺序并加防御。
+- 炊烟逐帧 `Math.random()<0.02` 闪烁 → 改为基于时间的 sin 呼吸。
+
+**Nice-to-have（不阻塞，留待后续迭代）**
+6 项：季节指示点触摸目标过小（10px）、雾气颜色中点硬切、远山未系统使用清/淡墨分层、宣纸逐像素纹理 resize 卡顿、来客 `layout` 参数计算未使用、印章字体跨平台 fallback。
 
 ### 双环改进
-（如有）
+本次**不改 Studio**。理由：
+1. 缺陷是具体实现的缓存逻辑错误，不是工作流、角色分工或验收标准导致的——验收标准（"动效缓慢有机、无跳变"）本身有效，且成功捕获了问题。
+2. maker/checker 分离纪律生效：生产 Worker 自检没发现瞬断（它跑了语法检查，但没有视觉/时间轴验证），独立验收员通过代码审查抓到了。这恰好验证了 v1.1 把 Visual Continuity 和 Product Acceptance 独立出来的价值。
+3. 一个可观察的 Studio 层信号（记录但不立即改）：**生产 Worker 的自检偏语法/结构，缺少"运行时视觉回归"手段**。未来如果多次出现"语法通过但视觉有问题"的情况，应考虑给 Builder 增加一个轻量的视觉自检脚手架（如 headless 截图对比季节过渡的帧序列）。这是 C 层（判断改什么的机制）的候选改进，先观察第二作再决定。
 
 ### Re-produced Evidence
-（如有）
+- 修复后作品：`gallery/works/mountain-dwelling.html`（38,832 字节）
+- 独立验收员复查三项修复全部通过，最终结论"通过"：`acceptance/001-acceptance.md`
+- 已上线画廊：commit 6f2f1e4，https://rongkyn.github.io/rongball-xr/gallery/
+
+### 沉淀到 Builder
+可复用模块（待第二作前提取到 `builder/`）：
+- 四季色彩插值系统（seasonConfig + seasonT lerp）
+- 形状蒙版染色缓存模式（解决噪声轮廓昂贵但颜色需逐帧变化的通用问题）
+- 宣纸纹理生成（底色+渐变+纤维+墨点，验收评为系列最佳）
