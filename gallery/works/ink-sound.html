@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>墨音 · Ink Sound</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  overflow:hidden;
+  background:#0a0a0f;
+  font-family:'Georgia','Noto Serif SC',serif;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action:none;
+}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
+
+/* UI overlay */
+.ui{
+  position:fixed;
+  z-index:10;
+  pointer-events:none;
+}
+.title-bar{
+  top:20px;left:0;right:0;
+  text-align:center;
+  opacity:0.7;
+  transition:opacity 0.5s;
+}
+.title-bar h1{
+  font-size:28px;
+  color:#c4a35a;
+  letter-spacing:12px;
+  font-weight:400;
+  text-shadow:0 0 20px rgba(196,163,90,0.3);
+}
+.title-bar p{
+  font-size:12px;
+  color:rgba(200,200,210,0.5);
+  margin-top:6px;
+  letter-spacing:3px;
+}
+
+.controls{
+  bottom:30px;left:0;right:0;
+  display:flex;
+  justify-content:center;
+  gap:16px;
+  pointer-events:auto;
+}
+.btn{
+  background:rgba(30,30,40,0.7);
+  border:1px solid rgba(196,163,90,0.3);
+  color:#c4a35a;
+  padding:8px 20px;
+  font-size:13px;
+  letter-spacing:2px;
+  cursor:pointer;
+  border-radius:2px;
+  transition:all 0.3s;
+  font-family:inherit;
+}
+.btn:hover{
+  background:rgba(196,163,90,0.15);
+  border-color:rgba(196,163,90,0.6);
+}
+.btn.active{
+  background:rgba(196,163,90,0.2);
+  border-color:#c4a35a;
+}
+
+.scale-info{
+  bottom:80px;left:0;right:0;
+  text-align:center;
+  opacity:0;
+  transition:opacity 0.8s;
+}
+.scale-info.show{opacity:1}
+.scale-info span{
+  font-size:11px;
+  color:rgba(200,200,210,0.4);
+  letter-spacing:2px;
+}
+
+.hint{
+  top:50%;left:0;right:0;
+  text-align:center;
+  transform:translateY(-50%);
+  opacity:0;
+  animation:hintFade 4s ease-in-out forwards;
+  animation-delay:1s;
+}
+.hint span{
+  font-size:14px;
+  color:rgba(200,200,210,0.4);
+  letter-spacing:4px;
+}
+@keyframes hintFade{
+  0%{opacity:0}
+  30%{opacity:0.6}
+  70%{opacity:0.6}
+  100%{opacity:0}
+}
+
+.note-display{
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+}
+.note-char{
+  position:absolute;
+  font-size:60px;
+  color:rgba(196,163,90,0.6);
+  text-shadow:0 0 30px rgba(196,163,90,0.3);
+  opacity:0;
+  animation:noteShow 1.5s ease-out forwards;
+  pointer-events:none;
+}
+@keyframes noteShow{
+  0%{opacity:0;transform:scale(0.5) translateY(10px)}
+  20%{opacity:0.8;transform:scale(1) translateY(0)}
+  100%{opacity:0;transform:scale(1.2) translateY(-30px)}
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div class="ui title-bar">
+  <h1>墨 音</h1>
+  <p>触山生水 · 点墨成音</p>
+</div>
+
+<div class="ui scale-info" id="scaleInfo">
+  <span>宫 · 商 · 角 · 徵 · 羽</span>
+</div>
+
+<div class="ui hint" id="hint">
+  <span>轻触画面 · 以山为琴</span>
+</div>
+
+<div class="ui note-display" id="noteDisplay"></div>
+
+<div class="ui controls">
+  <button class="btn" id="btnScale" onclick="toggleScale()">五声</button>
+  <button class="btn" id="btnPentatonic" onclick="switchMode('pentatonic')">宫调</button>
+  <button class="btn" id="btnRecord" onclick="toggleRecord()">录</button>
+  <button class="btn" id="btnPlay" onclick="playRecording()" style="display:none"> replay</button>
+  <button class="btn" id="btnAuto" onclick="toggleAuto()">自动</button>
+</div>
+
+<script>
+// ==================== Canvas Setup ====================
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth * devicePixelRatio;
+  H = canvas.height = window.innerHeight * devicePixelRatio;
+  ctx.scale(1, 1);
+  generateMountains();
+}
+window.addEventListener('resize', resize);
+
+// ==================== Audio System ====================
+let audioCtx = null;
+let masterGain = null;
+let reverbNode = null;
+let isAudioInit = false;
+
+function initAudio() {
+  if (isAudioInit) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.4;
+  
+  // Create reverb
+  reverbNode = createReverb(3, 2);
+  
+  const reverbGain = audioCtx.createGain();
+  reverbGain.gain.value = 0.3;
+  
+  masterGain.connect(audioCtx.destination);
+  masterGain.connect(reverbNode);
+  reverbNode.connect(reverbGain);
+  reverbGain.connect(audioCtx.destination);
+  
+  isAudioInit = true;
+}
+
+function createReverb(duration, decay) {
+  const rate = audioCtx.sampleRate;
+  const length = rate * duration;
+  const impulse = audioCtx.createBuffer(2, length, rate);
+  
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+    }
+  }
+  
+  const convolver = audioCtx.createConvolver();
+  convolver.buffer = impulse;
+  return convolver;
+}
+
+// Pentatonic scales (五声调式)
+const SCALES = {
+  pentatonic: {
+    name: '宫调',
+    notes: [
+      { name: '宫', freq: 261.63, color: '#c4a35a' },   // C
+      { name: '商', freq: 293.66, color: '#8fb8a0' },   // D
+      { name: '角', freq: 329.63, color: '#7ba5c4' },   // E
+      { name: '徵', freq: 392.00, color: '#c47b7b' },   // G
+      { name: '羽', freq: 440.00, color: '#a07bc4' },   // A
+    ]
+  },
+  jue: {
+    name: '角调',
+    notes: [
+      { name: '角', freq: 329.63, color: '#7ba5c4' },
+      { name: '徵', freq: 392.00, color: '#c47b7b' },
+      { name: '羽', freq: 440.00, color: '#a07bc4' },
+      { name: '宫', freq: 523.25, color: '#c4a35a' },
+      { name: '商', freq: 587.33, color: '#8fb8a0' },
+    ]
+  },
+  zhi: {
+    name: '徵调',
+    notes: [
+      { name: '徵', freq: 392.00, color: '#c47b7b' },
+      { name: '羽', freq: 440.00, color: '#a07bc4' },
+      { name: '宫', freq: 523.25, color: '#c4a35a' },
+      { name: '商', freq: 587.33, color: '#8fb8a0' },
+      { name: '角', freq: 659.25, color: '#7ba5c4' },
+    ]
+  }
+};
+
+let currentScale = 'pentatonic';
+let scaleModes = ['pentatonic', 'jue', 'zhi'];
+let scaleIndex = 0;
+
+function playNote(noteIndex, x, y) {
+  if (!isAudioInit) initAudio();
+  
+  const scale = SCALES[currentScale];
+  const note = scale.notes[noteIndex % scale.notes.length];
+  
+  const now = audioCtx.currentTime;
+  
+  // Main tone - guqin-like plucked sound
+  const osc1 = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+  
+  // Fundamental + slight detune for richness
+  osc1.type = 'triangle';
+  osc1.frequency.setValueAtTime(note.freq, now);
+  osc1.frequency.exponentialRampToValueAtTime(note.freq * 0.998, now + 2);
+  
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(note.freq * 2, now); // octave harmonic
+  
+  // Filter for warmth
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(note.freq * 4, now);
+  filter.frequency.exponentialRampToValueAtTime(note.freq * 1.5, now + 1.5);
+  filter.Q.value = 1;
+  
+  // Pluck envelope
+  gainNode.gain.setValueAtTime(0, now);
+  gainNode.gain.linearRampToValueAtTime(0.3, now + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.15, now + 0.15);
+  gainNode.gain.exponentialRampToValueAtTime(0.001, now + 3);
+  
+  osc1.connect(filter);
+  osc2.connect(filter);
+  filter.connect(gainNode);
+  gainNode.connect(masterGain);
+  
+  osc1.start(now);
+  osc2.start(now);
+  osc1.stop(now + 3.5);
+  osc2.stop(now + 3.5);
+  
+  // Visual effects
+  spawnNoteVisuals(x, y, note);
+  
+  // Record
+  if (isRecording) {
+    recordedNotes.push({
+      time: Date.now() - recordStartTime,
+      note: noteIndex,
+      x: x / W,
+      y: y / H,
+      name: note.name
+    });
+  }
+  
+  return note;
+}
+
+// ==================== Mountain Generation ====================
+let mountains = [];
+
+function generateMountains() {
+  mountains = [];
+  const layers = 5;
+  
+  for (let l = 0; l < layers; l++) {
+    const points = [];
+    const baseY = H * (0.45 + l * 0.1);
+    const amplitude = H * (0.15 - l * 0.015);
+    const segments = 80;
+    
+    for (let i = 0; i <= segments; i++) {
+      const x = (i / segments) * W;
+      let y = baseY;
+      
+      // Multiple octaves of noise
+      y -= amplitude * (0.5 + 0.5 * Math.sin(i * 0.08 + l * 2));
+      y -= amplitude * 0.3 * (0.5 + 0.5 * Math.sin(i * 0.15 + l * 5));
+      y -= amplitude * 0.15 * (0.5 + 0.5 * Math.sin(i * 0.3 + l * 8));
+      
+      points.push({ x, y });
+    }
+    
+    mountains.push({
+      points,
+      opacity: 0.15 + l * 0.05,
+      layer: l
+    });
+  }
+}
+
+// ==================== Particle System ====================
+let particles = [];
+let ripples = [];
+let floatingNotes = [];
+
+class Particle {
+  constructor(x, y, color, type) {
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.type = type || 'ink';
+    
+    if (type === 'ink') {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 3;
+      this.vx = Math.cos(angle) * speed;
+      this.vy = Math.sin(angle) * speed - 1;
+      this.size = 2 + Math.random() * 6;
+      this.life = 1;
+      this.decay = 0.008 + Math.random() * 0.015;
+      this.gravity = 0.02;
+    } else if (type === 'glow') {
+      this.vx = (Math.random() - 0.5) * 0.5;
+      this.vy = -0.5 - Math.random() * 1;
+      this.size = 3 + Math.random() * 8;
+      this.life = 1;
+      this.decay = 0.005 + Math.random() * 0.008;
+    }
+  }
+  
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    if (this.type === 'ink') {
+      this.vy += this.gravity;
+      this.vx *= 0.98;
+      this.size *= 0.995;
+    }
+    
+    this.life -= this.decay;
+    return this.life > 0;
+  }
+  
+  draw(ctx) {
+    ctx.globalAlpha = this.life * 0.7;
+    
+    if (this.type === 'ink') {
+      // Ink drop effect
+      const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size);
+      gradient.addColorStop(0, this.color);
+      gradient.addColorStop(0.6, this.color);
+      gradient.addColorStop(1, 'transparent');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      // Glow effect
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = this.color;
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+    
+    ctx.globalAlpha = 1;
+  }
+}
+
+class Ripple {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    this.color = color;
+    this.radius = 5;
+    this.maxRadius = 80 + Math.random() * 60;
+    this.life = 1;
+  }
+  
+  update() {
+    this.radius += 1.5;
+    this.life = 1 - (this.radius / this.maxRadius);
+    return this.life > 0;
+  }
+  
+  draw(ctx) {
+    ctx.globalAlpha = this.life * 0.4;
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 1.5 * this.life;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+function spawnNoteVisuals(x, y, note) {
+  // Ink particles
+  for (let i = 0; i < 12; i++) {
+    particles.push(new Particle(x, y, note.color, 'ink'));
+  }
+  
+  // Glow particles
+  for (let i = 0; i < 5; i++) {
+    particles.push(new Particle(x + (Math.random()-0.5)*30, y + (Math.random()-0.5)*30, note.color, 'glow'));
+  }
+  
+  // Ripple
+  ripples.push(new Ripple(x, y, note.color));
+  
+  // Floating note character
+  const el = document.createElement('div');
+  el.className = 'note-char';
+  el.textContent = note.name;
+  el.style.left = (x / devicePixelRatio) + 'px';
+  el.style.top = (y / devicePixelRatio) + 'px';
+  el.style.color = note.color;
+  document.getElementById('noteDisplay').appendChild(el);
+  setTimeout(() => el.remove(), 1500);
+}
+
+// ==================== Ambient Particles ====================
+let ambientParticles = [];
+
+function initAmbient() {
+  for (let i = 0; i < 40; i++) {
+    ambientParticles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      size: 1 + Math.random() * 2,
+      speed: 0.2 + Math.random() * 0.3,
+      phase: Math.random() * Math.PI * 2,
+      opacity: 0.1 + Math.random() * 0.3
+    });
+  }
+}
+
+// ==================== Recording ====================
+let isRecording = false;
+let recordStartTime = 0;
+let recordedNotes = [];
+
+function toggleRecord() {
+  isRecording = !isRecording;
+  const btn = document.getElementById('btnRecord');
+  if (isRecording) {
+    recordedNotes = [];
+    recordStartTime = Date.now();
+    btn.classList.add('active');
+    btn.textContent = '● 录制中';
+    document.getElementById('btnPlay').style.display = 'none';
+  } else {
+    btn.classList.remove('active');
+    btn.textContent = '录';
+    if (recordedNotes.length > 0) {
+      document.getElementById('btnPlay').style.display = 'block';
+    }
+  }
+}
+
+function playRecording() {
+  if (recordedNotes.length === 0) return;
+  
+  recordedNotes.forEach(n => {
+    setTimeout(() => {
+      playNote(n.note, n.x * W, n.y * H);
+    }, n.time);
+  });
+}
+
+// ==================== Auto Play ====================
+let isAutoPlaying = false;
+let autoTimer = null;
+
+function toggleAuto() {
+  isAutoPlaying = !isAutoPlaying;
+  const btn = document.getElementById('btnAuto');
+  
+  if (isAutoPlaying) {
+    btn.classList.add('active');
+    autoPlay();
+  } else {
+    btn.classList.remove('active');
+    if (autoTimer) clearTimeout(autoTimer);
+  }
+}
+
+function autoPlay() {
+  if (!isAutoPlaying) return;
+  
+  const scale = SCALES[currentScale];
+  const noteIdx = Math.floor(Math.random() * scale.notes.length);
+  
+  // Pick a point on the mountains
+  const layerIdx = Math.floor(Math.random() * mountains.length);
+  const layer = mountains[layerIdx];
+  const pointIdx = Math.floor(Math.random() * layer.points.length);
+  const pt = layer.points[pointIdx];
+  
+  playNote(noteIdx, pt.x, pt.y);
+  
+  // Random interval 800-2500ms
+  const delay = 800 + Math.random() * 1700;
+  autoTimer = setTimeout(autoPlay, delay);
+}
+
+// ==================== Scale Switching ====================
+function switchMode(mode) {
+  currentScale = mode;
+  const scaleNames = { pentatonic: '宫调', jue: '角调', zhi: '徵调' };
+  document.getElementById('btnPentatonic').textContent = scaleNames[mode];
+  
+  // Update button states
+  document.querySelectorAll('.btn').forEach(b => {
+    if (b.id === 'btnPentatonic') return;
+    // keep other states
+  });
+}
+
+function toggleScale() {
+  scaleIndex = (scaleIndex + 1) % scaleModes.length;
+  switchMode(scaleModes[scaleIndex]);
+  
+  const info = document.getElementById('scaleInfo');
+  info.classList.add('show');
+  setTimeout(() => info.classList.remove('show'), 2000);
+}
+
+// ==================== Drawing ====================
+function drawBackground() {
+  // Dark gradient background
+  const gradient = ctx.createLinearGradient(0, 0, 0, H);
+  gradient.addColorStop(0, '#0d0d15');
+  gradient.addColorStop(0.5, '#111118');
+  gradient.addColorStop(1, '#0a0a10');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Subtle moon
+  const moonX = W * 0.75;
+  const moonY = H * 0.15;
+  const moonGradient = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 60);
+  moonGradient.addColorStop(0, 'rgba(220,210,180,0.15)');
+  moonGradient.addColorStop(0.3, 'rgba(200,190,160,0.08)');
+  moonGradient.addColorStop(1, 'transparent');
+  ctx.fillStyle = moonGradient;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, 60, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Moon halo
+  const haloGradient = ctx.createRadialGradient(moonX, moonY, 30, moonX, moonY, 150);
+  haloGradient.addColorStop(0, 'rgba(200,190,160,0.04)');
+  haloGradient.addColorStop(1, 'transparent');
+  ctx.fillStyle = haloGradient;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, 150, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawMountains() {
+  mountains.forEach((mountain, idx) => {
+    const pts = mountain.points;
+    
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    
+    for (let i = 1; i < pts.length - 1; i++) {
+      const cpx = (pts[i].x + pts[i+1].x) / 2;
+      const cpy = (pts[i].y + pts[i+1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, cpx, cpy);
+    }
+    
+    ctx.lineTo(W, H);
+    ctx.lineTo(0, H);
+    ctx.closePath();
+    
+    // Mountain fill with gradient
+    const gradient = ctx.createLinearGradient(0, pts[0].y - 100, 0, H);
+    const alpha = mountain.opacity;
+    
+    if (idx === 0) {
+      gradient.addColorStop(0, `rgba(40,40,55,${alpha})`);
+      gradient.addColorStop(1, `rgba(20,20,30,${alpha + 0.1})`);
+    } else {
+      gradient.addColorStop(0, `rgba(30,30,45,${alpha})`);
+      gradient.addColorStop(1, `rgba(15,15,25,${alpha + 0.1})`);
+    }
+    
+    ctx.fillStyle = gradient;
+    ctx.fill();
+    
+    // Subtle edge line
+    ctx.strokeStyle = `rgba(196,163,90,${0.03 + idx * 0.01})`;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length - 1; i++) {
+      const cpx = (pts[i].x + pts[i+1].x) / 2;
+      const cpy = (pts[i].y + pts[i+1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, cpx, cpy);
+    }
+    ctx.stroke();
+  });
+}
+
+function drawAmbient(time) {
+  ambientParticles.forEach(p => {
+    p.y -= p.speed;
+    p.x += Math.sin(time * 0.001 + p.phase) * 0.3;
+    
+    if (p.y < -10) {
+      p.y = H + 10;
+      p.x = Math.random() * W;
+    }
+    
+    ctx.globalAlpha = p.opacity * (0.5 + 0.5 * Math.sin(time * 0.002 + p.phase));
+    ctx.fillStyle = '#c4a35a';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
+function drawWatermark(time) {
+  // Subtle flowing water line at bottom
+  const waterY = H * 0.88;
+  ctx.globalAlpha = 0.05;
+  ctx.strokeStyle = '#7ba5c4';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  
+  for (let x = 0; x < W; x += 2) {
+    const y = waterY + Math.sin(x * 0.01 + time * 0.001) * 5 
+              + Math.sin(x * 0.005 + time * 0.0005) * 8;
+    if (x === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+// ==================== Main Loop ====================
+let lastTime = 0;
+
+function animate(time) {
+  const dt = time - lastTime;
+  lastTime = time;
+  
+  // Clear and draw
+  drawBackground();
+  drawMountains();
+  drawAmbient(time);
+  drawWatermark(time);
+  
+  // Update and draw ripples
+  ripples = ripples.filter(r => {
+    const alive = r.update();
+    if (alive) r.draw(ctx);
+    return alive;
+  });
+  
+  // Update and draw particles
+  particles = particles.filter(p => {
+    const alive = p.update();
+    if (alive) p.draw(ctx);
+    return alive;
+  });
+  
+  // Vignette
+  const vignette = ctx.createRadialGradient(W/2, H/2, W*0.3, W/2, H/2, W*0.7);
+  vignette.addColorStop(0, 'transparent');
+  vignette.addColorStop(1, 'rgba(0,0,0,0.4)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, W, H);
+  
+  requestAnimationFrame(animate);
+}
+
+// ==================== Interaction ====================
+function getNoteFromPosition(y) {
+  const scale = SCALES[currentScale];
+  // Map vertical position to note (higher = higher pitch)
+  const ratio = 1 - (y / H);
+  const idx = Math.floor(ratio * scale.notes.length);
+  return Math.max(0, Math.min(scale.notes.length - 1, idx));
+}
+
+function handleInteraction(x, y) {
+  initAudio();
+  const noteIdx = getNoteFromPosition(y);
+  playNote(noteIdx, x, y);
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  handleInteraction(e.clientX * devicePixelRatio, e.clientY * devicePixelRatio);
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (e.buttons === 1) {
+    handleInteraction(e.clientX * devicePixelRatio, e.clientY * devicePixelRatio);
+  }
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  for (let touch of e.changedTouches) {
+    handleInteraction(touch.clientX * devicePixelRatio, touch.clientY * devicePixelRatio);
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  for (let touch of e.changedTouches) {
+    handleInteraction(touch.clientX * devicePixelRatio, touch.clientY * devicePixelRatio);
+  }
+}, { passive: false });
+
+// Keyboard support - number keys 1-5
+document.addEventListener('keydown', (e) => {
+  const num = parseInt(e.key);
+  if (num >= 1 && num <= 5) {
+    const scale = SCALES[currentScale];
+    const noteIdx = num - 1;
+    // Play at a random mountain position
+    const layerIdx = noteIdx % mountains.length;
+    const layer = mountains[layerIdx];
+    const pt = layer.points[Math.floor(Math.random() * layer.points.length)];
+    playNote(noteIdx, pt.x, pt.y);
+  }
+});
+
+// ==================== Init ====================
+resize();
+initAmbient();
+requestAnimationFrame(animate);
+
+// Show scale info briefly on load
+setTimeout(() => {
+  document.getElementById('scaleInfo').classList.add('show');
+  setTimeout(() => document.getElementById('scaleInfo').classList.remove('show'), 3000);
+}, 2000);
+</script>
+</body>
+</html>

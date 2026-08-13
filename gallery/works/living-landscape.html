@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>山水间 | Living Ink Landscape</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            background: #1a1814;
+            font-family: 'PingFang SC', 'Microsoft YaHei', serif;
+            cursor: none;
+        }
+        
+        canvas {
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+        }
+        
+        #mainCanvas {
+            z-index: 1;
+        }
+        
+        #uiCanvas {
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        .cursor {
+            position: fixed;
+            width: 20px;
+            height: 20px;
+            border: 1px solid rgba(200, 180, 150, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 100;
+            transition: transform 0.1s ease;
+            mix-blend-mode: difference;
+        }
+        
+        .cursor::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background: rgba(200, 180, 150, 0.8);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .info {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            color: rgba(200, 180, 150, 0.5);
+            font-size: 12px;
+            line-height: 1.8;
+            text-align: right;
+            z-index: 10;
+            letter-spacing: 1px;
+            pointer-events: none;
+        }
+        
+        .title-area {
+            position: fixed;
+            top: 28px;
+            left: 32px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .title-area h1 {
+            color: rgba(200, 180, 150, 0.7);
+            font-size: 28px;
+            font-weight: 300;
+            letter-spacing: 8px;
+            margin-bottom: 4px;
+        }
+        
+        .title-area .sub {
+            color: rgba(200, 180, 150, 0.35);
+            font-size: 11px;
+            letter-spacing: 3px;
+        }
+        
+        .poem {
+            position: fixed;
+            bottom: 80px;
+            left: 32px;
+            color: rgba(200, 180, 150, 0.4);
+            font-size: 14px;
+            line-height: 2.2;
+            writing-mode: vertical-rl;
+            letter-spacing: 4px;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            animation: fadeIn 3s ease 2s forwards;
+        }
+        
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        
+        .season-indicator {
+            position: fixed;
+            top: 32px;
+            right: 32px;
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+        }
+        
+        .season-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            border: 1px solid rgba(200, 180, 150, 0.3);
+            cursor: pointer;
+            transition: all 0.5s ease;
+        }
+        
+        .season-dot.active {
+            background: rgba(200, 180, 150, 0.6);
+            transform: scale(1.2);
+        }
+        
+        .season-dot:hover {
+            border-color: rgba(200, 180, 150, 0.6);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="mainCanvas"></canvas>
+    <canvas id="uiCanvas"></canvas>
+    <div class="cursor" id="cursor"></div>
+    
+    <div class="title-area">
+        <h1>山水间</h1>
+        <div class="sub">Living Ink Landscape</div>
+    </div>
+    
+    <div class="poem">
+        空山不见人<br>但闻人语响<br>返景入深林<br>复照青苔上
+    </div>
+    
+    <div class="season-indicator">
+        <div class="season-dot active" data-season="0" title="春"></div>
+        <div class="season-dot" data-season="1" title="夏"></div>
+        <div class="season-dot" data-season="2" title="秋"></div>
+        <div class="season-dot" data-season="3" title="冬"></div>
+    </div>
+    
+    <div class="info">
+        移动鼠标 感受风的流向<br>
+        点击 留下你的印记<br>
+        滚轮 调整时间流速
+    </div>
+
+    <script>
+        // ==================== 配置 ====================
+        const mainCanvas = document.getElementById('mainCanvas');
+        const uiCanvas = document.getElementById('uiCanvas');
+        const mainCtx = mainCanvas.getContext('2d');
+        const uiCtx = uiCanvas.getContext('2d');
+        const cursor = document.getElementById('cursor');
+        
+        let W, H;
+        
+        function resize() {
+            W = mainCanvas.width = uiCanvas.width = window.innerWidth;
+            H = mainCanvas.height = uiCanvas.height = window.innerHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+        
+        // ==================== 四季系统 ====================
+        const seasons = {
+            spring: {
+                sky: ['#2a2520', '#1f1c18', '#1a1814'],
+                mountain: ['#3d3830', '#2e2a24', '#25221c'],
+                mist: 'rgba(180, 160, 130, 0.03)',
+                accent: 'rgba(180, 200, 160, 0.15)',  // 嫩绿
+                particleColor: 'rgba(200, 180, 160, 0.4)',
+                windStrength: 0.3,
+                mistDensity: 0.6
+            },
+            summer: {
+                sky: ['#252220', '#1c1a16', '#161410'],
+                mountain: ['#35302a', '#2a2620', '#201e18'],
+                mist: 'rgba(160, 150, 120, 0.04)',
+                accent: 'rgba(140, 180, 120, 0.2)',   // 深绿
+                particleColor: 'rgba(180, 170, 150, 0.5)',
+                windStrength: 0.5,
+                mistDensity: 0.4
+            },
+            autumn: {
+                sky: ['#2a2218', '#201a12', '#181410'],
+                mountain: ['#3a3228', '#2e2820', '#24201a'],
+                mist: 'rgba(200, 170, 120, 0.04)',
+                accent: 'rgba(200, 140, 80, 0.2)',    // 橘红
+                particleColor: 'rgba(200, 170, 130, 0.5)',
+                windStrength: 0.6,
+                mistDensity: 0.5
+            },
+            winter: {
+                sky: ['#222228', '#1a1a20', '#14141a'],
+                mountain: ['#343438', '#2a2a2e', '#202024'],
+                mist: 'rgba(180, 180, 200, 0.04)',
+                accent: 'rgba(200, 200, 220, 0.15)',  // 冷白
+                particleColor: 'rgba(200, 200, 210, 0.4)',
+                windStrength: 0.2,
+                mistDensity: 0.8
+            }
+        };
+        
+        const seasonKeys = ['spring', 'summer', 'autumn', 'winter'];
+        let currentSeason = 0;
+        let targetSeason = 0;
+        let seasonTransition = 1.0;
+        
+        function lerpColor(c1, c2, t) {
+            const parse = (c) => {
+                if (c.startsWith('rgba')) {
+                    const m = c.match(/[\d.]+/g);
+                    return m.map(Number);
+                }
+                const hex = c.replace('#', '');
+                return [
+                    parseInt(hex.substr(0, 2), 16),
+                    parseInt(hex.substr(2, 2), 16),
+                    parseInt(hex.substr(4, 2), 16)
+                ];
+            };
+            const a = parse(c1), b = parse(c2);
+            const r = Math.round(a[0] + (b[0] - a[0]) * t);
+            const g = Math.round(a[1] + (b[1] - a[1]) * t);
+            const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+            if (c1.startsWith('rgba')) {
+                const al = a[3] + (b[3] - a[3]) * t;
+                return `rgba(${r}, ${g}, ${bl}, ${al})`;
+            }
+            return `rgb(${r}, ${g}, ${bl})`;
+        }
+        
+        function getCurrentSeasonConfig() {
+            if (seasonTransition >= 1.0) return seasons[seasonKeys[currentSeason]];
+            const from = seasons[seasonKeys[currentSeason]];
+            const to = seasons[seasonKeys[targetSeason]];
+            const t = 1.0 - seasonTransition;
+            
+            return {
+                sky: from.sky.map((c, i) => lerpColor(c, to.sky[i], t)),
+                mountain: from.mountain.map((c, i) => lerpColor(c, to.mountain[i], t)),
+                mist: lerpColor(from.mist, to.mist, t),
+                accent: lerpColor(from.accent, to.accent, t),
+                particleColor: lerpColor(from.particleColor, to.particleColor, t),
+                windStrength: from.windStrength + (to.windStrength - from.windStrength) * t,
+                mistDensity: from.mistDensity + (to.mistDensity - from.mistDensity) * t
+            };
+        }
+        
+        // 季节切换
+        document.querySelectorAll('.season-dot').forEach(dot => {
+            dot.addEventListener('click', () => {
+                const s = parseInt(dot.dataset.season);
+                if (s !== currentSeason) {
+                    targetSeason = s;
+                    seasonTransition = 0;
+                    document.querySelectorAll('.season-dot').forEach(d => d.classList.remove('active'));
+                    dot.classList.add('active');
+                }
+            });
+        });
+        
+        // ==================== 简化柏林噪声 ====================
+        class SimplexNoise {
+            constructor() {
+                this.perm = new Uint8Array(512);
+                const p = new Uint8Array(256);
+                for (let i = 0; i < 256; i++) p[i] = i;
+                for (let i = 255; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [p[i], p[j]] = [p[j], p[i]];
+                }
+                for (let i = 0; i < 512; i++) this.perm[i] = p[i & 255];
+            }
+            
+            noise2D(x, y) {
+                const X = Math.floor(x) & 255;
+                const Y = Math.floor(y) & 255;
+                x -= Math.floor(x);
+                y -= Math.floor(y);
+                const u = this.fade(x);
+                const v = this.fade(y);
+                const a = this.perm[X] + Y;
+                const b = this.perm[X + 1] + Y;
+                return this.lerp(v,
+                    this.lerp(u, this.grad(this.perm[a], x, y), this.grad(this.perm[b], x - 1, y)),
+                    this.lerp(u, this.grad(this.perm[a + 1], x, y - 1), this.grad(this.perm[b + 1], x - 1, y - 1))
+                );
+            }
+            
+            fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+            lerp(t, a, b) { return a + t * (b - a); }
+            grad(hash, x, y) {
+                const h = hash & 3;
+                const u = h < 2 ? x : y;
+                const v = h < 2 ? y : x;
+                return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+            }
+        }
+        
+        const noise = new SimplexNoise();
+        
+        // ==================== 山水生成 ====================
+        class MountainLayer {
+            constructor(baseY, amplitude, frequency, detail, colorIndex) {
+                this.baseY = baseY;
+                this.amplitude = amplitude;
+                this.frequency = frequency;
+                this.detail = detail;
+                this.colorIndex = colorIndex;
+                this.offset = Math.random() * 1000;
+                this.points = [];
+                this.generate();
+            }
+            
+            generate() {
+                this.points = [];
+                const step = 3;
+                for (let x = 0; x <= W + step; x += step) {
+                    let y = this.baseY;
+                    // 多层噪声叠加
+                    y += noise.noise2D((x + this.offset) * this.frequency * 0.001, this.colorIndex) * this.amplitude;
+                    y += noise.noise2D((x + this.offset) * this.frequency * 0.003, this.colorIndex + 10) * this.amplitude * 0.5;
+                    y += noise.noise2D((x + this.offset) * this.frequency * 0.008, this.colorIndex + 20) * this.amplitude * this.detail;
+                    this.points.push({ x, y });
+                }
+            }
+            
+            draw(ctx, colors) {
+                const color = colors[this.colorIndex] || colors[0];
+                ctx.beginPath();
+                ctx.moveTo(0, H);
+                for (const p of this.points) {
+                    ctx.lineTo(p.x, p.y);
+                }
+                ctx.lineTo(W, H);
+                ctx.closePath();
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+        }
+        
+        // 创建山脉层
+        let mountains = [];
+        
+        function generateMountains() {
+            mountains = [
+                new MountainLayer(H * 0.45, H * 0.15, 1.2, 0.1, 0),  // 远山
+                new MountainLayer(H * 0.55, H * 0.12, 1.5, 0.15, 1), // 中景山
+                new MountainLayer(H * 0.65, H * 0.1, 2.0, 0.2, 2),   // 近山
+            ];
+        }
+        generateMountains();
+        window.addEventListener('resize', () => {
+            resize();
+            generateMountains();
+        });
+        
+        // ==================== 流场粒子 ====================
+        class FlowParticle {
+            constructor() {
+                this.reset();
+            }
+            
+            reset() {
+                this.x = Math.random() * W;
+                this.y = Math.random() * H;
+                this.vx = 0;
+                this.vy = 0;
+                this.life = 0.3 + Math.random() * 0.7;
+                this.maxLife = this.life;
+                this.size = 0.5 + Math.random() * 1.5;
+                this.history = [];
+                this.maxHistory = 8 + Math.floor(Math.random() * 12);
+            }
+            
+            update(time, windStrength) {
+                // 流场
+                const scale = 0.002;
+                const angle = noise.noise2D(this.x * scale + time * 0.1, this.y * scale) * Math.PI * 2;
+                const speed = 0.5 + noise.noise2D(this.x * scale * 2, this.y * scale * 2 + time * 0.05) * 0.5;
+                
+                this.vx += Math.cos(angle) * speed * windStrength;
+                this.vy += Math.sin(angle) * speed * windStrength * 0.6;
+                
+                // 鼠标影响
+                const dx = mouseX - this.x;
+                const dy = mouseY - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 200) {
+                    const force = (1 - dist / 200) * 0.5;
+                    // 环绕效果
+                    this.vx += (-dy / dist) * force;
+                    this.vy += (dx / dist) * force;
+                }
+                
+                this.vx *= 0.95;
+                this.vy *= 0.95;
+                
+                this.history.push({ x: this.x, y: this.y });
+                if (this.history.length > this.maxHistory) this.history.shift();
+                
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.003;
+                
+                if (this.x < -50 || this.x > W + 50 || this.y < -50 || this.y > H + 50 || this.life <= 0) {
+                    this.reset();
+                }
+            }
+            
+            draw(ctx, color) {
+                const alpha = (this.life / this.maxLife) * 0.6;
+                if (this.history.length < 2) return;
+                
+                ctx.beginPath();
+                ctx.moveTo(this.history[0].x, this.history[0].y);
+                for (let i = 1; i < this.history.length; i++) {
+                    ctx.lineTo(this.history[i].x, this.history[i].y);
+                }
+                ctx.strokeStyle = color.replace(/[\d.]+\)$/, `${alpha})`);
+                ctx.lineWidth = this.size;
+                ctx.stroke();
+            }
+        }
+        
+        const particles = [];
+        for (let i = 0; i < 300; i++) {
+            particles.push(new FlowParticle());
+        }
+        
+        // ==================== 雾气系统 ====================
+        class MistLayer {
+            constructor(y, height, speed) {
+                this.y = y;
+                this.height = height;
+                this.speed = speed;
+                this.offset = Math.random() * 1000;
+            }
+            
+            draw(ctx, time, color, density) {
+                const gradient = ctx.createLinearGradient(0, this.y - this.height / 2, 0, this.y + this.height / 2);
+                gradient.addColorStop(0, 'transparent');
+                gradient.addColorStop(0.3, color);
+                gradient.addColorStop(0.7, color);
+                gradient.addColorStop(1, 'transparent');
+                
+                ctx.save();
+                ctx.globalAlpha = density * 0.5;
+                
+                // 动态雾气形状
+                ctx.beginPath();
+                for (let x = 0; x <= W; x += 5) {
+                    const wave = noise.noise2D(x * 0.003 + time * this.speed + this.offset, this.offset) * this.height * 0.3;
+                    const y = this.y + wave;
+                    if (x === 0) ctx.moveTo(x, y - this.height / 2);
+                    else ctx.lineTo(x, y - this.height / 2);
+                }
+                for (let x = W; x >= 0; x -= 5) {
+                    const wave = noise.noise2D(x * 0.003 + time * this.speed + this.offset + 100, this.offset) * this.height * 0.3;
+                    const y = this.y + wave;
+                    ctx.lineTo(x, y + this.height / 2);
+                }
+                ctx.closePath();
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        
+        const mistLayers = [
+            new MistLayer(H * 0.4, H * 0.15, 0.02),
+            new MistLayer(H * 0.55, H * 0.12, 0.015),
+            new MistLayer(H * 0.7, H * 0.1, 0.025),
+        ];
+        
+        // ==================== 水面反射 ====================
+        function drawWater(ctx, time, config) {
+            const waterY = H * 0.72;
+            
+            // 水面基底
+            const gradient = ctx.createLinearGradient(0, waterY, 0, H);
+            gradient.addColorStop(0, config.mountain[2]);
+            gradient.addColorStop(1, config.sky[2]);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, waterY, W, H - waterY);
+            
+            // 波纹
+            ctx.save();
+            ctx.globalAlpha = 0.3;
+            for (let i = 0; i < 15; i++) {
+                const y = waterY + 20 + i * 15;
+                const wave = Math.sin(time * 0.5 + i * 0.3) * 2;
+                ctx.beginPath();
+                for (let x = 0; x <= W; x += 10) {
+                    const wy = y + Math.sin(x * 0.02 + time * 0.3 + i) * (2 + i * 0.3) + wave;
+                    if (x === 0) ctx.moveTo(x, wy);
+                    else ctx.lineTo(x, wy);
+                }
+                ctx.strokeStyle = config.accent;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+            }
+            ctx.restore();
+            
+            // 倒影效果
+            ctx.save();
+            ctx.globalAlpha = 0.08;
+            ctx.scale(1, -0.3);
+            ctx.translate(0, -waterY * 4.3);
+            for (const m of mountains) {
+                m.draw(ctx, config.mountain);
+            }
+            ctx.restore();
+        }
+        
+        // ==================== 点击涟漪 ====================
+        class Ripple {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 0;
+                this.maxRadius = 80 + Math.random() * 60;
+                this.life = 1.0;
+            }
+            
+            update() {
+                this.radius += 1.2;
+                this.life = 1 - this.radius / this.maxRadius;
+            }
+            
+            draw(ctx, color) {
+                if (this.life <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = this.life * 0.4;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // 内圈
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+                ctx.restore();
+            }
+            
+            isDead() { return this.life <= 0; }
+        }
+        
+        const ripples = [];
+        
+        // ==================== 鼠标交互 ====================
+        let mouseX = W / 2, mouseY = H / 2;
+        let timeScale = 1.0;
+        
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursor.style.left = (e.clientX - 10) + 'px';
+            cursor.style.top = (e.clientY - 10) + 'px';
+        });
+        
+        document.addEventListener('click', (e) => {
+            ripples.push(new Ripple(e.clientX, e.clientY));
+        });
+        
+        document.addEventListener('wheel', (e) => {
+            timeScale = Math.max(0.2, Math.min(3.0, timeScale - e.deltaY * 0.001));
+        });
+        
+        // ==================== 主循环 ====================
+        let time = 0;
+        
+        function drawSky(ctx, config) {
+            const gradient = ctx.createLinearGradient(0, 0, 0, H * 0.7);
+            gradient.addColorStop(0, config.sky[0]);
+            gradient.addColorStop(0.5, config.sky[1]);
+            gradient.addColorStop(1, config.sky[2]);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, W, H);
+        }
+        
+        function animate() {
+            time += 0.01 * timeScale;
+            
+            // 季节过渡
+            if (seasonTransition < 1.0) {
+                seasonTransition += 0.005;
+                if (seasonTransition >= 1.0) {
+                    seasonTransition = 1.0;
+                    currentSeason = targetSeason;
+                }
+            }
+            
+            const config = getCurrentSeasonConfig();
+            
+            // 绘制天空
+            drawSky(mainCtx, config);
+            
+            // 绘制山脉
+            for (const m of mountains) {
+                m.draw(mainCtx, config.mountain);
+            }
+            
+            // 绘制雾气
+            for (const mist of mistLayers) {
+                mist.draw(mainCtx, time, config.mist, config.mistDensity);
+            }
+            
+            // 绘制水面
+            drawWater(mainCtx, time, config);
+            
+            // 绘制流场粒子
+            for (const p of particles) {
+                p.update(time, config.windStrength);
+                p.draw(mainCtx, config.particleColor);
+            }
+            
+            // 绘制涟漪
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                ripples[i].update();
+                ripples[i].draw(mainCtx, config.accent);
+                if (ripples[i].isDead()) ripples.splice(i, 1);
+            }
+            
+            // 绘制UI层 - 光晕效果
+            uiCtx.clearRect(0, 0, W, H);
+            const glow = uiCtx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 150);
+            glow.addColorStop(0, 'rgba(200, 180, 150, 0.05)');
+            glow.addColorStop(1, 'transparent');
+            uiCtx.fillStyle = glow;
+            uiCtx.fillRect(0, 0, W, H);
+            
+            // 暗角效果
+            const vignette = uiCtx.createRadialGradient(W/2, H/2, H*0.3, W/2, H/2, H*0.8);
+            vignette.addColorStop(0, 'transparent');
+            vignette.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+            uiCtx.fillStyle = vignette;
+            uiCtx.fillRect(0, 0, W, H);
+            
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

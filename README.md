@@ -6,9 +6,28 @@
 
 ## 🌐 在线体验
 
-https://rongkyn.github.io/rongball-xr/
+- **XR 实验室首页**：https://rongkyn.github.io/rongball-xr/
+- **绒球水墨集（互动作品集）**：https://rongkyn.github.io/rongball-xr/gallery/
 
-## 🥽 项目列表
+---
+
+## 🖌️ 绒球水墨集 · Rongball Ink Studio
+
+以代码为笔，以屏幕为纸——东方美学 × 程序生成的互动作品集。
+
+📜 画廊入口：[`gallery/index.html`](gallery/index.html)
+
+| 作品 | 路径 | 类型 | 说明 |
+|------|------|------|------|
+| 水墨流韵 | [ink-particles.html](gallery/works/ink-particles.html) | 粒子交互 | 鼠标挥毫，四色墨韵，晕染扩散 |
+| 山水间 | [living-landscape.html](gallery/works/living-landscape.html) | 沉浸视觉 | 多层山脉流场、四季切换、王维题诗 |
+| 水墨 2048 | [ink-2048.html](gallery/works/ink-2048.html) | 益智游戏 | 宣纸风格 2048，墨韵计分、悔棋、触屏 |
+| 弈 · 水墨五子棋 | [ink-gomoku.html](gallery/works/ink-gomoku.html) | 策略游戏 | 评分式 AI、人机/人人、落子水墨晕染 |
+| 墨音 | [ink-sound.html](gallery/works/ink-sound.html) | 互动音画 | 以山为琴，五声音阶、卷积混响、录制回放 |
+
+---
+
+## 🥽 XR 实验室项目列表
 
 | 项目 | 路径 | 说明 |
 |------|------|------|
@@ -44,12 +63,21 @@ https://rongkyn.github.io/rongball-xr/
 
 ```
 rongball-xr/
-├── index.html              # 首页（项目导航）
-├── xr/
-│   ├── soundscape-demo.html    # VR Soundscape 原型
-│   ├── hello-world.html        # 基础场景
-│   ├── exercise-components.html # 自定义组件练习
-│   └── exercise-community.html  # 社区组件综合
+├── index.html              # XR 实验室首页（项目导航）
+├── gallery/
+│   ├── index.html          # 绒球水墨集 · 画廊首页
+│   ├── images/
+│   └── works/              # 水墨互动作品（均为自包含 HTML）
+│       ├── ink-particles.html   # 水墨流韵
+│       ├── living-landscape.html # 山水间
+│       ├── ink-2048.html         # 水墨2048
+│       ├── ink-gomoku.html       # 弈·水墨五子棋
+│       └── ink-sound.html        # 墨音
+├── xr/                     # WebXR 原型
+│   ├── soundscape-demo.html
+│   ├── ink-landscape.html
+│   └── ...
+├── 创作日志/
 └── README.md
 ```
 

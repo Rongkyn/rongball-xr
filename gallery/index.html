@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>绒球水墨集 · Rongball Ink Studio</title>
+  <meta name="description" content="绒球水墨集——东方美学 × 程序生成的互动作品集：水墨粒子、山水间、水墨2048、弈·水墨五子棋、墨音。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;500;600;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --paper:#f3ece0;
+      --paper-2:#ebe2d1;
+      --paper-3:#e3d8c2;
+      --ink:#1c1a17;
+      --ink-soft:#3a352e;
+      --ink-mid:#6b6358;
+      --ink-light:#9a9082;
+      --seal:#a33a2c;
+      --seal-deep:#852a1f;
+      --gold:#b08a4a;
+      --line:rgba(40,34,28,.18);
+      --shadow:0 18px 50px -25px rgba(40,30,20,.45);
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{background:var(--paper);color:var(--ink);font-family:"Noto Serif SC","Songti SC","STSong",serif;-webkit-font-smoothing:antialiased}
+    body{
+      min-height:100vh;
+      background:
+        radial-gradient(1200px 700px at 80% -10%, rgba(176,138,74,.10), transparent 60%),
+        radial-gradient(900px 600px at -10% 30%, rgba(163,58,44,.06), transparent 60%),
+        radial-gradient(circle at 50% 120%, rgba(28,26,23,.08), transparent 55%),
+        linear-gradient(180deg,#f5efe3 0%, #efe6d5 100%);
+      position:relative;
+      overflow-x:hidden;
+    }
+    /* paper fiber */
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.45;
+      background-image:
+        repeating-linear-gradient(90deg, rgba(80,60,30,.025) 0 1px, transparent 1px 3px),
+        repeating-linear-gradient(0deg, rgba(80,60,30,.02) 0 1px, transparent 1px 4px);
+      mix-blend-mode:multiply;
+    }
+    /* faint ink wash blob */
+    body::after{
+      content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+      background:
+        radial-gradient(40% 30% at 15% 20%, rgba(40,35,30,.07), transparent 70%),
+        radial-gradient(35% 25% at 85% 75%, rgba(40,35,30,.06), transparent 70%);
+      filter:blur(8px);
+    }
+    .wrap{max-width:1180px;margin:0 auto;padding:0 28px;position:relative;z-index:1}
+
+    /* top bar */
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:22px 0 8px;font-size:.85rem;color:var(--ink-mid);
+      letter-spacing:.08em;
+    }
+    .topbar .brand{display:flex;align-items:center;gap:10px;font-family:"ZCOOL XiaoWei",serif}
+    .seal-mini{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:30px;height:30px;background:var(--seal);color:#f7efe2;
+      font-family:"Ma Shan Zheng",serif;font-size:1.05rem;border-radius:3px;
+      box-shadow:inset 0 0 0 2px rgba(255,240,225,.25), 0 2px 6px rgba(133,42,31,.35);
+      transform:rotate(-3deg);
+    }
+    .topbar a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid transparent;transition:.2s}
+    .topbar a:hover{color:var(--seal);border-color:var(--seal)}
+
+    /* hero */
+    header.hero{padding:64px 0 40px;text-align:center;position:relative}
+    .hero .eyebrow{
+      font-size:.78rem;letter-spacing:.5em;color:var(--ink-mid);
+      text-transform:uppercase;margin-bottom:22px;padding-left:.5em;
+    }
+    .hero h1{
+      font-family:"Ma Shan Zheng","STKaiti","KaiTi",serif;
+      font-size:clamp(3rem,8vw,5.6rem);line-height:1;font-weight:400;
+      letter-spacing:.12em;color:var(--ink);
+      text-shadow:0 1px 0 rgba(255,255,255,.5);
+    }
+    .hero h1 .red{color:var(--seal)}
+    .hero .en{
+      margin-top:14px;font-family:"ZCOOL XiaoWei",serif;
+      font-size:1rem;letter-spacing:.35em;color:var(--ink-mid);
+    }
+    .hero .desc{
+      max-width:620px;margin:26px auto 0;font-size:1.02rem;line-height:2;
+      color:var(--ink-soft);font-weight:300;
+    }
+    .hero .divider{
+      width:160px;height:14px;margin:28px auto 0;
+      background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 14'><path d='M2 8 Q 40 2, 80 7 T 158 6' stroke='%231c1a17' stroke-width='1.2' fill='none' stroke-linecap='round' opacity='0.55'/><circle cx='80' cy='9' r='2.2' fill='%23a33a2c'/></svg>") center/contain no-repeat;
+    }
+
+    /* meta row */
+    .meta-row{
+      display:flex;flex-wrap:wrap;gap:10px 22px;justify-content:center;
+      margin-top:26px;color:var(--ink-mid);font-size:.82rem;letter-spacing:.15em;
+    }
+    .meta-row span{display:inline-flex;align-items:center;gap:8px}
+    .meta-row span::before{content:"";width:5px;height:5px;background:var(--seal);border-radius:50%;opacity:.7}
+
+    /* section heading */
+    .section-head{
+      display:flex;align-items:baseline;gap:18px;margin:64px 0 28px;
+      padding-bottom:14px;border-bottom:1px solid var(--line);
+    }
+    .section-head h2{
+      font-family:"Ma Shan Zheng",serif;font-weight:400;
+      font-size:1.9rem;letter-spacing:.2em;color:var(--ink);
+    }
+    .section-head .sub{font-size:.8rem;color:var(--ink-mid);letter-spacing:.3em;text-transform:uppercase}
+    .section-head .count{
+      margin-left:auto;font-size:.8rem;color:var(--ink-light);letter-spacing:.15em;
+    }
+
+    /* grid */
+    .grid{
+      display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));
+      gap:28px;
+    }
+    .card{
+      position:relative;background:linear-gradient(180deg,#fbf6ec,#f1e8d6);
+      border:1px solid var(--line);border-radius:4px;
+      box-shadow:var(--shadow);
+      text-decoration:none;color:inherit;
+      display:flex;flex-direction:column;overflow:hidden;
+      transition:transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s;
+    }
+    .card:hover{transform:translateY(-6px);box-shadow:0 28px 60px -28px rgba(40,30,20,.55)}
+    .card::after{
+      content:"";position:absolute;inset:0;pointer-events:none;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.4);
+    }
+
+    /* cover */
+    .cover{
+      position:relative;height:200px;overflow:hidden;
+      display:flex;align-items:center;justify-content:center;
+      border-bottom:1px solid var(--line);
+    }
+    .cover canvas{position:absolute;inset:0;width:100%;height:100%}
+    .cover .glyph{
+      position:relative;z-index:2;font-family:"Ma Shan Zheng",serif;
+      font-size:5.5rem;color:rgba(28,26,23,.88);line-height:1;
+      text-shadow:0 2px 8px rgba(255,250,240,.4), 0 0 30px rgba(255,250,240,.25);
+      transition:transform .5s;
+    }
+    .card:hover .cover .glyph{transform:scale(1.06) rotate(-1deg)}
+    .cover .corner{
+      position:absolute;top:12px;right:14px;z-index:3;
+      font-size:.7rem;letter-spacing:.25em;color:var(--ink-mid);
+      background:rgba(245,239,227,.7);padding:3px 9px;border:1px solid var(--line);
+      backdrop-filter:blur(2px);
+    }
+    .cover .stamp{
+      position:absolute;left:14px;bottom:12px;z-index:3;
+      width:38px;height:38px;background:var(--seal);color:#f7efe2;
+      display:flex;align-items:center;justify-content:center;
+      font-family:"Ma Shan Zheng",serif;font-size:1.35rem;border-radius:3px;
+      box-shadow:inset 0 0 0 2px rgba(255,240,225,.3), 0 3px 8px rgba(133,42,31,.4);
+      transform:rotate(-4deg);opacity:.92;
+    }
+
+    /* cover variants */
+    .cv-particles{background:radial-gradient(120% 90% at 30% 20%,#fbf6ec 0%,#e8ddc7 55%,#cfc1a4 100%)}
+    .cv-landscape{background:linear-gradient(180deg,#e9e4d8 0%,#cdd3cb 45%,#a9b3a8 75%,#8a9589 100%)}
+    .cv-2048{background:linear-gradient(135deg,#f3ead7,#e3d3b1 60%,#c9b386)}
+    .cv-gomoku{background:radial-gradient(120% 90% at 50% 30%,#f0e3c8,#d9c39a 70%,#b89a6c)}
+    .cv-sound{background:linear-gradient(180deg,#1b1f2a 0%,#232938 55%,#3a3a48 100%)}
+    .cv-sound .glyph{color:rgba(245,235,210,.92);text-shadow:0 0 24px rgba(245,210,140,.35)}
+    .cv-sound .corner{background:rgba(20,24,34,.55);color:#d8cdb6;border-color:rgba(255,255,255,.08)}
+    .cv-sound .stamp{background:#c04632}
+
+    /* body */
+    .body{padding:22px 22px 24px;display:flex;flex-direction:column;flex:1}
+    .body .title{
+      display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+    }
+    .body h3{
+      font-family:"Ma Shan Zheng",serif;font-weight:400;font-size:1.55rem;
+      letter-spacing:.08em;color:var(--ink);
+    }
+    .body .en-title{font-size:.78rem;color:var(--ink-light);letter-spacing:.2em;text-transform:uppercase}
+    .body .date{font-size:.72rem;color:var(--ink-light);letter-spacing:.18em;margin-top:4px}
+    .body p{
+      margin-top:12px;font-size:.92rem;line-height:1.85;color:var(--ink-soft);
+      font-weight:300;flex:1;
+    }
+    .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+    .tag{
+      font-size:.72rem;padding:3px 10px;border-radius:2px;letter-spacing:.1em;
+      background:rgba(40,34,28,.06);color:var(--ink-soft);
+      border:1px solid rgba(40,34,28,.1);
+    }
+    .tag.accent{background:rgba(163,58,44,.08);color:var(--seal-deep);border-color:rgba(163,58,44,.2)}
+
+    .enter{
+      margin-top:18px;display:inline-flex;align-items:center;gap:10px;
+      align-self:flex-start;padding:9px 20px;
+      background:var(--ink);color:var(--paper);
+      font-family:"ZCOOL XiaoWei",serif;font-size:.95rem;letter-spacing:.3em;
+      text-decoration:none;border-radius:2px;
+      transition:background .25s, transform .25s;
+    }
+    .enter .arrow{transition:transform .25s}
+    .enter:hover{background:var(--seal)}
+    .enter:hover .arrow{transform:translateX(4px)}
+    .card[data-dark="1"] .enter{background:#f3e6c8;color:#1b1f2a}
+    .card[data-dark="1"] .enter:hover{background:#e8b86a}
+
+    /* colophon */
+    .colophon{
+      margin:80px 0 30px;padding:40px 0 0;
+      border-top:1px solid var(--line);text-align:center;
+    }
+    .colophon .verse{
+      font-family:"Ma Shan Zheng",serif;font-size:1.4rem;
+      letter-spacing:.3em;color:var(--ink-soft);line-height:2;
+    }
+    .colophon .sig{
+      margin-top:18px;font-size:.82rem;color:var(--ink-mid);letter-spacing:.2em;
+    }
+    .big-seal{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:54px;height:54px;background:var(--seal);color:#f7efe2;
+      font-family:"Ma Shan Zheng",serif;font-size:1.8rem;border-radius:4px;
+      box-shadow:inset 0 0 0 3px rgba(255,240,225,.25), 0 6px 16px rgba(133,42,31,.4);
+      transform:rotate(-3deg);margin-top:22px;
+    }
+
+    footer{
+      padding:30px 0 50px;text-align:center;color:var(--ink-mid);
+      font-size:.8rem;letter-spacing:.12em;
+    }
+    footer a{color:var(--ink-soft);text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:1px}
+    footer a:hover{color:var(--seal);border-color:var(--seal)}
+    footer .links{display:flex;gap:22px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+
+    /* responsive */
+    @media (max-width:640px){
+      .wrap{padding:0 18px}
+      header.hero{padding:40px 0 24px}
+      .grid{grid-template-columns:1fr;gap:22px}
+      .cover{height:180px}
+      .cover .glyph{font-size:4.5rem}
+      .section-head{margin-top:48px}
+      .topbar{font-size:.78rem}
+      .seal-mini{width:26px;height:26px;font-size:.95rem}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="topbar">
+      <div class="brand">
+        <span class="seal-mini">墨</span>
+        <span>Rongball Ink Studio</span>
+      </div>
+      <a href="../index.html">← 返回 XR 实验室</a>
+    </div>
+
+    <header class="hero">
+      <div class="eyebrow">Interactive Ink · 2026 Summer</div>
+      <h1>绒球<span class="red">水</span>墨集</h1>
+      <div class="en">R O N G B A L L · I N K · S T U D I O</div>
+      <p class="desc">
+        以代码为笔，以屏幕为纸。<br>
+        五件互动小品，游走于粒子、山水、棋局与琴弦之间，<br>
+        试把东方水墨的留白与肌理，请进数字的光里。
+      </p>
+      <div class="divider"></div>
+      <div class="meta-row">
+        <span>Canvas 2D</span>
+        <span>Web Audio</span>
+        <span>程序生成</span>
+        <span>触控友好</span>
+      </div>
+    </header>
+
+    <div class="section-head">
+      <h2>作品 · 五则</h2>
+      <span class="sub">Selected Works</span>
+      <span class="count">05 Pieces</span>
+    </div>
+
+    <div class="grid" id="grid">
+
+      <a class="card" href="works/ink-particles.html">
+        <div class="cover cv-particles">
+          <canvas data-cover="particles"></canvas>
+          <span class="corner">2026.08.07</span>
+          <span class="glyph">韵</span>
+          <span class="stamp">墨</span>
+        </div>
+        <div class="body">
+          <div class="title"><h3>水墨流韵</h3><span class="en-title">Ink Particles</span></div>
+          <div class="date">粒子交互 · 随鼠标挥毫</div>
+          <p>以粒子为墨，以屏幕为纸。鼠标过处，墨迹随行；轻点则有晕染散开。墨、青、朱、紫四种色彩切换，粒子带有生命衰减与尺寸扩散，轻盈随性，如在宣纸上挥毫。</p>
+          <div class="tags">
+            <span class="tag">Canvas 粒子</span>
+            <span class="tag">鼠标交互</span>
+            <span class="tag accent">晕染</span>
+          </div>
+          <span class="enter">入画 <span class="arrow">→</span></span>
+        </div>
+      </a>
+
+      <a class="card" href="works/living-landscape.html">
+        <div class="cover cv-landscape">
+          <canvas data-cover="landscape"></canvas>
+          <span class="corner">2026.08.07</span>
+          <span class="glyph">山</span>
+          <span class="stamp">水</span>
+        </div>
+        <div class="body">
+          <div class="title"><h3>山水间</h3><span class="en-title">Living Landscape</span></div>
+          <div class="date">沉浸视觉 · 四季流转</div>
+          <p>多层山脉与动态雾气由简化 Perlin 噪声生成，鼠标化作"气"扰动流场，点击激起涟漪，滚轮调节时间流速。春夏秋冬四时切换，三百流场粒子飘动于山水之间，王维《鹿柴》题诗竖向浮现。</p>
+          <div class="tags">
+            <span class="tag">流场噪声</span>
+            <span class="tag">四季系统</span>
+            <span class="tag accent">沉浸冥想</span>
+          </div>
+          <span class="enter">入画 <span class="arrow">→</span></span>
+        </div>
+      </a>
+
+      <a class="card" href="works/ink-2048.html">
+        <div class="cover cv-2048">
+          <canvas data-cover="grid2048"></canvas>
+          <span class="corner">2026.08.10</span>
+          <span class="glyph">弈</span>
+          <span class="stamp">数</span>
+        </div>
+        <div class="body">
+          <div class="title"><h3>水墨 2048</h3><span class="en-title">Ink 2048</span></div>
+          <div class="date">益智游戏 · 墨韵至境</div>
+          <p>经典 2048 披上宣纸外衣。方块由淡墨至浓墨渐变，合并时有水墨晕染弹跳；计分称"墨韵"，最高分为"至境"，悟道 2048，局终亦雅。支持键盘方向键、触摸滑动与悔棋。</p>
+          <div class="tags">
+            <span class="tag">2048</span>
+            <span class="tag">触屏滑动</span>
+            <span class="tag accent">悔棋</span>
+          </div>
+          <span class="enter">入画 <span class="arrow">→</span></span>
+        </div>
+      </a>
+
+      <a class="card" href="works/ink-gomoku.html">
+        <div class="cover cv-gomoku">
+          <canvas data-cover="gomoku"></canvas>
+          <span class="corner">2026.08.11</span>
+          <span class="glyph">棋</span>
+          <span class="stamp">弈</span>
+        </div>
+        <div class="body">
+          <div class="title"><h3>弈 · 水墨五子棋</h3><span class="en-title">Ink Gomoku</span></div>
+          <div class="date">策略游戏 · 人机对弈</div>
+          <p>宣纸纹理棋盘，黑白云子带玉石光泽，落子有水墨晕染与清脆击木声。评分式 AI 同时权衡攻防，识别连五、活四、冲四、活三与跳连；支持人人/人机、先后手切换与悔棋。</p>
+          <div class="tags">
+            <span class="tag">棋型 AI</span>
+            <span class="tag">Web Audio</span>
+            <span class="tag accent">人机对战</span>
+          </div>
+          <span class="enter">入画 <span class="arrow">→</span></span>
+        </div>
+      </a>
+
+      <a class="card" data-dark="1" href="works/ink-sound.html">
+        <div class="cover cv-sound">
+          <canvas data-cover="sound"></canvas>
+          <span class="corner">2026.08.12</span>
+          <span class="glyph">音</span>
+          <span class="stamp">弦</span>
+        </div>
+        <div class="body">
+          <div class="title"><h3>墨音</h3><span class="en-title">Ink Sound</span></div>
+          <div class="date">互动音画 · 以山为琴</div>
+          <p>多层山脉的水墨夜景即是键盘。点击/拖动山体不同高度触发五声音阶，高处音高、低处音低；双振荡器加卷积混响模拟古琴弹拨，金、绿、蓝、红、紫五色对应宫商角徵羽。可录制回放，亦有"风自弹"自动演奏。</p>
+          <div class="tags">
+            <span class="tag">五声音阶</span>
+            <span class="tag">卷积混响</span>
+            <span class="tag accent">可演奏</span>
+          </div>
+          <span class="enter">入画 <span class="arrow">→</span></span>
+        </div>
+      </a>
+
+    </div>
+
+    <section class="colophon">
+      <div class="verse">墨落无声　心随山远<br>一音一景　皆是相逢</div>
+      <div class="sig">—— 绒球 记于二〇二六夏</div>
+      <div class="big-seal">绒</div>
+    </section>
+
+    <footer>
+      <div class="links">
+        <a href="../index.html">绒球 XR 实验室</a>
+        <a href="https://rongkyn.github.io/rongball-room/">绒球的房间</a>
+        <a href="https://github.com/Rongkyn/rongball-xr">GitHub</a>
+      </div>
+      <p>Made with 🧶 by 绒球 · 宣纸为底，代码为墨</p>
+    </footer>
+
+  </div>
+
+<script>
+(function(){
+  // Tiny decorative canvas animations per cover. All static / gentle.
+  const covers = document.querySelectorAll('[data-cover]');
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function init(canvas, kind){
+    const ctx = canvas.getContext('2d');
+    let w, h, dpr = Math.min(window.devicePixelRatio||1, 2);
+    function resize(){
+      const rect = canvas.getBoundingClientRect();
+      w = rect.width; h = rect.height;
+      canvas.width = w*dpr; canvas.height = h*dpr;
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    if(kind==='particles'){
+      const pts = Array.from({length:46},()=>({
+        x:Math.random()*w, y:Math.random()*h,
+        r:1+Math.random()*2.5,
+        vx:(Math.random()-.5)*0.25, vy:-0.1-Math.random()*0.35,
+        a:0.15+Math.random()*0.45,
+        c:['#1c1a17','#3b4a52','#7a3a2e','#5a3a66'][Math.floor(Math.random()*4)]
+      }));
+      function frame(){
+        ctx.clearRect(0,0,w,h);
+        for(const p of pts){
+          p.x+=p.vx; p.y+=p.vy; p.r*=0.9985;
+          if(p.y<-10||p.r<0.3){p.x=Math.random()*w;p.y=h+5;p.r=1+Math.random()*2.5;}
+          ctx.beginPath();
+          const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*4);
+          g.addColorStop(0,p.c); g.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=g; ctx.globalAlpha=p.a;
+          ctx.arc(p.x,p.y,p.r*4,0,Math.PI*2); ctx.fill();
+        }
+        ctx.globalAlpha=1;
+        if(!prefersReduced) requestAnimationFrame(frame);
+      }
+      frame();
+    }
+    else if(kind==='landscape'){
+      let t=0;
+      function mountain(baseY, amp, color, speed){
+        ctx.beginPath();
+        ctx.moveTo(0,h);
+        for(let x=0;x<=w;x+=8){
+          const y = baseY + Math.sin(x*0.008 + t*speed)*amp*0.6
+                          + Math.sin(x*0.02 - t*speed*1.3)*amp*0.4;
+          ctx.lineTo(x,y);
+        }
+        ctx.lineTo(w,h); ctx.closePath();
+        ctx.fillStyle=color; ctx.fill();
+      }
+      function frame(){
+        ctx.clearRect(0,0,w,h);
+        mountain(h*0.55, 26, 'rgba(120,130,118,0.55)', 0.4);
+        mountain(h*0.68, 32, 'rgba(86,98,86,0.7)', 0.6);
+        mountain(h*0.82, 22, 'rgba(58,68,58,0.85)', 0.9);
+        t+=0.01;
+        if(!prefersReduced) requestAnimationFrame(frame);
+      }
+      frame();
+    }
+    else if(kind==='grid2048'){
+      function draw(){
+        ctx.clearRect(0,0,w,h);
+        const pad=22, n=4;
+        const size=(Math.min(w,h)-pad*2)/n;
+        const ox=(w-size*n)/2, oy=(h-size*n)/2;
+        ctx.fillStyle='rgba(120,90,50,0.12)';
+        ctx.fillRect(ox-pad*0.4, oy-pad*0.4, size*n+pad*0.8, size*n+pad*0.8);
+        const tiles=[
+          [2,0,4,0],[0,8,0,16],[32,0,64,0],[0,128,0,256]
+        ];
+        const shades=['#cdbfa0','#bfa878','#a68750','#8a6b36','#6d5226','#543d1a','#3b2b10'];
+        for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+          const x=ox+c*size+4, y=oy+r*size+4, s=size-8;
+          ctx.fillStyle='rgba(255,250,240,0.35)';
+          roundRect(ctx,x,y,s,s,5); ctx.fill();
+          const v=tiles[r][c];
+          if(v){
+            const idx=Math.min(Math.log2(v)-1,shades.length-1);
+            ctx.fillStyle=shades[idx];
+            roundRect(ctx,x,y,s,s,5); ctx.fill();
+            ctx.fillStyle=idx>=4?'#f5ead0':'#3a2e1c';
+            ctx.font='600 '+Math.floor(s*0.32)+'px "Noto Serif SC",serif';
+            ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText(v, x+s/2, y+s/2+1);
+          }
+        }
+      }
+      function roundRect(c,x,y,s,r,rad){
+        c.beginPath();
+        c.moveTo(x+r,y); c.arcTo(x+s,y,x+s,y+s,r);
+        c.arcTo(x+s,y+s,x,y+s,r); c.arcTo(x,y+s,x,y,r);
+        c.arcTo(x,y,x+s,y,r); c.closePath();
+      }
+      draw();
+    }
+    else if(kind==='gomoku'){
+      function draw(){
+        ctx.clearRect(0,0,w,h);
+        const size=Math.min(w,h)-30;
+        const ox=(w-size)/2, oy=(h-size)/2;
+        const lines=11;
+        ctx.strokeStyle='rgba(60,40,20,0.45)';
+        ctx.lineWidth=1;
+        for(let i=0;i<lines;i++){
+          const p=oy+i*(size/(lines-1));
+          ctx.beginPath();ctx.moveTo(ox,p);ctx.lineTo(ox+size,p);ctx.stroke();
+          const q=ox+i*(size/(lines-1));
+          ctx.beginPath();ctx.moveTo(q,oy);ctx.lineTo(q,oy+size);ctx.stroke();
+        }
+        const stones=[[5,5,0],[6,5,1],[5,6,1],[6,6,0],[4,5,0]];
+        for(const [gx,gy,d] of stones){
+          const cx=ox+gx*size/(lines-1), cy=oy+gy*size/(lines-1), r=size/(lines-1)*0.42;
+          const g=ctx.createRadialGradient(cx-r*0.3,cy-r*0.3,1,cx,cy,r);
+          if(d===0){g.addColorStop(0,'#5a5a5a');g.addColorStop(1,'#0a0a0a');}
+          else{g.addColorStop(0,'#fffaf0');g.addColorStop(1,'#c9b78a');}
+          ctx.fillStyle=g;
+          ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+        }
+      }
+      draw();
+    }
+    else if(kind==='sound'){
+      let t=0;
+      const stars=Array.from({length:40},()=>({x:Math.random()*w,y:Math.random()*h*0.55,r:Math.random()*1.2+0.2,a:Math.random()}));
+      function frame(){
+        ctx.clearRect(0,0,w,h);
+        // moon
+        const mx=w*0.78, my=h*0.28, mr=Math.min(w,h)*0.09;
+        const mg=ctx.createRadialGradient(mx,my,0,mx,my,mr*3);
+        mg.addColorStop(0,'rgba(240,220,160,0.25)');mg.addColorStop(1,'rgba(240,220,160,0)');
+        ctx.fillStyle=mg;ctx.beginPath();ctx.arc(mx,my,mr*3,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(245,230,190,0.9)';ctx.beginPath();ctx.arc(mx,my,mr,0,Math.PI*2);ctx.fill();
+        // stars
+        for(const s of stars){
+          s.a+=0.02;
+          ctx.fillStyle='rgba(240,230,200,'+(0.3+Math.abs(Math.sin(s.a))*0.6)+')';
+          ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+        }
+        // mountains
+        function mt(base, amp, color, speed){
+          ctx.beginPath();ctx.moveTo(0,h);
+          for(let x=0;x<=w;x+=6){
+            const y=base+Math.sin(x*0.01+t*speed)*amp+Math.sin(x*0.03)*amp*0.3;
+            ctx.lineTo(x,y);
+          }
+          ctx.lineTo(w,h);ctx.closePath();ctx.fillStyle=color;ctx.fill();
+        }
+        mt(h*0.6,18,'rgba(40,46,60,0.85)',0.3);
+        mt(h*0.72,22,'rgba(28,32,44,0.92)',0.5);
+        mt(h*0.86,14,'rgba(15,18,28,1)',0.8);
+        t+=0.01;
+        if(!prefersReduced) requestAnimationFrame(frame);
+      }
+      frame();
+    }
+  }
+
+  covers.forEach(c=>init(c,c.dataset.cover));
+})();
+</script>
+</body>
+</html>
