@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>水墨笔触技术验证</title>
+<style>
+body{margin:0;background:#e8dfc8;display:flex;flex-direction:column;align-items:center;padding:20px;font-family:serif}
+h2{color:#443a30;margin:5px 0}
+.row{display:flex;gap:40px;margin:10px 0}
+.col{text-align:center}
+canvas{border:1px solid #c9bfa8;background:#e8dfc8;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+.label{color:#6b5e4c;font-size:14px;margin-top:6px}
+</style>
+</head>
+<body>
+<h2>水墨笔触验证 · 矢量 vs Brush Stamp</h2>
+
+<div class="row">
+  <div class="col">
+    <canvas id="c1" width="400" height="300"></canvas>
+    <div class="label">矢量 lineTo+stroke（当前方案）</div>
+  </div>
+  <div class="col">
+    <canvas id="c2" width="400" height="300"></canvas>
+    <div class="label">Brush Stamp 铺贴（方案A）</div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col">
+    <canvas id="c3" width="400" height="300"></canvas>
+    <div class="label">矢量 兰叶</div>
+  </div>
+  <div class="col">
+    <canvas id="c4" width="400" height="300"></canvas>
+    <div class="label">Stamp 兰叶（钉头鼠尾）</div>
+  </div>
+</div>
+
+<script>
+const INK = {
+  jiao:'#1a1612', nong:'#2e2820', zhong:'#443a30',
+  dan:'#6b5e4c', qing:'#9a8d76', paper:'#e8dfc8'
+};
+
+// ─── Brush Stamp 生成 ───
+function createBrushStamp(size, opts={}){
+  const c=document.createElement('canvas');
+  c.width=c.height=size;
+  const ctx=c.getContext('2d');
+  const {elongation=2.2, feather=0.35, dryness=0.3}=opts;
+  const img=ctx.createImageData(size,size);
+  const cx=size/2, cy=size/2;
+  for(let y=0;y<size;y++){
+    for(let x=0;x<size;x++){
+      const dx=(x-cx)/cx;
+      const dy=(y-cy)/cy*elongation;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      const i=((y*size+x)*4);
+      if(d<1){
+        let a=Math.pow(1-d,1.2)*240;
+        // 飞白：d>0.2区域随机断笔
+        if(d>0.2){
+          const seed=Math.sin(x*12.9898+y*78.233)*43758.5453;
+          const r=seed-Math.floor(seed);
+          if(r<dryness*(d-0.2)*1.5) a*=0.15+r*0.3;
+        }
+        // 边缘羽化
+        if(d>1-feather) a*=Math.pow((1-d)/feather,0.7);
+        img.data[i]=26; img.data[i+1]=22; img.data[i+2]=18;
+        img.data[i+3]=Math.min(255,Math.max(0,a));
+      }
+    }
+  }
+  ctx.putImageData(img,0,0);
+  return c;
+}
+
+// ─── 贝塞尔曲线采样 ───
+function sampleBezier(p0,p1,p2,p3,segments){
+  const pts=[];
+  for(let i=0;i<=segments;i++){
+    const t=i/segments;
+    const mt=1-t;
+    pts.push({
+      x:mt*mt*mt*p0.x+3*mt*mt*t*p1.x+3*mt*t*t*p2.x+t*t*t*p3.x,
+      y:mt*mt*mt*p0.y+3*mt*mt*t*p1.y+3*mt*t*t*p2.y+t*t*t*p3.y,
+      t
+    });
+  }
+  return pts;
+}
+
+// ─── Brush Stamp 描边 ───
+function brushPath(ctx, pts, stamp, pressureFn, opts={}){
+  const {color=INK.nong, opacity=0.55, spacing=0.12, rotationOffset=0}=opts;
+  ctx.save();
+  for(let i=0;i<pts.length-1;i++){
+    const p=pts[i], n=pts[i+1];
+    const dist=Math.hypot(n.x-p.x,n.y-p.y);
+    const press=pressureFn(p.t,i,pts.length);
+    const step=Math.max(1,press.width*0.18);
+    const sub=Math.ceil(dist/step);
+    for(let s=0;s<sub;s++){
+      const f=s/sub;
+      const x=p.x+(n.x-p.x)*f;
+      const y=p.y+(n.y-p.y)*f;
+      const t=p.t+(n.t-p.t)*f;
+      const pr=pressureFn(t);
+      const w=pr.width;
+      const a=pr.opacity*opacity;
+      const angle=Math.atan2(n.y-p.y,n.x-p.x)+Math.PI/2;
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(angle);
+      ctx.globalAlpha=a;
+      const sz=Math.max(3,w*1.5);
+      ctx.drawImage(stamp,-sz/2,-sz/2,sz,sz);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+// ─── 竹叶压力曲线：起笔粗→收笔尖 ───
+function bambooLeafPressure(t){
+  let w, o;
+  if(t<0.15){ w=8*(t/0.15); o=0.9; }
+  else if(t<0.7){ w=8-3*((t-0.15)/0.55); o=0.85; }
+  else { w=5*(1-(t-0.7)/0.3); o=0.7; }
+  return {width:Math.max(0.5,w), opacity:o};
+}
+
+// ─── 兰叶压力曲线：钉头鼠尾 ───
+function orchidLeafPressure(t){
+  let w, o;
+  if(t<0.05){ w=10*(t/0.05); o=0.95; }       // 落笔
+  else if(t<0.15){ w=10; o=0.9; }              // 按笔
+  else if(t<0.60){ w=10-5*((t-0.15)/0.45); o=0.85; } // 行笔
+  else if(t<0.90){ w=5-3*((t-0.60)/0.30); o=0.75; }  // 提锋
+  else { w=2*(1-(t-0.90)/0.10); o=0.6; }      // 鼠尾
+  return {width:Math.max(0.3,w), opacity:o};
+}
+
+// ─── 渗化层：在笔触下方画一层大而虚的淡墨 ───
+function bleedLayer(ctx, pts, widthFn, color, opacity){
+  ctx.save();
+  ctx.globalCompositeOperation='multiply';
+  ctx.strokeStyle=color;
+  ctx.globalAlpha=opacity;
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  ctx.beginPath();
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i];
+    const w=widthFn(p.t).width*1.8;
+    ctx.lineWidth=w;
+    if(i===0) ctx.moveTo(p.x,p.y);
+    else ctx.lineTo(p.x,p.y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 初始化stamp（圆形软边，靠旋转沿切线拉成条状）
+const stamp=createBrushStamp(64,{elongation:1,feather:0.45,dryness:0.2});
+const stampDry=createBrushStamp(64,{elongation:1,feather:0.55,dryness:0.45});
+
+// ────────────────────────────────
+// 第一行：竹叶对比
+// ────────────────────────────────
+
+// 左：矢量竹叶
+(function(){
+  const cv=document.getElementById('c1'), ctx=cv.getContext('2d');
+  // 画个字
+  const leaves=[
+    [{x:200,y:200},{x:160,y:100},{x:140,y:60},{x:130,y:30}],
+    [{x:200,y:200},{x:200,y:100},{x:200,y:50},{x:200,y:20}],
+    [{x:200,y:200},{x:240,y:100},{x:260,y:60},{x:270,y:30}],
+  ];
+  ctx.strokeStyle=INK.nong;
+  ctx.lineWidth=6;
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  leaves.forEach(l=>{
+    ctx.beginPath();
+    ctx.moveTo(l[0].x,l[0].y);
+    ctx.bezierCurveTo(l[1].x,l[1].y,l[2].x,l[2].y,l[3].x,l[3].y);
+    ctx.stroke();
+  });
+})();
+
+// 右：Stamp竹叶
+(function(){
+  const cv=document.getElementById('c2'), ctx=cv.getContext('2d');
+  const leaves=[
+    [{x:200,y:200},{x:160,y:100},{x:140,y:60},{x:130,y:30}],
+    [{x:200,y:200},{x:200,y:100},{x:200,y:50},{x:200,y:20}],
+    [{x:200,y:200},{x:240,y:100},{x:260,y:60},{x:270,y:30}],
+  ];
+  leaves.forEach(l=>{
+    const pts=sampleBezier(l[0],l[1],l[2],l[3],120);
+    bleedLayer(ctx,pts,bambooLeafPressure,INK.dan,0.12);
+    brushPath(ctx,pts,stamp,bambooLeafPressure,{color:INK.nong,opacity:0.8});
+  });
+})();
+
+// ────────────────────────────────
+// 第二行：兰叶对比
+// ────────────────────────────────
+
+// 左：矢量兰叶
+(function(){
+  const cv=document.getElementById('c3'), ctx=cv.getContext('2d');
+  const curves=[
+    [{x:80,y:260},{x:60,y:180},{x:120,y:100},{x:300,y:50}],
+    [{x:100,y:260},{x:130,y:200},{x:180,y:150},{x:200,y:80}],
+    [{x:120,y:260},{x:80,y:220},{x:50,y:180},{x:30,y:120}],
+    [{x:140,y:260},{x:170,y:220},{x:220,y:200},{x:280,y:180}],
+  ];
+  ctx.strokeStyle=INK.nong;
+  ctx.lineCap='round';
+  curves.forEach((c,ci)=>{
+    ctx.lineWidth=ci===0?3.5:2.5;
+    ctx.beginPath();
+    ctx.moveTo(c[0].x,c[0].y);
+    ctx.bezierCurveTo(c[1].x,c[1].y,c[2].x,c[2].y,c[3].x,c[3].y);
+    ctx.stroke();
+  });
+})();
+
+// 右：Stamp兰叶
+(function(){
+  const cv=document.getElementById('c4'), ctx=cv.getContext('2d');
+  const curves=[
+    [{x:80,y:260},{x:60,y:180},{x:120,y:100},{x:300,y:50}],
+    [{x:100,y:260},{x:130,y:200},{x:180,y:150},{x:200,y:80}],
+    [{x:120,y:260},{x:80,y:220},{x:50,y:180},{x:30,y:120}],
+    [{x:140,y:260},{x:170,y:220},{x:220,y:200},{x:280,y:180}],
+  ];
+  curves.forEach((c,ci)=>{
+    const pts=sampleBezier(c[0],c[1],c[2],c[3],150);
+    const color=ci<2?INK.nong:(ci===2?INK.zhong:INK.dan);
+    bleedLayer(ctx,pts,orchidLeafPressure,color,0.08);
+    brushPath(ctx,pts,ci===2?stampDry:stamp,orchidLeafPressure,{
+      color,opacity:ci<2?0.85:0.7
+    });
+  });
+  // 根部钉头点
+  ctx.save();
+  ctx.globalCompositeOperation='multiply';
+  curves.forEach((c,ci)=>{
+    ctx.fillStyle=ci<2?INK.jiao:INK.nong;
+    ctx.globalAlpha=0.7;
+    ctx.beginPath();
+    ctx.ellipse(c[0].x,c[0].y,5,3,0,0,Math.PI*2);
+    ctx.fill();
+  });
+  ctx.restore();
+})();
+
+</script>
+</body>
+</html>

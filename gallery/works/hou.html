@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>候 · Awaiting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f5f0e8;
+    --ink:#1a1815;
+    --ink-soft:#3a3530;
+    --ink-mid:#6b6358;
+    --seal:#a33a2c;
+    --seal-deep:#852a1f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{
+    width:100%;height:100%;overflow:hidden;background:var(--paper);
+    -webkit-tap-highlight-color:transparent;touch-action:none;user-select:none;
+  }
+  canvas#scene{display:block;position:fixed;top:0;left:0;cursor:crosshair}
+  #sealCanvas{position:fixed;bottom:20px;right:26px;pointer-events:none;z-index:10}
+  #titleBlock{
+    position:fixed;top:22px;left:26px;z-index:10;pointer-events:none;
+    color:var(--ink);
+  }
+  #titleBlock h1{
+    font-family:"Ma Shan Zheng","STKaiti","KaiTi",serif;
+    font-size:34px;font-weight:400;letter-spacing:8px;line-height:1;
+    text-shadow:0 1px 0 rgba(255,255,255,.5);
+  }
+  #titleBlock .en{
+    margin-top:6px;font-family:"ZCOOL XiaoWei",serif;
+    font-size:10px;color:var(--ink-mid);letter-spacing:3px;
+  }
+  #hint{
+    position:fixed;bottom:50px;left:50%;transform:translateX(-50%);
+    z-index:10;color:var(--ink-mid);font-size:13px;letter-spacing:6px;
+    pointer-events:none;opacity:.5;transition:opacity 1s ease;
+    font-family:"Noto Serif SC","Songti SC",serif;
+  }
+  @media (max-width:640px){
+    #titleBlock h1{font-size:28px;letter-spacing:6px}
+    #sealCanvas{bottom:18px;right:18px}
+    #hint{bottom:40px;font-size:12px;letter-spacing:4px}
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<canvas id="sealCanvas"></canvas>
+
+<div id="titleBlock">
+  <h1>候</h1>
+  <div class="en">AWAITING</div>
+</div>
+<div id="hint">触 碰 留 墨 · 静 待 自 生</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ---- DPR ----
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  const sealCv = document.getElementById('sealCanvas');
+  const sealCtx = sealCv.getContext('2d');
+  let W, H;
+
+  // ---- Paper texture ----
+  let paperCanvas, paperW = 0, paperH = 0;
+  let resizeTimer = null, firstResize = true;
+
+  function createPaperTexture() {
+    paperCanvas = document.createElement('canvas');
+    paperCanvas.width = Math.round(W * dpr);
+    paperCanvas.height = Math.round(H * dpr);
+    paperW = W; paperH = H;
+    const pc = paperCanvas.getContext('2d');
+    pc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pc.fillStyle = '#f5f0e8';
+    pc.fillRect(0, 0, W, H);
+    const imgData = pc.getImageData(0, 0, Math.round(W * dpr), Math.round(H * dpr));
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() - 0.5) * 14;
+      d[i] = Math.max(0, Math.min(255, d[i] + n));
+      d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n * 0.9));
+      d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n * 0.8));
+    }
+    pc.putImageData(imgData, 0, 0);
+    // Subtle warm stains
+    for (let i = 0; i < 14; i++) {
+      const x = Math.random() * W, y = Math.random() * H;
+      const r = 60 + Math.random() * 160;
+      const grad = pc.createRadialGradient(x, y, 0, x, y, r);
+      const tone = Math.random() > 0.5 ? '205,195,178' : '225,218,200';
+      grad.addColorStop(0, 'rgba(' + tone + ',0.10)');
+      grad.addColorStop(1, 'rgba(' + tone + ',0)');
+      pc.fillStyle = grad;
+      pc.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  }
+
+  // ---- Vignette ----
+  let vignetteCanvas;
+  function buildVignette() {
+    vignetteCanvas = document.createElement('canvas');
+    vignetteCanvas.width = Math.round(W * dpr);
+    vignetteCanvas.height = Math.round(H * dpr);
+    const vc = vignetteCanvas.getContext('2d');
+    vc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const vg = vc.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(80,65,40,0.07)');
+    vc.fillStyle = vg;
+    vc.fillRect(0, 0, W, H);
+  }
+
+  // ---- Distant mist layers ----
+  let mistCanvas;
+  function buildMist() {
+    mistCanvas = document.createElement('canvas');
+    mistCanvas.width = Math.round(W * dpr);
+    mistCanvas.height = Math.round(H * dpr);
+    const mc = mistCanvas.getContext('2d');
+    mc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Three extremely faint horizontal bands
+    for (let i = 0; i < 3; i++) {
+      const yBase = H * (0.25 + i * 0.2);
+      const hBand = 30 + i * 15;
+      const grad = mc.createLinearGradient(0, yBase - hBand, 0, yBase + hBand);
+      grad.addColorStop(0, 'rgba(180,175,165,0)');
+      grad.addColorStop(0.5, 'rgba(180,175,165,0.04)');
+      grad.addColorStop(1, 'rgba(180,175,165,0)');
+      mc.fillStyle = grad;
+      mc.fillRect(0, yBase - hBand, W, hBand * 2);
+    }
+  }
+
+  // ---- Constants ----
+  const MAX_NODES = 200;
+  const MAX_LINES = 400;
+  const CONNECT_DIST = 160;
+  const CONNECT_DIST_SQ = CONNECT_DIST * CONNECT_DIST;
+  const MAIN_DIST = 280;
+  const MAIN_DIST_SQ = MAIN_DIST * MAIN_DIST;
+  const INK_ANIM_MS = 600;
+  const IDLE_TIME_MS = 8000;
+  const GROWTH_MIN_MS = 2000;
+  const GROWTH_MAX_MS = 4000;
+
+  // ---- Colors ----
+  const COLOR_USER = { r: 26, g: 24, b: 21 };   // #1a1815
+  const COLOR_AUTO = { r: 58, g: 53, b: 48 };   // #3a3530
+  const COLOR_HINT = { r: 90, g: 85, b: 75 };   // faint pre-birth
+
+  // ---- Node class ----
+  let nodeIdCounter = 0;
+
+  function createNode(x, y, isUser, opts) {
+    opts = opts || {};
+    const radius = opts.radius !== undefined ? opts.radius
+      : (isUser ? 3 + Math.random() * 3 : 2 + Math.random() * 2);
+    const targetAlpha = opts.alpha !== undefined ? opts.alpha
+      : (isUser ? 0.7 + Math.random() * 0.2 : 0.2 + Math.random() * 0.2);
+    return {
+      id: nodeIdCounter++,
+      x: x,
+      y: y,
+      radius: radius,
+      targetRadius: radius,
+      alpha: 0.05,           // start nearly transparent
+      targetAlpha: targetAlpha,
+      age: 0,
+      isUser: isUser,
+      color: isUser ? COLOR_USER : COLOR_AUTO,
+      birthTime: performance.now(),
+      animating: true,
+      dying: false,
+      fadeOut: 1,
+      isBridge: false
+    };
+  }
+
+  // ---- State ----
+  let nodes = [];
+  let lines = [];
+  let lastInteractTime = performance.now();
+  let autoGrowing = false;
+  let nextGrowthTime = 0;
+  let isPointerDown = false;
+  let lastPointerX = -100, lastPointerY = -100;
+  const POINTER_SPACING = 35;
+  let hasInteracted = false;
+
+  // Hint element
+  const hintEl = document.getElementById('hint');
+
+  // ---- Line management ----
+  // Each line: { a: nodeId, b: nodeId, alpha, curve: {cx, cy} }
+  function lineKey(a, b) {
+    return a < b ? a * 100000 + b : b * 100000 + a;
+  }
+
+  const lineSet = new Set();
+
+  function findConnections(node, distSq, maxConnections) {
+    const found = [];
+    for (let i = 0; i < nodes.length; i++) {
+      const other = nodes[i];
+      if (other.id === node.id || other.dying) continue;
+      const dx = other.x - node.x;
+      const dy = other.y - node.y;
+      const dsq = dx * dx + dy * dy;
+      if (dsq < distSq) {
+        found.push({ node: other, distSq: dsq });
+      }
+    }
+    // Sort by distance, take closest
+    found.sort(function (a, b) { return a.distSq - b.distSq; });
+    const count = Math.min(found.length, maxConnections || 8);
+    for (let i = 0; i < count; i++) {
+      addLine(node, found[i].node, found[i].distSq);
+    }
+  }
+
+  function addLine(a, b, distSq) {
+    const key = lineKey(a.id, b.id);
+    if (lineSet.has(key)) return;
+    if (lines.length >= MAX_LINES) return;
+    // Control point offset for subtle curve
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    const perpX = -(b.y - a.y);
+    const perpY = (b.x - a.x);
+    const plen = Math.sqrt(perpX * perpX + perpY * perpY) || 1;
+    const offset = (Math.random() - 0.5) * 20;
+    const ctrlCx = mx + (perpX / plen) * offset;
+    const ctrlCy = my + (perpY / plen) * offset;
+    lines.push({
+      a: a.id,
+      b: b.id,
+      cx: ctrlCx,
+      cy: ctrlCy,
+      initCx: ctrlCx, initCy: ctrlCy,
+      alpha: 0,
+      targetAlpha: 0,
+      distSq: distSq,
+      dying: false
+    });
+    lineSet.add(key);
+  }
+
+  function removeLine(idx) {
+    const ln = lines[idx];
+    lineSet.delete(lineKey(ln.a, ln.b));
+    lines.splice(idx, 1);
+  }
+
+  // ---- Easing ----
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  // ---- Add node with connections ----
+  function addInkNode(x, y, isUser, opts) {
+    // Enforce node cap — mark oldest for fade
+    if (nodes.length >= MAX_NODES) {
+      // Find oldest non-dying node
+      let oldest = null;
+      for (let i = 0; i < nodes.length; i++) {
+        if (!nodes[i].dying) {
+          if (!oldest || nodes[i].age > oldest.age) oldest = nodes[i];
+        }
+      }
+      if (oldest) oldest.dying = true;
+    }
+
+    const node = createNode(x, y, isUser, opts);
+    nodes.push(node);
+
+    // Search connections
+    if (opts && opts.isMain) {
+      findConnections(node, MAIN_DIST_SQ, 12);
+    } else if (isUser) {
+      findConnections(node, CONNECT_DIST_SQ, 6);
+    } else {
+      findConnections(node, CONNECT_DIST_SQ, 5);
+    }
+    return node;
+  }
+
+  // ---- Interaction ----
+  function markInteract() {
+    lastInteractTime = performance.now();
+    if (autoGrowing) {
+      autoGrowing = false;
+    }
+    if (!hasInteracted) {
+      hasInteracted = true;
+      hintEl.style.opacity = '0';
+      setTimeout(function () { hintEl.style.display = 'none'; }, 1000);
+    }
+  }
+
+  function handlePointerMove(x, y) {
+    markInteract();
+    const dx = x - lastPointerX;
+    const dy = y - lastPointerY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist >= POINTER_SPACING) {
+      const steps = Math.floor(dist / POINTER_SPACING);
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const ix = lastPointerX + dx * t;
+        const iy = lastPointerY + dy * t;
+        addInkNode(ix, iy, true, {
+          radius: 3 + Math.random() * 3,
+          alpha: 0.7 + Math.random() * 0.2
+        });
+      }
+      lastPointerX = x;
+      lastPointerY = y;
+    }
+  }
+
+  function handlePointerDown(x, y) {
+    markInteract();
+    isPointerDown = true;
+    lastPointerX = x;
+    lastPointerY = y;
+    // Main ink dot
+    addInkNode(x, y, true, {
+      radius: 5 + Math.random() * 3,
+      alpha: 0.8 + Math.random() * 0.15,
+      isMain: true
+    });
+  }
+
+  function handlePointerUp() {
+    isPointerDown = false;
+    lastPointerX = -100;
+    lastPointerY = -100;
+  }
+
+  // Mouse
+  canvas.addEventListener('mousedown', function (e) {
+    handlePointerDown(e.clientX, e.clientY);
+  });
+  canvas.addEventListener('mousemove', function (e) {
+    if (isPointerDown) {
+      handlePointerMove(e.clientX, e.clientY);
+    }
+  });
+  window.addEventListener('mouseup', handlePointerUp);
+
+  // Also leave trail on hover (not just drag)
+  let hoverX = -1, hoverY = -1;
+  let hoverLastTime = 0;
+  canvas.addEventListener('mousemove', function (e) {
+    if (isPointerDown) return; // drag handled by handlePointerMove
+    markInteract();
+    const now = performance.now();
+    if (now - hoverLastTime < 40) return;
+    hoverLastTime = now;
+    if (hoverX >= 0) {
+      const dx = e.clientX - hoverX;
+      const dy = e.clientY - hoverY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist >= POINTER_SPACING) {
+        const steps = Math.floor(dist / POINTER_SPACING);
+        for (let i = 1; i <= steps; i++) {
+          const t = i / steps;
+          addInkNode(hoverX + dx * t, hoverY + dy * t, true, {
+            radius: 3 + Math.random() * 3,
+            alpha: 0.7 + Math.random() * 0.2
+          });
+        }
+      }
+    }
+    hoverX = e.clientX;
+    hoverY = e.clientY;
+  });
+  canvas.addEventListener('mouseleave', function () {
+    hoverX = -1; hoverY = -1;
+  });
+
+  // Touch
+  canvas.addEventListener('touchstart', function (e) {
+    e.preventDefault();
+    if (e.changedTouches.length === 0) return;
+    const t = e.changedTouches[0];
+    handlePointerDown(t.clientX, t.clientY);
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', function (e) {
+    e.preventDefault();
+    if (e.changedTouches.length === 0) return;
+    const t = e.changedTouches[0];
+    handlePointerMove(t.clientX, t.clientY);
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', function (e) {
+    e.preventDefault();
+    handlePointerUp();
+  }, { passive: false });
+
+  canvas.addEventListener('touchcancel', handlePointerUp);
+
+  // ---- Self-growth ----
+  function scheduleNextGrowth() {
+    const delay = GROWTH_MIN_MS + Math.random() * (GROWTH_MAX_MS - GROWTH_MIN_MS);
+    nextGrowthTime = performance.now() + delay;
+  }
+
+  function findEmptyArea() {
+    // Try several random positions, pick the one farthest from all nodes
+    let bestX = W * 0.5, bestY = H * 0.5, bestMinDist = 0;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const x = 60 + Math.random() * (W - 120);
+      const y = 60 + Math.random() * (H - 120);
+      let minD = Infinity;
+      for (let i = 0; i < nodes.length; i++) {
+        const dx = nodes[i].x - x;
+        const dy = nodes[i].y - y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < minD) minD = d;
+      }
+      if (minD > bestMinDist) {
+        bestMinDist = minD;
+        bestX = x;
+        bestY = y;
+      }
+    }
+    return { x: bestX, y: bestY, minDist: bestMinDist };
+  }
+
+  function findClusterCenters() {
+    // Simple: find pairs of distant node groups
+    if (nodes.length < 4) return null;
+    // Pick a random node, then find the farthest node from it
+    const a = nodes[Math.floor(Math.random() * nodes.length)];
+    let farthest = null, farDist = 0;
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      if (n.dying) continue;
+      const dx = n.x - a.x, dy = n.y - a.y;
+      const d = dx * dx + dy * dy;
+      if (d > farDist) { farDist = d; farthest = n; }
+    }
+    if (!farthest || farDist < 40000) return null; // <200px apart
+    // Midpoint with jitter
+    const mx = (a.x + farthest.x) / 2 + (Math.random() - 0.5) * 60;
+    const my = (a.y + farthest.y) / 2 + (Math.random() - 0.5) * 60;
+    return { x: mx, y: my };
+  }
+
+  // Pre-birth hints (will-be-born spots)
+  let pendingHints = [];
+
+  function spawnAutoGrowth() {
+    if (nodes.filter(function (n) { return !n.dying; }).length < 2) {
+      // If very few nodes, start one in a central-ish position
+      addInkNode(
+        W * (0.3 + Math.random() * 0.4),
+        H * (0.3 + Math.random() * 0.4),
+        false,
+        { radius: 2 + Math.random() * 2, alpha: 0.2 + Math.random() * 0.15 }
+      );
+      scheduleNextGrowth();
+      return;
+    }
+
+    const aliveNodes = nodes.filter(function (n) { return !n.dying; });
+
+    if (Math.random() < 0.7) {
+      // Cluster growth: near an existing node
+      const anchor = aliveNodes[Math.floor(Math.random() * aliveNodes.length)];
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 50 + Math.random() * 100;
+      const nx = Math.max(30, Math.min(W - 30, anchor.x + Math.cos(angle) * dist));
+      const ny = Math.max(30, Math.min(H - 30, anchor.y + Math.sin(angle) * dist));
+
+      // Create a pre-birth hint
+      pendingHints.push({
+        x: nx, y: ny,
+        born: false,
+        startTime: performance.now(),
+        duration: 800 + Math.random() * 600
+      });
+    } else {
+      // Exploration: jump to empty area
+      const spot = findEmptyArea();
+
+      // 25% chance to create a bridge between clusters
+      if (Math.random() < 0.25 && aliveNodes.length >= 6) {
+        const cluster = findClusterCenters();
+        if (cluster) {
+          // Place node at cluster midpoint and connect to both sides
+          const node = addInkNode(cluster.x, cluster.y, false, {
+            radius: 2 + Math.random() * 1.5,
+            alpha: 0.15 + Math.random() * 0.1
+          });
+          node.isBridge = true;
+          // Extended connection search
+          findConnections(node, MAIN_DIST_SQ * 0.7, 6);
+          scheduleNextGrowth();
+          return;
+        }
+      }
+
+      pendingHints.push({
+        x: spot.x, y: spot.y,
+        born: false,
+        startTime: performance.now(),
+        duration: 1000 + Math.random() * 800
+      });
+    }
+    scheduleNextGrowth();
+  }
+
+  function updateHints(now) {
+    for (let i = pendingHints.length - 1; i >= 0; i--) {
+      const h = pendingHints[i];
+      const elapsed = now - h.startTime;
+      if (elapsed >= h.duration && !h.born) {
+        h.born = true;
+        // Spawn the actual node
+        addInkNode(h.x, h.y, false, {
+          radius: 2 + Math.random() * 2,
+          alpha: 0.2 + Math.random() * 0.2
+        });
+        pendingHints.splice(i, 1);
+      }
+    }
+  }
+
+  // ---- Drawing ----
+  function drawNode(node, now) {
+    // Birth animation
+    let renderRadius = node.targetRadius;
+    let renderAlpha = node.targetAlpha;
+
+    if (node.animating) {
+      const t = Math.min((now - node.birthTime) / INK_ANIM_MS, 1);
+      const eased = easeOutCubic(t);
+      renderRadius = node.targetRadius * eased;
+      // Start slightly more opaque, settle to target
+      renderAlpha = 0.05 + (node.targetAlpha - 0.05) * eased;
+      if (t >= 1) node.animating = false;
+    }
+
+    // Death fade
+    if (node.dying) {
+      node.fadeOut -= 0.008;
+      if (node.fadeOut <= 0) node.fadeOut = 0;
+      renderAlpha *= node.fadeOut;
+    }
+
+    node.alpha = renderAlpha;
+
+    if (renderAlpha <= 0.005 || renderRadius <= 0.1) return;
+
+    const c = node.color;
+    const r = Math.max(0.5, renderRadius);
+
+    // Outer soft glow (ink bleed)
+    const glowR = r * 2.8;
+    const grad = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowR);
+    grad.addColorStop(0, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (renderAlpha * 0.9) + ')');
+    grad.addColorStop(0.35, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + (renderAlpha * 0.5) + ')');
+    grad.addColorStop(1, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, glowR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core dot
+    ctx.fillStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + renderAlpha + ')';
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // For user main dots, add a tiny darker center
+    if (node.isUser && node.targetRadius > 4.5) {
+      ctx.fillStyle = 'rgba(' + Math.max(0, c.r - 10) + ',' + Math.max(0, c.g - 10) + ',' + Math.max(0, c.b - 10) + ',' + (renderAlpha * 0.6) + ')';
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawLine(ln, nodeMap) {
+    const a = nodeMap[ln.a];
+    const b = nodeMap[ln.b];
+    if (!a || !b) return;
+    if (a.dying && a.fadeOut <= 0.01) return;
+    if (b.dying && b.fadeOut <= 0.01) return;
+
+    // Distance-based alpha
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const distSq = dx * dx + dy * dy;
+    const dist = Math.sqrt(distSq);
+    const distFactor = 1 - Math.min(dist / CONNECT_DIST, 1);
+
+    // Both nodes' alpha influences line
+    let aAlpha = a.animating ? a.alpha : a.targetAlpha;
+    let bAlpha = b.animating ? b.alpha : b.targetAlpha;
+    if (a.dying) aAlpha *= a.fadeOut;
+    if (b.dying) bAlpha *= b.fadeOut;
+    const nodeAlpha = Math.min(aAlpha, bAlpha);
+
+    // User-user lines more solid
+    let baseAlpha;
+    if (a.isUser && b.isUser) {
+      baseAlpha = 0.35;
+    } else if (a.isUser || b.isUser) {
+      baseAlpha = 0.22;
+    } else {
+      baseAlpha = 0.12;
+    }
+
+    const targetAlpha = baseAlpha * distFactor * nodeAlpha * 1.8;
+    ln.alpha += (targetAlpha - ln.alpha) * 0.08;
+    if (ln.alpha <= 0.005) return;
+
+    // Line width
+    let width = 0.3 + distFactor * 0.7;
+    if (a.isUser && b.isUser) width += 0.2;
+    if (a.isBridge || b.isBridge) width = Math.max(0.2, width * 0.6);
+
+    // Color: blend based on node types
+    let cr, cg, cb;
+    if (a.isUser && b.isUser) {
+      cr = COLOR_USER.r; cg = COLOR_USER.g; cb = COLOR_USER.b;
+    } else if (a.isUser || b.isUser) {
+      const u = a.isUser ? a : b;
+      const au = a.isUser ? b : a;
+      const t = 0.5;
+      cr = Math.round(u.color.r * (1 - t) + au.color.r * t);
+      cg = Math.round(u.color.g * (1 - t) + au.color.g * t);
+      cb = Math.round(u.color.b * (1 - t) + au.color.b * t);
+    } else {
+      cr = COLOR_AUTO.r; cg = COLOR_AUTO.g; cb = COLOR_AUTO.b;
+    }
+
+    ctx.strokeStyle = 'rgba(' + cr + ',' + cg + ',' + cb + ',' + ln.alpha + ')';
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+
+    // Gentle drift around initial control point with spring return
+    ln.cx += (ln.initCx - ln.cx) * 0.01 + (Math.random() - 0.5) * 0.1;
+    ln.cy += (ln.initCy - ln.cy) * 0.01 + (Math.random() - 0.5) * 0.1;
+
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.quadraticCurveTo(ln.cx, ln.cy, b.x, b.y);
+    ctx.stroke();
+  }
+
+  function drawHints(now) {
+    for (let i = 0; i < pendingHints.length; i++) {
+      const h = pendingHints[i];
+      if (h.born) continue;
+      const elapsed = now - h.startTime;
+      const t = Math.min(elapsed / h.duration, 1);
+      // Fade in then pulse slightly
+      const alpha = 0.04 + Math.sin(t * Math.PI) * 0.06;
+      const r = 8 + Math.sin(t * Math.PI * 2) * 3;
+      const grad = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, r * 2.5);
+      grad.addColorStop(0, 'rgba(' + COLOR_HINT.r + ',' + COLOR_HINT.g + ',' + COLOR_HINT.b + ',' + alpha + ')');
+      grad.addColorStop(1, 'rgba(' + COLOR_HINT.r + ',' + COLOR_HINT.g + ',' + COLOR_HINT.b + ',0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, r * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ---- Main loop ----
+  let lastTime = performance.now();
+  let rafId = null;
+
+  function loop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+
+    // Draw paper
+    if (paperCanvas && paperW === W && paperH === H) {
+      ctx.drawImage(paperCanvas, 0, 0, W, H);
+    } else {
+      ctx.fillStyle = '#f5f0e8';
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Mist background
+    if (mistCanvas) ctx.drawImage(mistCanvas, 0, 0, W, H);
+
+    // Check auto-growth
+    const timeSinceInteract = now - lastInteractTime;
+    if (timeSinceInteract >= IDLE_TIME_MS) {
+      if (!autoGrowing) {
+        autoGrowing = true;
+        scheduleNextGrowth();
+      }
+      if (now >= nextGrowthTime) {
+        spawnAutoGrowth();
+      }
+      updateHints(now);
+    }
+
+    // Draw pre-birth hints
+    drawHints(now);
+
+    // Build node map for line lookups
+    const nodeMap = {};
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      n.age += dt;
+      nodeMap[n.id] = n;
+    }
+
+    // Draw lines first (behind nodes)
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const ln = lines[i];
+      const a = nodeMap[ln.a];
+      const b = nodeMap[ln.b];
+      if (!a || !b || (a.dying && a.fadeOut <= 0.01) || (b.dying && b.fadeOut <= 0.01)) {
+        removeLine(i);
+        continue;
+      }
+      drawLine(ln, nodeMap);
+    }
+
+    // Draw nodes
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const node = nodes[i];
+      drawNode(node, now);
+      if (node.dying && node.fadeOut <= 0) {
+        // Remove associated lines
+        for (let j = lines.length - 1; j >= 0; j--) {
+          if (lines[j].a === node.id || lines[j].b === node.id) {
+            removeLine(j);
+          }
+        }
+        nodes.splice(i, 1);
+      }
+    }
+
+    // Vignette
+    if (vignetteCanvas) ctx.drawImage(vignetteCanvas, 0, 0, W, H);
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  // ---- Resize ----
+  function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    buildVignette();
+    buildMist();
+
+    if (firstResize) {
+      createPaperTexture();
+      firstResize = false;
+    } else {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        createPaperTexture();
+        buildVignette();
+        buildMist();
+      }, 200);
+    }
+  }
+  window.addEventListener('resize', resize);
+
+  // ---- Visibility ----
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) {
+      if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    } else {
+      lastTime = performance.now();
+      if (!rafId) rafId = requestAnimationFrame(loop);
+    }
+  });
+
+  // ---- Seal ----
+  function drawSeal() {
+    const c = sealCtx, s = 64;
+    c.clearRect(0, 0, s, s);
+    c.fillStyle = '#a33a2c';
+    c.fillRect(6, 6, s - 12, s - 12);
+    c.globalCompositeOperation = 'destination-out';
+    for (let i = 0; i < 55; i++) {
+      c.fillStyle = 'rgba(0,0,0,' + (0.06 + Math.random() * 0.26) + ')';
+      c.beginPath();
+      c.arc(8 + Math.random() * (s - 16), 8 + Math.random() * (s - 16), Math.random() * 2.6 + 0.3, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillStyle = 'rgba(0,0,0,0.3)';
+    c.fillRect(0, 0, s, 3); c.fillRect(0, s - 3, s, 3);
+    c.fillRect(0, 0, 3, s); c.fillRect(s - 3, 0, 3, s);
+    c.globalCompositeOperation = 'source-over';
+    c.strokeStyle = 'rgba(255,240,225,0.3)';
+    c.lineWidth = 1.5;
+    c.strokeRect(9, 9, s - 18, s - 18);
+    c.fillStyle = '#f7efe2';
+    c.font = 'bold 30px "Ma Shan Zheng","Songti SC","STSong",serif';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillText('候', s / 2, s / 2 + 1);
+  }
+
+  // Seal DPR
+  sealCv.width = Math.round(64 * dpr);
+  sealCv.height = Math.round(64 * dpr);
+  sealCv.style.width = '64px';
+  sealCv.style.height = '64px';
+  sealCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  resize();
+  drawSeal();
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { drawSeal(); });
+  }
+
+  // Seed a few initial faint nodes so the canvas isn't empty
+  setTimeout(function () {
+    const seedCount = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < seedCount; i++) {
+      setTimeout(function () {
+        addInkNode(
+          W * (0.2 + Math.random() * 0.6),
+          H * (0.25 + Math.random() * 0.5),
+          false,
+          { radius: 2 + Math.random() * 1.5, alpha: 0.15 + Math.random() * 0.1 }
+        );
+      }, i * 600);
+    }
+  }, 800);
+
+  rafId = requestAnimationFrame(loop);
+
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+})();
+</script>
+</body>
+</html>
