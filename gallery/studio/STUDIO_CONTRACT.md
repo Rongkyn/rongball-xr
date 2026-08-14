@@ -1,6 +1,10 @@
-# 绒球水墨工作室 · Ink Studio Operating Model v1.3
+# 绒球水墨工坊 · Ink Workshop Operating Model v1.3
 
-> 本文件是绒球水墨创作的生产契约。结构对齐 AIOS Creative Production Studio（commit 9729563），
+> 本文件是绒球水墨**工具制造**的生产契约（构建生成器、笔触引擎、截图方案等）。
+> 与「水墨画房」（PAINTING_STUDIO_CONTRACT.md，艺术创作）并列，构成双环：
+> **画房作画 → 发现工具不够 → 工坊改工具 → 画房作出更好的画。**
+>
+> 结构对齐 AIOS Creative Production Studio（commit 9729563），
 > 按绒球单 Agent + sub-agent 的实际规模做轻量映射。每次创作后迭代本文件。
 
 ## 1. Studio 边界
