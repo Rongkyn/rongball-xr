@@ -856,39 +856,51 @@ body.gallery-mode #toast { display:none !important; }
       }
     }
     buildOrchid() {
-      // v5 宋画兰叶法：一笔定方向、二笔交凤眼、三笔破凤眼，添嫩叶抱根。
-      // 三次贝塞尔S翻转 + 出射点沿短根茎二列错开(不从一点放射) + 种子驱动。
+      // v6 宋画兰叶法：一笔定方向、二笔交凤眼、三笔破凤眼，添嫩叶抱根。
+      // 悬臂梁模型v2 + 出射点宽幅错开(叶基分居根两侧以成交叉) + 7-9叶 + 种子驱动。
       const sp = this.species;
       const rand = (s)=>this.rand(s);
-      const lean = (rand(101)<0.5?-1:1) * (0.4+rand(102)*0.6);
-      const n = 5 + Math.floor(rand(103)*3);
-      const tones = ['nong','nong','zhong','zhong','dan','dan','dan'];
-      // 出射点沿假球茎竖向错开，二列互生
+      const UP = -Math.PI/2;
+      const lean = (rand(101)<0.5?-1:1) * (0.35+rand(102)*0.5);
+      const n = 7 + Math.floor(rand(103)*3); // 7-9叶
+      const tones = ['nong','nong','zhong','zhong','zhong','dan','dan','dan','dan'];
+      const isCompose = typeof urlParams !== 'undefined' && urlParams.get('compose') === '1';
+      // 叶基宽幅错开：叶基分居根两侧较远处，使叶在画面中段交叉成凤眼
+      const baseSpread = isCompose ? 28 : 14;
       const baseOffset = (i)=>{
+        if(i===0) return { x: this.x - (baseSpread+rand(200)*6), y: this.y - (2+rand(201)*4) };
+        if(i===1) return { x: this.x + (baseSpread+rand(202)*6), y: this.y - (4+rand(203)*4) };
+        if(i===2) return { x: this.x + (lean>0?-(baseSpread*0.6):baseSpread*0.6)+rand(204)*4, y: this.y - (6+rand(205)*5) };
+        if(i===3) return { x: this.x + (lean>0?baseSpread*0.5:-baseSpread*0.5)+rand(206)*5, y: this.y - (10+rand(207)*5) };
+        if(i===4) return { x: this.x + (lean>0?-baseSpread*0.4:baseSpread*0.4)+rand(208)*4, y: this.y - (12+rand(209)*5) };
         const side = i%2===0 ? -1 : 1;
-        return { x: this.x + side*(6+rand(200+i)*8), y: this.y - i*(7+rand(210+i)*7) };
+        return { x: this.x + side*(4+rand(210+i)*6), y: this.y - (14+rand(211+i)*6+i*2) };
       };
       const cubicLeaf = (bx,by,ang,len,sag,flip)=>{
-        // 悬臂梁模型：叶基角度ang，越往尖端受重力影响偏转越大（t²加速）
-        // 弯垂方向跟随叶基偏侧（左生左弯、右生右弯），叠加极轻sin扭转
+        // 悬臂梁模型v2：叶基角度ang决定初始方向，重力使角度向DOWN偏转（t²加速）
+        // 不区分side——重力永远向下，叶子从初始方向逐渐弯向地面
         const N=40; const pts=[];
         let x=bx, y=by;
-        const side = ang > UP ? 1 : -1;  // 叶尖偏向哪一侧
-        const bend = sag * 1.1 * side;
-        const twist = flip * 0.05;
+        const DOWN = Math.PI/2;
+        // 从ang到DOWN的角差，取最短方向
+        let droop = DOWN - ang;
+        while(droop > Math.PI) droop -= Math.PI*2;
+        while(droop < -Math.PI) droop += Math.PI*2;
+        const bend = sag * 0.8;
+        const twist = flip * 0.04;
         for(let i=0;i<=N;i++){
           const t=i/N;
           pts.push({x,y});
           if(i<N){
             const dt=1/N;
-            const a = ang + bend*t*t + Math.sin(t*Math.PI)*twist;
+            // 角度从ang向DOWN偏转，t²加速
+            const a = ang + droop * bend * t*t + Math.sin(t*Math.PI)*twist;
             x += Math.cos(a)*len*dt;
             y += Math.sin(a)*len*dt;
           }
         }
         return pts;
       };
-      const UP = -Math.PI/2; // 画布中正上方
       const addLeaf=(i,ang,len,w,sag)=>{
         const b=baseOffset(i);
         const flip=rand(300+i)<0.5?-1:1;
@@ -900,19 +912,38 @@ body.gallery-mode #toast { display:none !important; }
         });
       };
       const BL=sp.baseLen, BW=sp.baseWidth;
-      // 所有叶子从基部向上生长，靠sag重力在后半段弯垂；左右靠lean偏出，不水平炸开
-      addLeaf(0, UP+lean*0.18+(rand(12)-0.5)*0.08,
-              BL*(1.20+rand(13)*0.15), BW*(0.95+rand(14)*0.15), 1.1+rand(15)*0.3);   // 主叶
-      addLeaf(1, UP-lean*0.22+(rand(22)-0.5)*0.10,
-              BL*(1.05+rand(23)*0.10), BW*(0.82+rand(24)*0.12), 0.9+rand(25)*0.3);  // 交凤眼
-      addLeaf(2, UP+(lean>0?0.42:-0.42)+(rand(32)-0.5)*0.10,
-              BL*(0.88+rand(33)*0.10), BW*(0.72+rand(34)*0.12), 0.75+rand(35)*0.25); // 破凤眼斜出
-      for(let i=3;i<n;i++){
+      // compose(折枝)模式叶更长，弯度更大——披拂入画
+      const L = isCompose ? 1.75 : 1.0;
+      // 折枝模式：主叶初始更斜(向画面内)，sag更大(尖端弯垂)，形成大弧线
+      const aSkew = isCompose ? 0.22 : 0.18;
+      const aCross = isCompose ? -0.28 : -0.22;
+      const aBreak = isCompose ? 0.65 : 0.55;
+      const sMain = isCompose ? 0.38 : 0.22;
+      const sCross = isCompose ? 0.48 : 0.30;
+      const sBreak = isCompose ? 0.78 : 0.60;
+      // 宋画兰叶法：
+      // 第1笔(主叶)：从基出，向画面内斜上挺拔，尖端微垂
+      // 第2笔(交凤眼)：向反方向斜上，与主叶在中段交叉成凤眼
+      // 第3笔(破凤眼)：大幅斜出，明显弯垂——打破凤眼对称
+      // 第4-5笔：中短辅叶
+      // 第6+笔：嫩叶抱根
+      addLeaf(0, UP + (lean>0?aSkew:-aSkew) + (rand(12)-0.5)*0.06,
+              BL*L*(1.35+rand(13)*0.15), BW*(1.0+rand(14)*0.15), sMain+rand(15)*0.08);
+      addLeaf(1, UP + (lean>0?aCross:-aCross) + (rand(22)-0.5)*0.06,
+              BL*L*(1.20+rand(23)*0.10), BW*(0.88+rand(24)*0.12), sCross+rand(25)*0.08);
+      addLeaf(2, UP + (lean>0?aBreak:-aBreak) + (rand(32)-0.5)*0.08,
+              BL*L*(1.00+rand(33)*0.10), BW*(0.78+rand(34)*0.10), sBreak+rand(35)*0.12);
+      addLeaf(3, UP + (lean>0?-(aBreak*0.7):aBreak*0.7) + (rand(36)-0.5)*0.12,
+              BL*L*(0.85+rand(37)*0.12), BW*(0.68+rand(38)*0.10), 0.50+rand(39)*0.15);
+      addLeaf(4, UP + lean*0.12 + (rand(42)-0.5)*0.15,
+              BL*L*(0.70+rand(43)*0.15), BW*(0.58+rand(44)*0.10), 0.38+rand(45)*0.12);
+      for(let i=5;i<n;i++){
         const r=rand(40+i); let ang;
-        if(r<0.55){ ang=UP+lean*0.10+(rand(41+i)-0.5)*0.25; }
-        else if(r<0.85){ ang=UP+(rand(42+i)<0.5?0.30:-0.30)+(rand(43+i)-0.5)*0.12; }
-        else { ang=UP+(rand(44+i)<0.5?0.5:-0.5)+(rand(45+i)-0.5)*0.12; }
-        addLeaf(i, ang, BL*(0.50+rand(46+i)*0.40), BW*(0.5+rand(47+i)*0.3), 0.5+rand(48+i)*0.4);
+        if(r<0.45){ ang=UP+lean*0.08+(rand(41+i)-0.5)*0.25; }
+        else if(r<0.75){ ang=UP+(rand(42+i)<0.5?0.30:-0.30)+(rand(43+i)-0.5)*0.15; }
+        else { ang=UP+(rand(44+i)<0.5?0.55:-0.55)+(rand(45+i)-0.5)*0.15; }
+        const sag = r<0.45 ? 0.25+rand(48+i)*0.12 : 0.45+rand(48+i)*0.20;
+        addLeaf(i, ang, BL*L*(0.38+rand(46+i)*0.32), BW*(0.42+rand(47+i)*0.22), sag);
       }
     }
     growBranch(id, x, y, angle, length, width, depth, offset) {
@@ -1455,48 +1486,63 @@ body.gallery-mode #toast { display:none !important; }
       brushPath(ctx, dpts, useStamp, makeOrchidPressure(maxW), {
         opacity: baseOpacity * alpha, spacing: 0.18
       });
-      // 叶根钉头点（焦墨，ellipse 5×3px 量级，按叶宽缩放）
-      ctx.globalAlpha = alpha * 0.9;
-      ctx.fillStyle = leafColor;
-      ctx.beginPath();
-      ctx.ellipse(dpts[0].x, dpts[0].y,
-        Math.max(2, maxW * 0.55), Math.max(1.5, maxW * 0.35), 0, 0, Math.PI * 2);
-      ctx.fill();
-      // 叶尖回锋点：1px 浓墨点
-      const tip = dpts[dpts.length - 1];
-      ctx.globalAlpha = alpha * 0.7;
-      ctx.beginPath();
-      ctx.arc(tip.x, tip.y, 0.9, 0, Math.PI * 2);
-      ctx.fill();
+      // 叶根：用一笔短粗的入锋藏锋，而非机械圆点
+      // 从叶基沿反方向绘一小段粗墨，模拟起笔藏锋
+      if (dpts.length >= 3) {
+        const p0 = dpts[0];
+        const p1 = dpts[1];
+        const dx = p0.x - p1.x, dy = p0.y - p1.y;
+        const len = Math.sqrt(dx*dx+dy*dy) || 1;
+        const ux = dx/len, uy = dy/len;
+        ctx.globalAlpha = alpha * 0.85;
+        ctx.strokeStyle = leafColor;
+        ctx.lineCap = 'round';
+        ctx.lineWidth = Math.max(2.5, maxW * 0.85);
+        ctx.beginPath();
+        ctx.moveTo(p0.x + ux*maxW*0.6, p0.y + uy*maxW*0.6);
+        ctx.lineTo(p0.x - ux*maxW*0.4, p0.y - uy*maxW*0.4);
+        ctx.stroke();
+      }
       ctx.globalAlpha = 1;
     }
     drawOrchidFlowers(ctx, time, alpha) {
       const leaves = this.branches.filter(function(b){ return b.kind === 'leaf'; });
       if (leaves.length < 2) return;
       leaves.sort(function(a,b){ return b.length - a.length; });
-      const flowerCount = 2 + (this.rand(55) > 0.5 ? 1 : 0);
+      // 2-4朵花，在叶的中上部，有主次：主花大而淡墨+胭脂心，辅花小而清
+      const flowerCount = 2 + (this.rand(55) > 0.4 ? 1 : 0) + (this.rand(59) > 0.7 ? 1 : 0);
       for (let fi = 0; fi < flowerCount; fi++) {
-        const leaf = leaves[fi % leaves.length];
+        const leafIdx = fi < leaves.length ? fi : (fi % leaves.length);
+        const leaf = leaves[leafIdx];
         if (!leaf || leaf.points.length < 5) continue;
-        const idx = Math.floor(leaf.points.length * (0.35 + this.rand(56+fi)*0.3));
+        // 花在叶的上半段(0.25-0.55)
+        const idx = Math.floor(leaf.points.length * (0.28 + this.rand(56+fi)*0.25));
         const p = leaf.points[idx];
-        const sway = Math.sin(time*0.002+idx+fi)*0.08;
-        const fsz = 2.5 + this.rand(57+fi)*1.0;
+        const sway = Math.sin(time*0.002+idx+fi)*0.04;
+        const isMain = fi === 0;
+        const fsz = (isMain ? 6.5 : 4.5) + this.rand(57+fi)*1.0;
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(sway);
+        // 五瓣：外三瓣(长卵)舒展，内二瓣(短圆)抱心
+        const petalAngles = isMain
+          ? [-Math.PI*0.10, Math.PI*0.42, -Math.PI*0.48, Math.PI*0.75, -Math.PI*0.78]
+          : [0, Math.PI*0.45, -Math.PI*0.45, Math.PI*0.85, -Math.PI*0.85];
         for (let pet = 0; pet < 5; pet++) {
-          const pa = (pet/5)*Math.PI*2;
-          ctx.fillStyle = fi === 0 ? INK.qing : INK.dan;
-          ctx.globalAlpha = 0.35*alpha;
+          const pa = petalAngles[pet] + (this.rand(60+pet+fi)-0.5)*0.08;
+          const pLen = fsz * (pet < 3 ? 1.0 : 0.55);
+          const pWid = fsz * (pet < 3 ? 0.40 : 0.30);
+          ctx.fillStyle = isMain ? INK.dan : INK.qing;
+          ctx.globalAlpha = (isMain ? 0.65 : 0.50) * alpha;
           ctx.beginPath();
-          ctx.ellipse(Math.cos(pa)*fsz, Math.sin(pa)*fsz*0.7, fsz*0.55, fsz*0.35, pa, 0, Math.PI*2);
+          ctx.ellipse(Math.cos(pa)*pLen*0.45, Math.sin(pa)*pLen*0.45, pLen, pWid, pa, 0, Math.PI*2);
           ctx.fill();
         }
-        ctx.fillStyle = INK.jiao;
-        ctx.globalAlpha = 0.5*alpha;
+        // 花心胭脂点——醒目
+        ctx.fillStyle = INK.rouge;
+        ctx.globalAlpha = 0.70*alpha;
         ctx.beginPath();
-        ctx.arc(0, 0, 0.6, 0, Math.PI*2);
+        ctx.arc(0, 0, isMain?1.6:1.2, 0, Math.PI*2);
         ctx.fill();
         ctx.restore();
       }
@@ -1722,8 +1768,11 @@ body.gallery-mode #toast { display:none !important; }
       ctx.fillStyle = INK.paper;
       ctx.fillRect(0, 0, W, H);
     }
-    drawMountains(ctx);
-    drawGround(ctx);
+    // 折枝模式：不画远山和地面，纯宣纸留白
+    if (urlParams.get('compose') !== '1') {
+      drawMountains(ctx);
+      drawGround(ctx);
+    }
     for (let i = plants.length-1; i >= 0; i--) plants[i].update(dt, wind);
     const visiblePlants = [];
     for (let i = plants.length-1; i >= 0; i--) {
@@ -2033,6 +2082,21 @@ body.gallery-mode #toast { display:none !important; }
     if (!hasPlanted) dom.hint.style.opacity = '0.25';
   }, 4200);
   setTimeout(function() {
+    if (urlParams.get('compose') === '1') {
+      // 出画创作模式：不自动种植，等待外部构图指令
+      window.__inkPlant = function(x, y, si) {
+        if (si !== undefined) selectedPlant = si;
+        plantAt(x, y);
+      };
+      window.__inkClear = function() {
+        plants.length = 0;
+        plantHistory.length = 0;
+      };
+      window.__inkSetWind = function(s) { wind = s; };
+      hasPlanted = true;
+      dom.hint.style.display = 'none';
+      return;
+    }
     const starters = [
       { x:0.72, yRatio:0.52, si:1 },  // 松（右上）
       { x:0.42, yRatio:0.68, si:0 },  // 竹（中）

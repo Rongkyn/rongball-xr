@@ -1,0 +1,12 @@
+# Creation process screenshots (large, not for repo)
+gallery/works/creations/
+gallery/works/moyuan-v*.png
+gallery/works/brush-test-v2.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp
+*.tmp
+/tmp/
