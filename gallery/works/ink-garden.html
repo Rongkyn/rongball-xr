@@ -272,6 +272,13 @@ canvas#scene {
 #wind-indicator {
   right:14px}
 }
+/* 出画模式：隐藏所有UI，只留画心与印章 */
+body.gallery-mode #titleBlock,
+body.gallery-mode #stats,
+body.gallery-mode #hint,
+body.gallery-mode #barWrap,
+body.gallery-mode #wind-indicator,
+body.gallery-mode #toast { display:none !important; }
 </style>
 </head>
 <body>
@@ -323,6 +330,11 @@ canvas#scene {
 <script>
 (function() {
   'use strict';
+  // 出画模式：?gallery=1 隐藏所有UI
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('gallery') === '1') {
+    document.body.classList.add('gallery-mode');
+  }
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const canvas = document.getElementById('scene');
   const ctx = canvas.getContext('2d');
