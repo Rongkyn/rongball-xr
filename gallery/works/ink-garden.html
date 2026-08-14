@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- 墨园 v4.2 · 竹兰形态重写 · brush stamp渲染 + 竹叶沿枝错落 + 宋画兰叶 --><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>墨园 · Ink Garden</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" rel="stylesheet"><style>:root {
+<!DOCTYPE html><!-- 墨园 v4.3 · 飞白笔触 + brush花瓣 · 离屏刮白飞白引擎 + stamp铺贴花瓣替代椭圆fill --><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>墨园 · Ink Garden</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" rel="stylesheet"><style>:root {
   --paper:#e8dfc8;
   --paper-2:#ddd2b8;
   --ink:#1a1612;
@@ -522,6 +522,131 @@ body.gallery-mode #toast { display:none !important; }
       }
       acc += dist;
     }
+  }
+
+  // ─── Brush Path with Feibai (v4.3) · 离屏刮白飞白 ───
+  // 在offscreen canvas绘制笔触后，用destination-out刮出丝状留白
+  function brushPathFeibai(mainCtx, pts, stampWet, stampDry, pressureFn, opts) {
+    opts = opts || {};
+    var opacity = opts.opacity !== undefined ? opts.opacity : 0.85;
+    var feibai = opts.feibai || 0.6;
+    var numStreaks = opts.streaks || 8;
+    var dryStart = opts.dryStart || 0.42;
+    var tremor = opts.tremor || 0;
+    var seed = opts.seed || 42;
+    if (!pts || pts.length < 2) return;
+    var rng = (function(s) {
+      return function() { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+    })(seed % 2147483647 || 1);
+
+    // Bounding box
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (var i = 0; i < pts.length; i++) {
+      minX = Math.min(minX, pts[i].x); maxX = Math.max(maxX, pts[i].x);
+      minY = Math.min(minY, pts[i].y); maxY = Math.max(maxY, pts[i].y);
+    }
+    var pad = 15;
+    var bw = maxX - minX + pad * 2, bh = maxY - minY + pad * 2;
+    var bx = minX - pad, by = minY - pad;
+
+    var offCanvas = document.createElement('canvas');
+    offCanvas.width = Math.ceil(bw * dpr);
+    offCanvas.height = Math.ceil(bh * dpr);
+    var off = offCanvas.getContext('2d');
+    off.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var segLens = [], total = 0;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var dl = Math.hypot(pts[i+1].x - pts[i].x, pts[i+1].y - pts[i].y);
+      segLens.push(dl); total += dl;
+    }
+    if (total < 0.5) return;
+
+    // Pass 1: draw stroke
+    var acc = 0;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p = pts[i], n = pts[i+1], dist = segLens[i];
+      if (dist < 0.001) continue;
+      var t0 = acc / total, t1 = (acc + dist) / total;
+      var angle = Math.atan2(n.y - p.y, n.x - p.x) + Math.PI / 2;
+      var pr0 = pressureFn(t0);
+      var step = Math.max(1, pr0.width * 0.16);
+      var sub = Math.ceil(dist / step);
+      for (var s = 0; s < sub; s++) {
+        var f = s / sub, t = t0 + (t1 - t0) * f, pr = pressureFn(t);
+        var w = pr.width, a = pr.opacity * opacity;
+        var dryFactor = t < dryStart ? 0 : Math.min(1, (t - dryStart) / (1 - dryStart));
+        var useStamp = dryFactor > 0.4 ? stampDry : stampWet;
+        a *= (1 - dryFactor * 0.15);
+        var tx = 0, ty = 0;
+        if (tremor > 0) {
+          var px = -Math.sin(angle - Math.PI/2), py = Math.cos(angle - Math.PI/2);
+          tx = px * (rng() - 0.5) * tremor * 1.0;
+          ty = py * (rng() - 0.5) * tremor * 1.0;
+        }
+        if (w < 0.3) continue;
+        off.save();
+        off.translate(p.x - bx + (n.x - p.x) * f + tx, p.y - by + (n.y - p.y) * f + ty);
+        off.rotate(angle);
+        off.globalAlpha = a;
+        var sz = Math.max(3, w * 1.5);
+        off.drawImage(useStamp, -sz/2, -sz/2, sz, sz);
+        off.restore();
+      }
+      acc += dist;
+    }
+
+    // Pass 2: erase feibai streaks
+    if (feibai > 0.05) {
+      off.save();
+      off.globalCompositeOperation = 'destination-out';
+      for (var si = 0; si < numStreaks; si++) {
+        var lateral = (rng() - 0.5) * 1.4;
+        var streakW = 0.8 + rng() * 2.0;
+        var sStart = dryStart + rng() * (1 - dryStart) * 0.3;
+        var density = 0.25 + rng() * 0.65;
+        var eraseA = (0.25 + rng() * 0.55) * feibai;
+        off.lineCap = 'round';
+        off.lineJoin = 'round';
+        var localAcc = 0;
+        for (var i = 0; i < pts.length - 1; i++) {
+          var p = pts[i], n = pts[i+1], dist = segLens[i];
+          if (dist < 0.001) continue;
+          var la = 0;
+          for (var j = 0; j < i; j++) la += segLens[j];
+          var lt0 = la / total, lt1 = (la + dist) / total;
+          var angle = Math.atan2(n.y - p.y, n.x - p.x);
+          var perpX = -Math.sin(angle), perpY = Math.cos(angle);
+          var prAt = pressureFn((lt0 + lt1) / 2);
+          var latOff = lateral * prAt.width * 0.4;
+          var nSub = Math.max(3, Math.ceil(dist / 2));
+          off.beginPath();
+          var drawing = false;
+          for (var ss = 0; ss <= nSub; ss++) {
+            var sf = ss / nSub;
+            var st = lt0 + (lt1 - lt0) * sf;
+            if (st < sStart) continue;
+            var bSeed = Math.sin(st * 40 + si * 17.3) * 43758.5;
+            var bR = bSeed - Math.floor(bSeed);
+            if (bR > density) { drawing = false; continue; }
+            var fadeIn = Math.min(1, (st - sStart) / 0.08);
+            var fadeOut = Math.min(1, (1 - st) / 0.12);
+            var fade = Math.min(fadeIn, fadeOut);
+            var sx = p.x - bx + (n.x - p.x) * sf + perpX * latOff;
+            var sy = p.y - by + (n.y - p.y) * sf + perpY * latOff;
+            sx += Math.sin(st * 25 + si * 3) * 0.8 * feibai;
+            sy += Math.cos(st * 18 + si * 7) * 0.5 * feibai;
+            off.globalAlpha = eraseA * fade;
+            off.lineWidth = streakW * (0.5 + fade * 0.5);
+            if (!drawing) { off.moveTo(sx, sy); drawing = true; }
+            else off.lineTo(sx, sy);
+          }
+          off.stroke();
+        }
+      }
+      off.restore();
+    }
+    mainCtx.drawImage(offCanvas, bx, by, bw, bh);
   }
 
   function sampleQuad(p0, c, p1, segments) {
@@ -1551,17 +1676,26 @@ body.gallery-mode #toast { display:none !important; }
       // 老叶焦浓(nong)用浓stamp，中叶重墨(zhong)，嫩叶淡墨(dan)用干笔stamp带飞白
       const tone = b.leafTone || 'nong';
       let leafColor, useStamp, baseOpacity;
+      let feibaiAmt = 0.55, dryStart = 0.42, streaks = 7;
       if (tone === 'dan') {
         leafColor = INK.zhong; useStamp = stampDry; baseOpacity = 0.7;
+        feibaiAmt = 0.75; dryStart = 0.35; streaks = 9; // 嫩叶更干
       } else if (tone === 'nong') {
         leafColor = INK.jiao; useStamp = stamp; baseOpacity = 0.9;
+        feibaiAmt = 0.4; dryStart = 0.50; streaks = 6; // 主叶较润
       } else {
         leafColor = INK.nong; useStamp = stamp; baseOpacity = 0.8;
+        feibaiAmt = 0.55; dryStart = 0.45; streaks = 7;
       }
       const maxW = b.width;
-      // 沿叶弧铺贴stamp：钉头鼠尾压力曲线
-      brushPath(ctx, dpts, useStamp, makeOrchidPressure(maxW), {
-        opacity: baseOpacity * alpha, spacing: 0.18
+      // 飞白笔触：离屏绘制+刮白
+      brushPathFeibai(ctx, dpts, stamp, stampDry, makeOrchidPressure(maxW), {
+        opacity: baseOpacity * alpha,
+        feibai: feibaiAmt,
+        streaks: streaks,
+        dryStart: dryStart,
+        tremor: 0.08,
+        seed: (b.id || 1) * 31 + 7
       });
       // 叶根：用一笔短粗的入锋藏锋，而非机械圆点
       // 从叶基沿反方向绘一小段粗墨，模拟起笔藏锋
@@ -1586,40 +1720,53 @@ body.gallery-mode #toast { display:none !important; }
       const leaves = this.branches.filter(function(b){ return b.kind === 'leaf'; });
       if (leaves.length < 2) return;
       leaves.sort(function(a,b){ return b.length - a.length; });
-      // 2-4朵花，在叶的中上部，有主次：主花大而淡墨+胭脂心，辅花小而清
       const flowerCount = 2 + (this.rand(55) > 0.4 ? 1 : 0) + (this.rand(59) > 0.7 ? 1 : 0);
       for (let fi = 0; fi < flowerCount; fi++) {
         const leafIdx = fi < leaves.length ? fi : (fi % leaves.length);
         const leaf = leaves[leafIdx];
         if (!leaf || leaf.points.length < 5) continue;
-        // 花在叶的上半段(0.25-0.55)
         const idx = Math.floor(leaf.points.length * (0.28 + this.rand(56+fi)*0.25));
         const p = leaf.points[idx];
         const sway = Math.sin(time*0.002+idx+fi)*0.04;
         const isMain = fi === 0;
-        const fsz = (isMain ? 6.5 : 4.5) + this.rand(57+fi)*1.0;
+        const fsz = (isMain ? 7.5 : 5.0) + this.rand(57+fi)*1.2;
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(sway);
-        // 五瓣：外三瓣(长卵)舒展，内二瓣(短圆)抱心
         const petalAngles = isMain
           ? [-Math.PI*0.10, Math.PI*0.42, -Math.PI*0.48, Math.PI*0.75, -Math.PI*0.78]
           : [0, Math.PI*0.45, -Math.PI*0.45, Math.PI*0.85, -Math.PI*0.85];
         for (let pet = 0; pet < 5; pet++) {
           const pa = petalAngles[pet] + (this.rand(60+pet+fi)-0.5)*0.08;
           const pLen = fsz * (pet < 3 ? 1.0 : 0.55);
-          const pWid = fsz * (pet < 3 ? 0.40 : 0.30);
-          ctx.fillStyle = isMain ? INK.dan : INK.qing;
-          ctx.globalAlpha = (isMain ? 0.65 : 0.50) * alpha;
-          ctx.beginPath();
-          ctx.ellipse(Math.cos(pa)*pLen*0.45, Math.sin(pa)*pLen*0.45, pLen, pWid, pa, 0, Math.PI*2);
-          ctx.fill();
+          const pWid = fsz * (pet < 3 ? 0.45 : 0.35);
+          // Brush-stamp petals instead of flat ellipse fill
+          const petalColor = isMain ? (pet < 3 ? INK.zhong : INK.dan) : (pet < 3 ? INK.dan : INK.qing);
+          const petalAlpha = (isMain ? (pet < 3 ? 0.60 : 0.45) : (pet < 3 ? 0.50 : 0.38)) * alpha;
+          ctx.save();
+          ctx.translate(Math.cos(pa)*pLen*0.4, Math.sin(pa)*pLen*0.4);
+          ctx.rotate(pa);
+          ctx.fillStyle = petalColor;
+          const segs = 10;
+          for (let si = 0; si <= segs; si++) {
+            const st = si / segs;
+            let profile;
+            if (st < 0.2) profile = (st/0.2)*0.6;
+            else if (st < 0.6) profile = 0.6 + 0.4*Math.sin((st-0.2)/0.4*Math.PI*0.5);
+            else profile = 1.0 - (st-0.6)/0.4*0.6;
+            const pw = pWid * profile;
+            const px = pLen * st * 0.75;
+            ctx.globalAlpha = petalAlpha * (0.4 + 0.6*profile);
+            const psz = Math.max(2.5, pw*2.4);
+            ctx.drawImage(stampSmall, px-psz/2, -psz/2, psz, psz);
+          }
+          ctx.restore();
         }
         // 花心胭脂点——醒目
         ctx.fillStyle = INK.rouge;
-        ctx.globalAlpha = 0.70*alpha;
+        ctx.globalAlpha = 0.75*alpha;
         ctx.beginPath();
-        ctx.arc(0, 0, isMain?1.6:1.2, 0, Math.PI*2);
+        ctx.arc(0, 0, isMain?2.0:1.5, 0, Math.PI*2);
         ctx.fill();
         ctx.restore();
       }

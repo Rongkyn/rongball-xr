@@ -1,4 +1,4 @@
-# 绒球水墨工坊 · Ink Workshop Operating Model v1.3
+# 绒球水墨工坊 · Ink Workshop Operating Model v1.5
 
 > 本文件是绒球水墨**工具制造**的生产契约（构建生成器、笔触引擎、截图方案等）。
 > 与「水墨画房」（PAINTING_STUDIO_CONTRACT.md，艺术创作）并列，构成双环：
@@ -29,6 +29,7 @@ sub-agent 不是角色，是被分配到某个角色的 Worker。同一作中一
 - **审美连续性**：每作延续水墨美学语言（留白、墨色、宣纸质感、印章），同时探索一个新交互方向。
 - **众审（Review Loop）**：验收通过后，派多个不同视角的审查 Worker 挑战作品，循环多轮，由策展人裁决何时停止。审查意见是参考，不是命令。水墨工作室的众审称「攻墨」，语气偏攻击型；其他 Studio 可自定义审查视角和语气。详见第 5.4 节。
 - **人类裁量**：作品是否公开发布、是否对外署名、是否接受有风险的改动，由主人决定。
+- **人-Agent统一通道（Command Pattern）**：工坊造出的每一个工具，其所有对状态的改变必须经过同一个Command通道。人通过UI交互生成Command，AI Agent通过直接构造Command进入同一条Bus。工具内部不区分也不需要区分"谁在操作"——入口不同，路径完全相同。参考实现：VR Soundscape 的 `WorldCommandBus` → `WorldCommandDispatcher`（actorSource 字段记录来源但执行路径一致）。禁止为人和Agent分别写两套操作逻辑或两条修改路径。
 
 ## 3. 角色契约
 
@@ -179,10 +180,60 @@ sub-agent 不是角色，是被分配到某个角色的 Worker。同一作中一
 | 悬臂梁叶形模型 | 稳定 | 替代三次贝塞尔S弯。角度随t²加速偏转（`a = ang + bend*t² + sin(t*π)*twist`），Euler积分40段生成路径。弯垂方向跟随叶基偏侧（`side = ang > UP ? 1 : -1`）。适用于兰叶等基部固定、尖端受重力弯垂的自然形态 |
 | CDP截图验证方案 | 稳定 | headless Chrome `--remote-debugging-port=9222` + ws模块WebSocket连接CDP，Page.navigate后真实await 30秒（非virtual-time-budget），Page.captureScreenshot获取PNG。解决setTimeout驱动的生长动画在virtual-time下不正确等待的问题 |
 | Debug可视化诊断法 | 稳定 | 在绘制函数中添加URL触发的临时高对比度粗线绘制（如鲜红色lineWidth=max(2,b.width)），绕过渲染层直接查看路径形态，快速区分"形态问题"和"渲染问题"。验证后移除 |
+| 飞白刮白引擎 | 稳定 | brushPathFeibai函数：在DPR分辨率离屏canvas上先stamp铺贴笔触，再用destination-out沿笔锋方向刮出丝状留白，最后drawImage合成到主canvas。解决了主canvas直接擦除被DPR缩放吞掉的问题。参数：feibai(0.4-0.75强度)、streaks(6-9丝痕数)、dryStart(0.35-0.50飞白起始位置)、tremor(0.08微颤)。按叶色分档：嫩叶dan更干更多飞白，老叶nong更润更少飞白 |
+| Brush Stamp花瓣渲染 | 稳定 | 用stampSmall(32px)沿花瓣长轴铺贴10段替代椭圆fill，每段宽度按profile曲线变化（尖端窄、中段宽、根部收），透明度随profile渐变。花瓣尺寸7.5px/5.0px，墨色zhong/dan/qing三档，胭脂心2.0px/1.5px。解决了椭圆fill在宣纸上发灰的问题 |
 
 每个模块从具体作品中提取，提取后在后续作品中验证。验证通过标记为"稳定"。
 
-## 8. 文件结构
+## 8. Command Bus 架构（人-Agent统一通道）
+
+### 8.1 原则
+
+工坊产出的所有工具，其状态变更必须通过Command Bus。这不是可选架构，是铁律。
+
+```
+人  → UI事件（点击/拖拽/滑块） → 构造Command ─┐
+                                              ├→ Command Bus → 验证 → 执行 → 记Event → 入Undo栈
+AI  → 直接构造Command ────────────────────────┘
+```
+
+工具内部不存在"谁在用"这个问题。按钮的onClick和Agent的API调用，构造的是同一种Command对象，走的是同一个执行路径。
+
+### 8.2 Command 对象规范
+
+每个Command必须包含：
+- **type**：操作类型（枚举，如 `plant` / `move` / `remove` / `clear` / `setWind`）
+- **params**：操作参数（位置、类型、数值等，可序列化）
+- **actor**：来源标识（`"human"` / `"agent"` / `"system"`），仅用于日志和调试，不影响执行逻辑
+- **timestamp**：执行时间
+
+### 8.3 Bus 必须提供的能力
+
+- **Dispatch(command)**：唯一入口，所有状态变更经过这里
+- **验证**：执行前校验参数合法性，拒绝非法操作并返回失败结果
+- **Undo/Redo**：Command天然可逆（或显式标记不可逆），维护操作栈
+- **Event记录**：每次成功执行产生Event，可回放、可审计
+- **序列化**：Command序列可导出/导入，使创作过程可保存、可分享、可变体
+
+### 8.4 禁止事项
+
+- ❌ UI按钮直接操作内部状态而不经过Bus
+- ❌ 为人和Agent分别写两套修改逻辑
+- ❌ Agent通过模拟UI点击（如browser automation）来操作工具——应直接构造Command
+- ❌ 绕过验证的"后门"函数（调试用函数也必须走Bus）
+
+### 8.5 参考实现
+
+VR Soundscape 的 `WorldCommandBus` / `WorldCommandDispatcher` 架构是本原则的成熟实践：
+- `WorldCommand` struct：统一的命令对象，39种命令类型
+- `actorSource`：记录来源（如 `"item-to-world-object-deploy"` vs `"soundscape-draft-apply"`）
+- `SoundscapeDraftApplyService`：AI Draft → Commands 的适配层，包含验证和旧命令转译
+- `WorldCommandOutcome`：统一的成功/失败结果
+- Undo、乐观并发（ExpectedSourceRevision）、Command rejection event 均已实现
+
+墨园等轻量工具不需要照搬完整DDD层，但核心骨架（统一入口、验证、Undo、Event）必须有。
+
+## 9. 文件结构
 
 ```
 gallery/studio/
@@ -202,8 +253,10 @@ gallery/studio/
     └── ...
 ```
 
-## 9. 版本
+## 10. 版本
 
+- v1.5 (2026-08-14)：从VR Soundscape毕设项目的 `WorldCommandBus` 架构提炼出人-Agent统一通道原则，写入核心原则并新增第8节Command Bus架构规范。所有工坊产出的工具，状态变更必须经过同一Command通道，人和AI Agent入口不同但执行路径完全相同。核心要求：统一Dispatch入口、验证、Undo/Redo、Event记录、序列化。
+- v1.4 (2026-08-14)：墨园v4.3工坊改进——新增飞白刮白引擎（离屏canvas DPR分辨率绘制+destination-out丝状刮白，8版迭代验证，解决主canvas擦除被DPR吞掉的问题）和Brush Stamp花瓣渲染（stampSmall铺贴替代椭圆fill，解决发灰问题）两项B层稳定资产。画房feedback中两个待改进项（悬臂梁光滑缺飞白、花瓣发灰）均已解决。
 - v1.3 (2026-08-14)：墨园v4.0-v4.2攻墨经验沉淀——Brush Stamp笔触引擎标记为稳定模块；新增悬臂梁叶形模型（替代三次贝塞尔S弯，t²加速偏转+方向跟随偏侧）、CDP截图验证方案（headless Chrome + WebSocket真实等待30秒，解决virtual-time-budget不等待setTimeout动画问题）、Debug可视化诊断法（临时高对比度粗线绕过渲染层直查路径形态）三项B层资产。墨色调色板/宣纸底色标记为稳定。构图间距原则写入审美连续性。
 - v1.2 (2026-08-14)：新增「攻墨循环」(ink-attack) 作为工作流 5.4——验收通过后并行派多个不同视角的攻击 Worker 挑战作品，循环多轮，由 Curator 裁决停止；攻击意见为参考非命令，Curator 逐条裁决采纳/记录/不采纳；与双环改进联动，反复命中的问题升级为 Studio 层改进。双环改进顺延为 5.5，Curator 决策权章节同步更新。
 - v1.1 (2026-08-13)：对齐 AIOS Creative Production Studio 结构——明确 Studio 边界（只拥有角色契约/工作流/验收逻辑），角色改用 AIOS 命名（Curator/Visual Continuity Steward/Product Acceptance/System Steward），工作流拆为 intake-curation/production/acceptance/improvement 四个并定义各自产出物，sub-agent 定位为 Worker 而非角色
