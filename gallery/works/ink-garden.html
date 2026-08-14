@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- 墨园 v5.1 · Command Bus · 人-Agent统一通道 · 竹子宋画墨竹法 --><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>墨园 · Ink Garden</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" rel="stylesheet"><style>:root {
+<!DOCTYPE html><!-- 墨园 v5.2 · Command Bus · 人-Agent统一通道 · 竹子笔意打磨（竿力/叶丰/节劲/墨韵） --><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>墨园 · Ink Garden</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" rel="stylesheet"><style>:root {
   --paper:#e8dfc8;
   --paper-2:#ddd2b8;
   --ink:#1a1612;
@@ -1335,39 +1335,52 @@ body.gallery-mode #toast { display:none !important; }
       }
     }
     buildBamboo() {
-      // v5.1 宋画墨竹法：主竿顶天 + 辅竿偏侧；节上直接生叶组（个/介/分字），叶聚顶梢、同向偏垂。
+      // v5.2 宋画墨竹法（吴镇一路·丰厚饱满）：主竿顶天立地有篆意，辅竿偏侧；
+      // 节上直接生叶组（个/介/分字），叶聚顶梢、同向偏垂；竿粗节劲、叶丰墨润。
       const sp = this.species;
       const opts = this._opts || {};
       const isCompose = typeof urlParams !== 'undefined' && urlParams.get('compose') === '1';
       const rand = (o) => this.rand(o);
       // 折枝模式：竿大叶长；普通模式尺寸适中
+      // v5.2: compose竿宽10→14（力量感，不臃肿），普通8→9
       const H = isCompose ? 500 : 300;
-      const W = isCompose ? 10 : 8;
-      const Lmul = isCompose ? 2.1 : 1.0;
+      const W = isCompose ? 14 : 9;
+      // v5.2: 叶长compose 54-76，普通32-48
+      const Lmul = isCompose ? 1.22 : 1.0;
       const hMulOpt = typeof opts.heightMul === 'number' ? opts.heightMul : 1;
-      // 一主竿 + 1-2辅竿（主竿最高最粗最直，辅竿矮20-30%、细20-30%、略偏斜）
+      // 一主竿 + 0-1辅竿（主竿最高最粗最直；辅竿紧贴主竿根部，只到主竿65-80%高，
+      // 且只有顶梢少量叶——形成"双竿"构图而非第二支瓶刷）
       let stalkCount = opts.stalkCount !== undefined ? opts.stalkCount
-        : (2 + (rand(2) > 0.55 ? 1 : 0));
+        : (1 + (rand(2) > 0.40 ? 1 : 0));
       stalkCount = Math.max(1, Math.min(3, stalkCount|0));
-      // 整株叶的统一偏向（势）：左垂或右垂；风竹时偏向更明显
-      let lean = opts.lean !== undefined ? opts.lean
-        : (rand(11) < 0.5 ? -1 : 1) * (0.25 + rand(12) * 0.25);
-      if (isCompose) lean *= 1.15;
+      // 整株叶的统一偏向（势）：左垂或右垂。v5.2: 偏角缩小，叶先向上向外斜出再弧垂。
+      // opts.lean 支持 'left'/'right' 字符串 或 数值（正右负左）
+      let lean;
+      if (opts.lean === 'left') lean = -(0.20 + rand(12)*0.14);
+      else if (opts.lean === 'right') lean = (0.20 + rand(12)*0.14);
+      else if (typeof opts.lean === 'number') lean = opts.lean;
+      else lean = (rand(11) < 0.5 ? -1 : 1) * (0.20 + rand(12) * 0.16);
+      if (isCompose) lean *= 1.25;
       const branchSide = lean > 0 ? 1 : -1;
       for (let s = 0; s < stalkCount; s++) {
         const isMain = s === 0;
-        // 错开根部位置（辅竿在主竿叶势相反的一侧，形成支撑/避让）
+        // v5.2: 辅竿从主竿根部附近出发（只错开10-20px），形成"双竿依偎"
+        const baseYOffset = 0;
+        // 辅竿紧贴主竿根部，横向只错开8-18px
         const off = isMain ? (rand(s*3)-0.5) * 6
-          : -branchSide * (18 + rand(s*5) * 14) + (rand(s*7)-0.5) * 8;
-        // 主竿直，辅竿更斜
-        const tilt = isMain ? (rand(s*9)-0.5) * 0.04 : lean * (0.04 + rand(s*11)*0.05);
+          : -branchSide * (8 + rand(s*5) * 10) + (rand(s*7)-0.5) * 4;
+        // 主竿直，辅竿略斜
+        const tilt = isMain ? (rand(s*9)-0.5) * 0.04 : lean * (0.04 + rand(s*11)*0.04);
         const baseAngle = -Math.PI/2 + tilt;
-        // 主竿5-7节（下疏上密）；辅竿略少
+        // 主竿5-7节；辅竿4-5节（保证有节感）
         const segs = isMain ? (5 + Math.floor(rand(s*13)*3)) : (4 + Math.floor(rand(s*15)*2));
-        const hScale = isMain ? 1.0 : (0.72 + rand(s*17)*0.12);
+        // v5.2: 辅竿到主竿高的65-82%
+        const hScale = isMain ? 1.0 : (0.62 + rand(s*17)*0.20);
         const totalH = H * hScale * (0.95 + rand(s*19)*0.1) * hMulOpt;
-        const baseW = W * (isMain ? 1.0 : (0.72 + rand(s*23)*0.08));
-        // 节间距从下到上递减（下疏上密）：权重从1.25 -> 0.75
+        // v5.2: 辅竿更细（0.50-0.62），强化主辅对比
+        const baseW = W * (isMain ? 1.0 : (0.50 + rand(s*23)*0.12));
+        const stalkTone = isMain ? 'nong' : 'dan';
+        // 节间距从下到上递减（下疏上密）
         const weights = [];
         let wsum = 0;
         for (let i = 0; i < segs; i++) {
@@ -1375,14 +1388,15 @@ body.gallery-mode #toast { display:none !important; }
           const wt = 1.28 - 1.05*t + (rand(s*30+i)-0.5)*0.08;
           weights.push(wt); wsum += wt;
         }
-        const pts = [{x:this.x+off, y:this.y}];
-        let cx = this.x+off, cy = this.y, ca = baseAngle;
+        const startX = this.x+off;
+        const startY = this.y - baseYOffset;
+        const pts = [{x:startX, y:startY}];
+        let cx = startX, cy = startY, ca = baseAngle;
         const nodes = [];
         const segLens = [];
         for (let i = 0; i < segs; i++) {
           const sl = totalH * weights[i] / wsum;
           segLens.push(sl);
-          // 主竿基本挺直（微弧），辅竿可略弯
           ca += sp.curve * (isMain ? 0.3 : 0.8) * (0.5 + rand(s*40+i)*0.8);
           cx += Math.cos(ca)*sl; cy += Math.sin(ca)*sl;
           pts.push({x:cx, y:cy});
@@ -1392,51 +1406,100 @@ body.gallery-mode #toast { display:none !important; }
           id:this.branches.length, kind:'stalk', points:pts, angle:ca, length:totalH,
           width:baseW, depth:0, children:[], hasLeaf:false, nodes,
           segLens: segLens, baseAngle: baseAngle, isMain: isMain,
+          stalkTone: stalkTone,
         });
-        // 叶只从顶部2-3个节生出（底部2/3竿身裸露）。顶端再一组梢叶。
-        const leafNodeCount = isMain ? 3 : 2;
+        // v5.2: 叶只从顶部1-2节生出。主竿2节（上节丰厚成冠、下节少量补叶），
+        // 辅竿只顶节1组。宋画墨竹叶聚顶梢，竿身多裸露。
+        const leafNodeCount = isMain ? 2 : 1;
         const firstLeafNode = Math.max(0, nodes.length - leafNodeCount);
         for (let ni = firstLeafNode; ni < nodes.length; ni++) {
           const np = pts[nodes[ni]];
           const upFactor = (ni - firstLeafNode) / Math.max(1, leafNodeCount-1); // 0底 1顶
-          // 短柄 0-8px，直接从节上生出叶组（不是长侧枝）
-          const petiole = 2 + rand(s*60+ni)*6;
-          // 叶组角度：向lean侧偏垂，越靠上越聚拢/越偏
-          const groupAng = baseAngle + lean*(0.95 + upFactor*0.25)
-            + (rand(s*62+ni)-0.5)*0.08;
+          // 短柄 3-10px
+          const petiole = 3 + rand(s*60+ni)*7;
+          // v5.2: 叶组出射方向为斜上方约30-50°（从竿向外），然后drawBambooLeaves
+          // 的sag(0.8+)让叶尖弧垂，形成"起笔外撇、收笔下垂"的竹叶典型姿态。
+          // 越靠顶部越开张，偏向lean侧。
+          const sideOut = branchSide; // +1右 -1左
+          // 与垂直方向(-PI/2)的外撇角：约0.55-0.85 rad (31°-49°)
+          const outward = (0.55 + upFactor*0.25) + (rand(s*62+ni)-0.5)*0.12;
+          const groupAng = baseAngle + sideOut * outward * (0.85 + lean*0.6);
           const gpts = this.calcTwig(np.x, np.y, groupAng, petiole, 2, s*70+ni);
-          // 叶组类型与叶数
+          // 叶组类型与笔数：个字4、介字5、分字6
           let groupType;
           const gr = rand(s*64+ni);
-          if (gr < 0.35) groupType = 'ge';       // 介字4笔
-          else if (gr < 0.7) groupType = 'fen';  // 分字5-6笔
-          else groupType = 'ren';                // 个字3笔
+          if (gr < 0.25) groupType = 'ren';
+          else if (gr < 0.60) groupType = 'ge';
+          else groupType = 'fen';
           const topBias = ni >= nodes.length-1;
-          const countMin = groupType==='ren' ? 3 : (groupType==='ge' ? 4 : 5);
-          const countMax = groupType==='ren' ? 4 : (groupType==='ge' ? 5 : 7);
-          // 上层节叶略短、梢头更聚拢
-          const lScale = (1.0 - upFactor*0.18) * (topBias ? 0.9 : 1.0);
-          this.branches.push({
-            id:this.branches.length, kind:'twig', points:gpts, angle:groupAng,
-            length:petiole, width:1.0+rand(s*66+ni)*0.5, depth:3, children:[],
-            hasLeaf:true, leafAngle:groupAng, leafGroup:groupType,
-            leafTone: (isMain && rand(s*68+ni)<0.65) ? 'nong' : 'zhong',
-            leafLenMin: Math.round(50*Lmul*lScale), leafLenMax: Math.round(78*Lmul*lScale),
-            leafCount:[countMin,countMax], forkSpread: 0.9 + upFactor*0.15,
-            isTop: topBias,
-          });
+          const countMin = groupType==='ren' ? 4 : (groupType==='ge' ? 5 : 6);
+          // v5.2: 顶部节叶丰厚，下节叶少而短（避免下节叶冠过大造成瓶刷）
+          const densityMul = topBias ? 1.0 : 0.55;
+          const lScale = topBias ? 1.0 : 0.72;
+          const leafTone = isMain
+            ? (topBias && rand(s*68+ni) < 0.75 ? 'nong' : 'zhong')
+            : (rand(s*69+ni) < 0.30 ? 'zhong' : 'dan');
+          // forkSpread：叶组内叶片向两侧展开，但以主叶（外撇方向）为主
+          const spreadJitter = (0.55 + (topBias?0.15:0)) * (0.85 + rand(s*71+ni)*0.30);
+          // v5.2: 顶部节主竿5组叶、辅竿3组；下节（upFactor=0）主竿只2组短补叶
+          let groupsAtNode;
+          if (isMain) groupsAtNode = topBias ? 5 : 2;
+          else groupsAtNode = topBias ? 3 : 1;
+          for (let gi = 0; gi < groupsAtNode; gi++) {
+            // 同节各组叶的角度分布：主组向lean侧外撇，其它组分别向更外、回拢、
+            // 甚至向反方向伸出（背叶），形成扇形竹冠
+            let angDelta;
+            const groupRand = (k) => rand(s*74+ni*7+gi*13+k);
+            // 5组叶的角度错落：主组0；其它分别向lean侧外撇、回拢、
+            // 反方向背叶、更外撇长叶，形成扇形竹冠
+            if (gi === 0) angDelta = 0;
+            else if (gi === 1) angDelta = sideOut * (0.30 + groupRand(1)*0.18);
+            else if (gi === 2) angDelta = -sideOut * (0.12 + groupRand(2)*0.16);
+            else if (gi === 3) angDelta = -sideOut * (0.50 + groupRand(3)*0.22);
+            else angDelta = sideOut * (0.55 + groupRand(8)*0.18);
+            const gAng2 = groupAng + angDelta;
+            const gpts2 = gi === 0 ? gpts : this.calcTwig(np.x, np.y, gAng2, petiole*(0.7+groupRand(4)*0.4), 2, s*80+ni+gi*3);
+            const tScale = gi === 0 ? 1.0 : (gi === 3 ? 0.72 : (0.80 + groupRand(5)*0.14));
+            const cnt = Math.max(2, Math.round(countMin * densityMul * (gi === 0 ? 1.0 : 0.85) * tScale));
+            this.branches.push({
+              id:this.branches.length, kind:'twig', points:gpts2, angle:gAng2,
+              length:petiole, width:1.0+groupRand(6)*0.5, depth:3, children:[],
+              hasLeaf:true, leafAngle:gAng2, leafGroup: groupType,
+              leafTone: gi === 0 ? leafTone : (gi === 3 || gi === 4 ? 'dan' : (groupRand(7)<0.45?'zhong':'dan')),
+              leafLenMin: Math.round(56*Lmul*lScale*tScale),
+              leafLenMax: Math.round(78*Lmul*lScale*tScale),
+              leafCount:[cnt, cnt], forkSpread: spreadJitter * (gi===0?1.0:0.90),
+              isTop: topBias,
+              isBack: gi >= 2,
+            });
+          }
+          // v5.2: 顶部节再补1组"垂叶"——从节向斜下方直接垂出的长叶（中墨），
+          // 形成竹梢自然下垂的姿态；辅竿不补，避免叶量过载
+          if (isMain) {
+            const dropAng = baseAngle + sideOut * (1.15 + rand(s*90)*0.15);
+            const dpts = this.calcTwig(np.x, np.y, dropAng, petiole*0.5, 2, s*95);
+            this.branches.push({
+              id:this.branches.length, kind:'twig', points:dpts, angle:dropAng,
+              length:petiole*0.5, width:0.9, depth:3, children:[],
+              hasLeaf:true, leafAngle:dropAng, leafGroup:'ge',
+              leafTone: 'zhong',
+              leafLenMin: Math.round(56*Lmul), leafLenMax: Math.round(72*Lmul),
+              leafCount:[4,4], forkSpread: 0.45,
+              isTop: true, isBack: false, isDrop: true,
+            });
+          }
         }
-        // 顶端梢头：一组小叶（2-3片，短而聚拢）
+        // 顶端梢头：一组小叶（3-4片，短而聚拢向上，做收尖）
         const tip = pts[pts.length-1];
-        const tipAng = baseAngle + lean*0.25 + (rand(s*80)-0.5)*0.2;
-        const tpts = this.calcTwig(tip.x, tip.y, tipAng, 4, 1, s*82);
+        const tipAng = baseAngle + (rand(s*100)-0.5)*0.18;
+        const tpts = this.calcTwig(tip.x, tip.y, tipAng, 4, 1, s*102);
         this.branches.push({
           id:this.branches.length, kind:'twig', points:tpts, angle:tipAng,
           length:4, width:0.9, depth:3, children:[], hasLeaf:true,
           leafAngle:tipAng, leafGroup:'tip',
           leafTone: isMain ? 'nong' : 'zhong',
-          leafLenMin: Math.round(30*Lmul), leafLenMax: Math.round(44*Lmul),
-          leafCount:[2,3], forkSpread:0.5, isTop:true,
+          leafLenMin: Math.round(32*Lmul), leafLenMax: Math.round(44*Lmul),
+          leafCount:[3,4], forkSpread:0.45, isTop:true,
         });
       }
     }
@@ -1711,53 +1774,61 @@ body.gallery-mode #toast { display:none !important; }
       }
     }
     drawBambooLeaves(ctx, b, lx, ly, sway, leafAlpha, scaleMul) {
-      // v5.1 宋画竹叶：长而挺，悬臂梁路径；叶基藏锋→中段行笔→叶尖出锋。
-      // 叶组"个/介/分/梢"：3-5片从节上放射生出，主叶浓长、辅叶淡短，同向成势。
+      // v5.2 宋画竹叶（吴镇丰厚一路）：个4/介5/分6笔，叶中段微弧、叶尖出锋（钉头鼠尾）；
+      // 主叶浓墨实笔、背叶淡墨带飞白；叶根浓、叶尖淡；同向偏垂成势、错落自然。
       const sm = scaleMul || 1;
       const group = b.leafGroup || 'ge';
       const baseAng = b.angle || 0;
       // 各组叶片角度偏移（相对枝向；正号向一侧，负号向另一侧）
+      // v5.2: 个字4笔、介字5笔、分字6笔，角度偏置微随机化避免均匀
       let offs;
-      if (group === 'ren') offs = [0.12, 0.48, 0.88];
-      else if (group === 'fen') offs = [0.08, 0.36, 0.66, 0.98, 1.28, 1.50];
-      else if (group === 'tip') offs = [-0.10, 0.18, 0.46];
-      else offs = [0.10, 0.45, 0.82, 1.18]; // ge
+      if (group === 'ren') offs = [0.05, 0.42, 0.78, 1.15];
+      else if (group === 'fen') offs = [0.06, 0.32, 0.60, 0.90, 1.20, 1.48];
+      else if (group === 'tip') offs = [-0.12, 0.15, 0.42, 0.70];
+      else offs = [0.08, 0.40, 0.74, 1.08, 1.38]; // ge 5笔
       // 同向成势：叶组整体偏向枝尖所指的一侧，不做左右对称V形
       const sideSign = Math.cos(baseAng) >= -0.05 ? 1 : -1;
       offs = offs.map(o => o * sideSign);
       const spread = b.forkSpread || 1.0;
-      const lc = b.leafCount || [3, 5];
+      const lc = b.leafCount || [4, 6];
       let strokes = lc[0] + Math.floor(this.rand(b.id*5) * (lc[1]-lc[0]+1));
       // API可显式指定叶片数
       if (this._opts && typeof this._opts.leafCount === 'number' && b.isTop) {
         strokes = this._opts.leafCount;
       }
-      strokes = Math.max(2, Math.min(7, strokes|0));
+      strokes = Math.max(2, Math.min(8, strokes|0));
       // API可显式指定叶角（相对枝向，弧度数组）
       const apiAngles = (this._opts && Array.isArray(this._opts.leafAngles)) ? this._opts.leafAngles : null;
-      const lmin = b.leafLenMin || 36;
-      const lmax = b.leafLenMax || 54;
+      const lmin = b.leafLenMin || 40;
+      const lmax = b.leafLenMax || 60;
       const tone = b.leafTone || 'nong';
+      const isBack = !!b.isBack;
+      // v5.2: 角度偏置在组内做随机抖动，避免每组都同一角度
+      const offJitter = (n) => {
+        if (apiAngles && n < apiAngles.length) return apiAngles[n];
+        const idx = Math.min(offs.length-1, n);
+        // 第一、二笔为主叶（取最外两笔），其余从offs中取并加随机错落
+        if (n === 0) return offs[0] + (this.rand(b.id+n*7+1)-0.5)*0.08;
+        if (n === 1) return offs[offs.length-1] + (this.rand(b.id+n*7+2)-0.5)*0.08;
+        return offs[idx] + (this.rand(b.id+n*7)-0.5)*0.22;
+      };
       for (let n = 0; n < strokes; n++) {
-        let off;
-        if (apiAngles && n < apiAngles.length) {
-          off = apiAngles[n];
-        } else {
-          // 组内角度：前两片为主叶（偏外更开张），其余辅叶，避免均匀
-          if (n === 0) off = offs[0];
-          else if (n === 1) off = offs[offs.length-1];
-          else off = offs[Math.min(offs.length-1, n)] + (this.rand(b.id+n*7)-0.5)*0.12;
-        }
+        const off = offJitter(n);
         const na = baseAng + off * spread + sway * 0.25;
         // 外撇/主叶最长；背叶和最垂叶略短，形成主次
-        const mainFactor = n < 2 ? 1.0 : (0.76 + this.rand(b.id+n*13)*0.16);
+        const mainFactor = n < 2 ? 1.0 : (0.72 + this.rand(b.id+n*13)*0.20);
         const len = (lmin + this.rand(b.id+n*5)*(lmax-lmin)) * sm * mainFactor;
-        // 叶基宽：主叶宽，辅叶窄；compose已由leafLenMin/Max放大
-        const w = (3.6 + this.rand(b.id+n*9)*1.4) * sm * (n<2 ? 1.12 : 0.86);
-        // 悬臂梁路径：叶基藏锋、中段匀、叶尖收细；叶尖顺势下垂
-        const sag = (group === 'tip' ? 0.30 : 0.58) + this.rand(b.id+n*11)*0.24;
-        const twist = (this.rand(b.id+n*17)-0.5) * 0.05;
-        const N = 24;
+        // 叶基宽：主叶宽，辅叶窄；背叶整体更细
+        const wBase = isBack ? 2.6 : 3.6;
+        const w = (wBase + this.rand(b.id+n*9)*1.4) * sm * (n<2 ? 1.15 : 0.82);
+        // v5.2: 叶中段微弧，叶尖下垂出锋。sag直接控制叶尖最终垂度——
+        // 0=直（保持na方向），1=叶尖完全垂直向下（PI/2）。
+        // 竹叶需要明显弧垂：sag 1.0-1.3；tip组叶短而挺。
+        const sag = (group === 'tip' ? 0.45 : 1.05) + this.rand(b.id+n*11)*0.22;
+        const twist = (this.rand(b.id+n*17)-0.5) * 0.08;
+        // 中段侧摆：轻微的左右波
+        const midSway = (this.rand(b.id+n*23)-0.5) * 0.04;
+        const N = 28;
         const pts = [];
         let x = lx, y = ly;
         const DOWN = Math.PI/2;
@@ -1768,36 +1839,72 @@ body.gallery-mode #toast { display:none !important; }
           const t = i/N;
           pts.push({x, y});
           if (i < N) {
-            const a = na + droop*sag*t*t + Math.sin(t*Math.PI)*twist;
+            // 悬臂梁重力下垂 t² + 中段微摆 sin(πt) + 轻微twist
+            const a = na + droop*sag*t*t
+                    + Math.sin(t*Math.PI)*twist
+                    + Math.sin(t*Math.PI*2)*midSway*(0.5+t*0.5);
             x += Math.cos(a)*len/N;
             y += Math.sin(a)*len/N;
           }
         }
-        // 墨色层次：主叶浓墨实叶，辅叶干淡；少飞白，避免变成细刺/发丝
-        const isMainLeaf = tone === 'nong' && n < 2;
-        const useStamp = (tone === 'nong' || n < 2) ? stamp : stampDry;
-        const baseOpacity = isMainLeaf ? 0.86 : (tone === 'nong' ? 0.52 : 0.42);
-        const a = baseOpacity * (0.88 + this.rand(b.id+n*19)*0.12) * leafAlpha;
+        // v5.2 墨色层次：
+        //   - 主叶（tone=nong且前两片/正面叶）浓墨实笔，opacity 0.82-0.92
+        //   - 中叶（tone=zhong）中墨实笔，opacity 0.55-0.68
+        //   - 背叶/辅叶（tone=dan或isBack）淡墨带飞白，opacity 0.40-0.55
+        // 叶根部浓、叶尖淡由压感函数（makeOrchidPressure尾部opacity下降）保证
+        let useFeibai, baseOpacity;
+        const isMainLeaf = tone === 'nong' && n < 2 && !isBack;
         if (isMainLeaf) {
-          brushPath(ctx, pts, useStamp, makeOrchidPressure(w), { opacity: a, spacing: 0.14 });
-        } else {
-          brushPathFeibai(ctx, pts, stamp, stampDry, makeOrchidPressure(w), {
-            opacity: a, feibai: 0.30, streaks: 5, dryStart: 0.58,
-            tremor: 0.03, seed: (b.id||1)*31 + n*7 + 3,
-          });
+          useFeibai = false;
+          baseOpacity = 0.88;
+        } else if (tone === 'dan' || isBack) {
+          useFeibai = true;
+          baseOpacity = 0.46;
+        } else if (tone === 'nong') {
+          useFeibai = false;
+          baseOpacity = 0.62;
+        } else { // zhong
+          useFeibai = this.rand(b.id+n*29) < 0.45;
+          baseOpacity = 0.58;
         }
-        // 叶基藏锋：一小段粗墨入锋
+        const a = baseOpacity * (0.88 + this.rand(b.id+n*19)*0.12) * leafAlpha;
+        if (useFeibai) {
+          brushPathFeibai(ctx, pts, stamp, stampDry, makeOrchidPressure(w), {
+            opacity: a, feibai: 0.42, streaks: 6, dryStart: 0.55,
+            tremor: 0.04, seed: (b.id||1)*31 + n*7 + 3,
+          });
+        } else {
+          brushPath(ctx, pts, stamp, makeOrchidPressure(w), { opacity: a, spacing: 0.13 });
+        }
+        // 叶根藏锋（钉头）：一小段粗墨入锋，根部墨色最浓
         if (pts.length >= 2) {
           const p0 = pts[0], p1 = pts[1];
           const dx = p1.x-p0.x, dy = p1.y-p0.y;
           const pl = Math.hypot(dx,dy)||1;
-          ctx.globalAlpha = a * 0.9;
-          ctx.strokeStyle = tone === 'nong' ? INK.jiao : INK.nong;
+          ctx.globalAlpha = a * 0.95;
+          // 主叶根用焦墨，其余用浓墨
+          ctx.strokeStyle = isMainLeaf ? INK.jiao : INK.nong;
           ctx.lineCap = 'round';
-          ctx.lineWidth = Math.max(1.2, w*0.7);
+          ctx.lineWidth = Math.max(1.4, w*0.8);
           ctx.beginPath();
           ctx.moveTo(p0.x, p0.y);
-          ctx.lineTo(p0.x + dx/pl*w*0.8, p0.y + dy/pl*w*0.8);
+          ctx.lineTo(p0.x + dx/pl*w*1.0, p0.y + dy/pl*w*1.0);
+          ctx.stroke();
+        }
+        // 叶尖出锋（鼠尾）：在叶尖追加一笔极细的淡墨拖尾，强化出锋感
+        if (pts.length >= 3) {
+          const pN = pts[pts.length-1];
+          const pN1 = pts[pts.length-2];
+          const dx = pN.x-pN1.x, dy = pN.y-pN1.y;
+          const pl = Math.hypot(dx,dy)||1;
+          const tailLen = len * (0.08 + this.rand(b.id+n*31)*0.06);
+          ctx.globalAlpha = a * 0.55;
+          ctx.strokeStyle = isMainLeaf ? INK.nong : INK.zhong;
+          ctx.lineCap = 'round';
+          ctx.lineWidth = Math.max(0.5, w*0.18);
+          ctx.beginPath();
+          ctx.moveTo(pN.x, pN.y);
+          ctx.lineTo(pN.x + dx/pl*tailLen, pN.y + dy/pl*tailLen);
           ctx.stroke();
         }
       }
@@ -2013,15 +2120,19 @@ body.gallery-mode #toast { display:none !important; }
       ctx.globalAlpha = 1;
     }
     drawBambooStalk(ctx, b, dpts, strokeColor, alpha, layer) {
-      // v5.1 宋画竹竿：根粗梢细的压感笔道 + 鹊爪竹节（节处略粗、两道顿挫弧/线、墨色略深）。
+      // v5.2 宋画竹竿（吴镇篆隶笔意）：根粗梢细压感笔道；鹊爪竹节焦墨顿挫、
+      // 上环粗重弧、下环短横顿挫、两端爪笔可见；主竿浓墨、辅竿淡墨。
       if (dpts.length < 2) return;
       const pw0 = Math.max(1.0, b.width * layer.scale);
+      // v5.2: 主竿浓墨（opacity 0.80），辅竿淡墨（opacity 0.55）
+      const stalkTone = b.stalkTone || (b.isMain === false ? 'dan' : 'nong');
+      const stalkOpacity = stalkTone === 'dan' ? 0.55 : 0.82;
       // 竿身：从根到梢有明显粗细变化（根粗梢细），用brushPath压感
       // 把段间点细分，使stamp铺贴更平滑
       const fine = [];
       for (let k = 0; k < dpts.length-1; k++) {
         const a = dpts[k], c = dpts[k+1];
-        const sub = 6;
+        const sub = 8;
         for (let s = 0; s < sub; s++) {
           const t = s/sub;
           fine.push({x:a.x+(c.x-a.x)*t, y:a.y+(c.y-a.y)*t});
@@ -2031,16 +2142,16 @@ body.gallery-mode #toast { display:none !important; }
       // 压感：root→中段保持饱满→tip收细；起笔藏锋（略粗）
       const stalkPressure = (maxW) => (t) => {
         let w;
-        if (t < 0.08) w = maxW * (0.85 + 0.15*(t/0.08));      // 起笔藏锋
-        else if (t < 0.75) w = maxW * (1.0 - 0.18*((t-0.08)/0.67)); // 中段匀
-        else w = maxW * (0.82 * (1 - (t-0.75)/0.25));         // 梢端收细
-        return { width: Math.max(0.4, w), opacity: 0.92 };
+        if (t < 0.08) w = maxW * (0.88 + 0.12*(t/0.08));      // 起笔藏锋
+        else if (t < 0.72) w = maxW * (1.0 - 0.16*((t-0.08)/0.64)); // 中段匀（略减）
+        else w = maxW * (0.84 * (1 - (t-0.72)/0.28));         // 梢端收细
+        return { width: Math.max(0.4, w), opacity: 0.95 };
       };
       ctx.save();
       ctx.globalAlpha = alpha;
-      brushPath(ctx, fine, stamp, stalkPressure(pw0), { opacity: 0.60, spacing: 0.14 });
+      brushPath(ctx, fine, stamp, stalkPressure(pw0), { opacity: stalkOpacity, spacing: 0.12 });
       ctx.restore();
-      // 竹节（鹊爪）：每个内部节点处一道略粗的环 + 上下两小笔顿挫，墨色略深
+      // 竹节（鹊爪）：每个内部节点处一道焦墨粗环 + 上下两小笔顿挫，墨色明显加深
       if (b.nodes && layer.detail) {
         for (const ni of b.nodes) {
           if (ni <= 0 || ni >= dpts.length-1) continue;
@@ -2052,32 +2163,37 @@ body.gallery-mode #toast { display:none !important; }
           const nx = -uy, ny = ux;             // 垂直竿方向
           // 节处竿宽（根粗梢细）
           const tpos = ni/(dpts.length-1);
-          const nodeW = pw0 * (1.0 - 0.28*tpos);
-          const hw = nodeW * 0.78;
-          ctx.strokeStyle = 'rgba(20,16,12,'+(0.72*alpha)+')';
+          const nodeW = pw0 * (1.0 - 0.25*tpos);
+          const hw = nodeW * 0.92;
+          // v5.2: 节用焦墨(#1a1612)，明显比竿身深
           ctx.lineCap = 'round';
-          // 上环（鹊爪上挑）：向上游方向微凸的短弧
-          ctx.lineWidth = Math.max(2.0, nodeW*0.14);
+          ctx.lineJoin = 'round';
+          // 上环（鹊爪上挑）：向上游方向微凸的短弧，粗重有隶意
+          ctx.strokeStyle = 'rgba(20,16,12,'+(0.92*alpha)+')';
+          ctx.lineWidth = Math.max(2.6, nodeW*0.20);
           ctx.beginPath();
-          ctx.moveTo(p.x - nx*hw - ux*nodeW*0.18, p.y - ny*hw - uy*nodeW*0.18);
+          ctx.moveTo(p.x - nx*hw - ux*nodeW*0.22, p.y - ny*hw - uy*nodeW*0.22);
           ctx.quadraticCurveTo(
-            p.x + ux*nodeW*0.12, p.y + uy*nodeW*0.12,
-            p.x + nx*hw - ux*nodeW*0.05, p.y + ny*hw - uy*nodeW*0.05);
+            p.x + ux*nodeW*0.16, p.y + uy*nodeW*0.16,
+            p.x + nx*hw - ux*nodeW*0.06, p.y + ny*hw - uy*nodeW*0.06);
           ctx.stroke();
-          // 下环（顿挫）：较直的一道横线，略短
-          ctx.lineWidth = Math.max(1.2, nodeW*0.10);
-          ctx.globalAlpha = alpha*0.90;
+          // 下环（顿挫）：较直的一道短横，略短，有顿挫粗细
+          ctx.strokeStyle = 'rgba(20,16,12,'+(0.80*alpha)+')';
+          ctx.lineWidth = Math.max(1.8, nodeW*0.14);
+          ctx.globalAlpha = alpha;
           ctx.beginPath();
-          ctx.moveTo(p.x - nx*hw*0.85 + ux*nodeW*0.1, p.y - ny*hw*0.85 + uy*nodeW*0.1);
-          ctx.lineTo(p.x + nx*hw*0.85 + ux*nodeW*0.1, p.y + ny*hw*0.85 + uy*nodeW*0.1);
+          ctx.moveTo(p.x - nx*hw*0.88 + ux*nodeW*0.12, p.y - ny*hw*0.88 + uy*nodeW*0.12);
+          ctx.lineTo(p.x + nx*hw*0.88 + ux*nodeW*0.12, p.y + ny*hw*0.88 + uy*nodeW*0.12);
           ctx.stroke();
-          // 鹊爪顿挫：两端向梢部挑出的两小笔
-          ctx.lineWidth = Math.max(1.1, nodeW*0.13);
-          ctx.globalAlpha = alpha*0.50;
+          // 鹊爪顿挫：两端向梢部挑出的两小笔，可见但不夸张
+          ctx.strokeStyle = 'rgba(20,16,12,'+(0.70*alpha)+')';
+          ctx.lineWidth = Math.max(1.4, nodeW*0.16);
           for (const side of [-1, 1]) {
             ctx.beginPath();
-            ctx.moveTo(p.x + nx*hw*0.72*side + ux*nodeW*0.08, p.y + ny*hw*0.72*side + uy*nodeW*0.08);
-            ctx.lineTo(p.x + nx*hw*0.92*side - ux*nodeW*0.35, p.y + ny*hw*0.92*side - uy*nodeW*0.35);
+            ctx.moveTo(p.x + nx*hw*0.78*side + ux*nodeW*0.10, p.y + ny*hw*0.78*side + uy*nodeW*0.10);
+            ctx.quadraticCurveTo(
+              p.x + nx*hw*0.92*side - ux*nodeW*0.12, p.y + ny*hw*0.92*side - uy*nodeW*0.12,
+              p.x + nx*hw*0.98*side - ux*nodeW*0.40, p.y + ny*hw*0.98*side - uy*nodeW*0.40);
             ctx.stroke();
           }
           ctx.globalAlpha = alpha;
