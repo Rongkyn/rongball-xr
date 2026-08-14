@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- 墨园 v5.0 · Command Bus · 人-Agent统一通道 · 兰花精确构图 --><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>墨园 · Ink Garden</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" rel="stylesheet"><style>:root {
+<!DOCTYPE html><!-- 墨园 v4.3 · 飞白笔触 + brush花瓣 · 离屏刮白飞白引擎 + stamp铺贴花瓣替代椭圆fill --><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>墨园 · Ink Garden</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" rel="stylesheet"><style>:root {
   --paper:#e8dfc8;
   --paper-2:#ddd2b8;
   --ink:#1a1612;
@@ -805,507 +805,18 @@ body.gallery-mode #toast { display:none !important; }
     const sf = f * f * (3 - 2 * f);
     return a + (b - a) * sf;
   }
-  // ═══════════════════════════════════════════════════════════════
-  // InkCommandBus v5.0 — 人-Agent统一通道（工坊契约v1.5第8节）
-  // 所有状态变更必须经此通道。人和AI构造同一种Command，走同一执行路径。
-  // ═══════════════════════════════════════════════════════════════
-  class InkCommandBus {
-    constructor() {
-      this._undoStack = [];
-      this._redoStack = [];
-      this._eventLog = [];
-      this._eventCounter = 0;
-      this._maxStack = 100;
-      this._batchDepth = 0;
-      this._batchUndos = null;
-      this._handlers = {};
-    }
-
-    // 注册Command处理器：{ validate(params), execute(params, ctx), undo(undoData) }
-    register(type, handler) {
-      this._handlers[type] = handler;
-    }
-
-    // 唯一入口
-    dispatch(command) {
-      if (!command || typeof command !== 'object')
-        return { success: false, error: 'Command must be an object' };
-      const type = command.type;
-      if (!type || typeof type !== 'string')
-        return { success: false, error: 'Command.type is required' };
-      const handler = this._handlers[type];
-      if (!handler)
-        return { success: false, error: 'Unknown command type: ' + type };
-
-      const params = command.params || {};
-      const actor = command.actor || 'system';
-
-      // 验证
-      if (handler.validate) {
-        const vErr = handler.validate(params);
-        if (vErr) return { success: false, error: vErr };
-      }
-
-      // 高层Command可展开为原子Command序列
-      if (handler.expand) {
-        return this._dispatchComposite(type, params, actor, handler, command);
-      }
-
-      // 执行原子Command
-      let result;
-      try {
-        result = handler.execute(params, { actor: actor });
-      } catch(e) {
-        return { success: false, error: 'Execute error: ' + e.message };
-      }
-      if (result && result.success === false)
-        return { success: false, error: result.error || 'Execution failed' };
-
-      const undoData = (result && result.undoData) || {};
-      const eventId = this._recordEvent(type, params, actor, undoData);
-
-      // 入Undo栈
-      this._pushUndo({
-        type: type,
-        params: this._clone(params),
-        actor: actor,
-        eventId: eventId,
-        undoData: this._clone(undoData),
-        composite: false
-      });
-
-      // 非批量模式下清空redo
-      if (this._batchDepth === 0) this._redoStack = [];
-
-      return { success: true, eventId: eventId };
-    }
-
-    _dispatchComposite(type, params, actor, handler, origCommand) {
-      let subCommands;
-      try {
-        subCommands = handler.expand(params, { actor: actor });
-      } catch(e) {
-        return { success: false, error: 'Expand error: ' + e.message };
-      }
-      if (!Array.isArray(subCommands))
-        return { success: false, error: 'expand() must return an array' };
-
-      this._batchDepth++;
-      this._batchUndos = [];
-      const subEventIds = [];
-      let firstError = null;
-
-      for (let i = 0; i < subCommands.length; i++) {
-        const sc = subCommands[i];
-        if (!sc.actor) sc.actor = actor;
-        if (!sc.timestamp) sc.timestamp = (origCommand.timestamp || Date.now()) + i;
-        const r = this.dispatch(sc);
-        if (r.success) {
-          subEventIds.push(r.eventId);
-        } else {
-          firstError = r.error;
-          // 回滚已执行的子Command
-          for (let j = this._batchUndos.length - 1; j >= 0; j--) {
-            this._undoEntry(this._batchUndos[j]);
-          }
-          this._batchUndos = null;
-          this._batchDepth--;
-          return { success: false, error: 'Composite failed at sub-cmd ' + i + ': ' + firstError };
-        }
-      }
-
-      // 将整组子Command的undo记录合并为一条
-      const groupUndos = this._batchUndos.slice();
-      this._batchUndos = null;
-      this._batchDepth--;
-
-      // 标记子undo记录为复合根（用于兰花整株回滚）
-      for (let gi = 0; gi < groupUndos.length; gi++) {
-        if (groupUndos[gi].undoData) {
-          groupUndos[gi].undoData.compositeRoot = true;
-        }
-      }
-
-      // 子Command在batchDepth>0时只进入_batchUndos，不进入_undoStack
-      // 所以不需要splice，直接添加composite条目即可
-
-      const eventId = this._recordEvent(type, params, actor, { subEventIds: subEventIds });
-      this._pushUndo({
-        type: type,
-        params: this._clone(params),
-        actor: actor,
-        eventId: eventId,
-        composite: true,
-        subEntries: groupUndos,
-        subEventIds: subEventIds
-      });
-
-      if (this._batchDepth === 0) this._redoStack = [];
-      return { success: true, eventId: eventId };
-    }
-
-    _pushUndo(entry) {
-      if (this._batchDepth > 0) {
-        this._batchUndos.push(entry);
-      } else {
-        this._undoStack.push(entry);
-        if (this._undoStack.length > this._maxStack) this._undoStack.shift();
-      }
-    }
-
-    _recordEvent(type, params, actor, undoData) {
-      const eventId = 'evt-' + (++this._eventCounter);
-      this._eventLog.push({
-        eventId: eventId,
-        type: type,
-        params: this._clone(params),
-        actor: actor,
-        timestamp: Date.now()
-      });
-      if (this._eventLog.length > 500) this._eventLog.shift();
-      return eventId;
-    }
-
-    _undoEntry(entry) {
-      const handler = this._handlers[entry.type];
-      if (handler && handler.undo) {
-        try { handler.undo(entry.undoData, entry.params); } catch(e) {}
-      }
-    }
-
-    _redoEntry(entry) {
-      const handler = this._handlers[entry.type];
-      if (handler && handler.execute) {
-        try {
-          const r = handler.execute(entry.params, { actor: entry.actor, redo: true });
-          if (r && r.undoData) entry.undoData = this._clone(r.undoData);
-        } catch(e) {}
-      }
-    }
-
-    undo() {
-      if (this._undoStack.length === 0) return { success: false, error: 'Nothing to undo' };
-      const entry = this._undoStack.pop();
-      if (entry.composite && entry.subEntries) {
-        // 整组回滚
-        for (let i = entry.subEntries.length - 1; i >= 0; i--) {
-          this._undoEntry(entry.subEntries[i]);
-        }
-      } else {
-        this._undoEntry(entry);
-      }
-      this._redoStack.push(entry);
-      if (this._redoStack.length > this._maxStack) this._redoStack.shift();
-      return { success: true, eventId: entry.eventId };
-    }
-
-    redo() {
-      if (this._redoStack.length === 0) return { success: false, error: 'Nothing to redo' };
-      const entry = this._redoStack.pop();
-      if (entry.composite && entry.subEntries) {
-        for (let i = 0; i < entry.subEntries.length; i++) {
-          this._redoEntry(entry.subEntries[i]);
-        }
-      } else {
-        this._redoEntry(entry);
-      }
-      this._undoStack.push(entry);
-      if (this._undoStack.length > this._maxStack) this._undoStack.shift();
-      return { success: true, eventId: entry.eventId };
-    }
-
-    canUndo() { return this._undoStack.length > 0; }
-    canRedo() { return this._redoStack.length > 0; }
-
-    // v5.0: 完全重置Bus状态（用于loadHistory前清空）
-    reset() {
-      this._undoStack = [];
-      this._redoStack = [];
-      this._eventLog = [];
-      this._eventCounter = 0;
-    }
-
-    getEventLog() { return this._clone(this._eventLog); }
-
-    serialize() {
-      return {
-        version: 1,
-        undoStack: this._clone(this._undoStack),
-        redoStack: this._clone(this._redoStack),
-        eventLog: this._clone(this._eventLog),
-        eventCounter: this._eventCounter
-      };
-    }
-
-    loadHistory(history) {
-      if (!history || !Array.isArray(history.commands))
-        return { success: false, error: 'Invalid history format' };
-      // 清空当前Bus状态
-      this.reset();
-      const results = [];
-      for (let i = 0; i < history.commands.length; i++) {
-        const cmd = history.commands[i];
-        if (!cmd.timestamp) cmd.timestamp = Date.now() + i;
-        if (!cmd.actor) cmd.actor = 'system';
-        const r = this.dispatch(cmd);
-        results.push(r);
-        if (!r.success) return { success: false, error: 'Failed at command ' + i + ': ' + r.error };
-      }
-      return { success: true, executed: results.length };
-    }
-
-    // 获取当前可回放的Command序列（从undo栈重建）
-    getHistory() {
-      const commands = [];
-      for (const entry of this._undoStack) {
-        commands.push({
-          type: entry.type,
-          params: this._clone(entry.params),
-          actor: entry.actor || 'system',
-          timestamp: entry.eventId
-        });
-      }
-      return { version: 1, commands: commands };
-    }
-
-    _clone(obj) {
-      if (obj === null || obj === undefined) return obj;
-      return JSON.parse(JSON.stringify(obj));
-    }
-  }
-
-  // 全局Bus实例
-  const bus = new InkCommandBus();
-
-  // v5.0: Plant注册表 — undoData中存ID而非对象引用（JSON克隆会丢失引用）
-  let _plantIdCounter = 0;
-  const _plantRegistry = {};
-  function registerPlant(p) {
-    if (!p._pid) { p._pid = 'p' + (++_plantIdCounter); _plantRegistry[p._pid] = p; }
-    return p._pid;
-  }
-  function getPlant(pid) { return _plantRegistry[pid] || null; }
-
-  // ─── 兰花构图数据生成（v5.0: 从buildOrchid提取，支持options覆盖）───
-  // 返回 { leaves: [...], flowers: [...] }，不依赖Plant实例
-  function buildOrchidData(x, y, sp, options, seedFn) {
-    options = options || {};
-    const rand = seedFn || Math.random;
-    const randS = (s) => { const v = Math.sin(s * 127.1 + seedFn._seed * 0.001) * 43758.5453; return v - Math.floor(v); };
-    const UP = -Math.PI / 2;
-    const isCompose = options.compose === true ||
-      (typeof urlParams !== 'undefined' && urlParams.get('compose') === '1');
-
-    // 种子
-    const seed = options.seed !== undefined ? options.seed : Math.floor(rand() * 10000);
-    const _sr = (off) => { const v = Math.sin(seed + off * 127.1) * 43758.5453; return v - Math.floor(v); };
-
-    const lean = options.lean !== undefined ? options.lean :
-      ((_sr(101) < 0.5 ? -1 : 1) * (0.35 + _sr(102) * 0.5));
-
-    // 叶数：options覆盖，否则7-9
-    let n;
-    if (options.leafCount !== undefined) {
-      n = Math.max(3, Math.min(12, options.leafCount));
-    } else {
-      n = 7 + Math.floor(_sr(103) * 3);
-    }
-
-    const tones = options.leafTones || ['nong','nong','zhong','zhong','zhong','dan','dan','dan','dan'];
-    const baseSpread = isCompose ? 28 : 14;
-    const baseOffset = (i) => {
-      if (i === 0) return { x: x - (baseSpread + _sr(200) * 6), y: y - (2 + _sr(201) * 4) };
-      if (i === 1) return { x: x + (baseSpread + _sr(202) * 6), y: y - (4 + _sr(203) * 4) };
-      if (i === 2) return { x: x + (lean > 0 ? -(baseSpread * 0.6) : baseSpread * 0.6) + _sr(204) * 4, y: y - (6 + _sr(205) * 5) };
-      if (i === 3) return { x: x + (lean > 0 ? baseSpread * 0.5 : -baseSpread * 0.5) + _sr(206) * 5, y: y - (10 + _sr(207) * 5) };
-      if (i === 4) return { x: x + (lean > 0 ? -baseSpread * 0.4 : baseSpread * 0.4) + _sr(208) * 4, y: y - (12 + _sr(209) * 5) };
-      const side = i % 2 === 0 ? -1 : 1;
-      return { x: x + side * (4 + _sr(210 + i) * 6), y: y - (14 + _sr(211 + i) * 6 + i * 2) };
-    };
-
-    const cubicLeaf = (bx, by, ang, len, sag, flip) => {
-      const N = 40;
-      const pts = [];
-      let cx = bx, cy = by;
-      const DOWN = Math.PI / 2;
-      let droop = DOWN - ang;
-      while (droop > Math.PI) droop -= Math.PI * 2;
-      while (droop < -Math.PI) droop += Math.PI * 2;
-      const bend = sag * 0.8;
-      const twist = flip * 0.04;
-      for (let i = 0; i <= N; i++) {
-        const t = i / N;
-        pts.push({ x: cx, y: cy });
-        if (i < N) {
-          const dt = 1 / N;
-          const a = ang + droop * bend * t * t + Math.sin(t * Math.PI) * twist;
-          cx += Math.cos(a) * len * dt;
-          cy += Math.sin(a) * len * dt;
-        }
-      }
-      return pts;
-    };
-
-    const BL = sp.baseLen, BW = sp.baseWidth;
-    const L = isCompose ? 1.75 : 1.0;
-    const aSkew = isCompose ? 0.22 : 0.18;
-    const aCross = isCompose ? -0.28 : -0.22;
-    const aBreak = isCompose ? 0.65 : 0.55;
-    const sMain = isCompose ? 0.38 : 0.22;
-    const sCross = isCompose ? 0.48 : 0.30;
-    const sBreak = isCompose ? 0.78 : 0.60;
-
-    const leaves = [];
-
-    // 构建叶子参数数组
-    const leafDefs = [];
-    // 前三笔定构图
-    const ang0 = options.leafAngles && options.leafAngles[0] !== undefined ? options.leafAngles[0]
-      : (UP + (lean > 0 ? aSkew : -aSkew) + (_sr(12) - 0.5) * 0.06);
-    const len0 = options.leafLengths && options.leafLengths[0] !== undefined ? options.leafLengths[0]
-      : (BL * L * (1.35 + _sr(13) * 0.15));
-    const w0 = options.leafWidths && options.leafWidths[0] !== undefined ? options.leafWidths[0]
-      : (BW * (1.0 + _sr(14) * 0.15));
-    const sag0 = options.leafSags && options.leafSags[0] !== undefined ? options.leafSags[0]
-      : (sMain + _sr(15) * 0.08);
-    leafDefs.push({ ang: ang0, len: len0, w: w0, sag: sag0 });
-
-    const ang1 = options.leafAngles && options.leafAngles[1] !== undefined ? options.leafAngles[1]
-      : (UP + (lean > 0 ? aCross : -aCross) + (_sr(22) - 0.5) * 0.06);
-    const len1 = options.leafLengths && options.leafLengths[1] !== undefined ? options.leafLengths[1]
-      : (BL * L * (1.20 + _sr(23) * 0.10));
-    const w1 = options.leafWidths && options.leafWidths[1] !== undefined ? options.leafWidths[1]
-      : (BW * (0.88 + _sr(24) * 0.12));
-    const sag1 = options.leafSags && options.leafSags[1] !== undefined ? options.leafSags[1]
-      : (sCross + _sr(25) * 0.08);
-    leafDefs.push({ ang: ang1, len: len1, w: w1, sag: sag1 });
-
-    const ang2 = options.leafAngles && options.leafAngles[2] !== undefined ? options.leafAngles[2]
-      : (UP + (lean > 0 ? aBreak : -aBreak) + (_sr(32) - 0.5) * 0.08);
-    const len2 = options.leafLengths && options.leafLengths[2] !== undefined ? options.leafLengths[2]
-      : (BL * L * (1.00 + _sr(33) * 0.10));
-    const w2 = options.leafWidths && options.leafWidths[2] !== undefined ? options.leafWidths[2]
-      : (BW * (0.78 + _sr(34) * 0.10));
-    const sag2 = options.leafSags && options.leafSags[2] !== undefined ? options.leafSags[2]
-      : (sBreak + _sr(35) * 0.12);
-    leafDefs.push({ ang: ang2, len: len2, w: w2, sag: sag2 });
-
-    if (n > 3) {
-      const ang3 = options.leafAngles && options.leafAngles[3] !== undefined ? options.leafAngles[3]
-        : (UP + (lean > 0 ? -(aBreak * 0.7) : aBreak * 0.7) + (_sr(36) - 0.5) * 0.12);
-      const len3 = options.leafLengths && options.leafLengths[3] !== undefined ? options.leafLengths[3]
-        : (BL * L * (0.85 + _sr(37) * 0.12));
-      const w3 = options.leafWidths && options.leafWidths[3] !== undefined ? options.leafWidths[3]
-        : (BW * (0.68 + _sr(38) * 0.10));
-      const sag3 = options.leafSags && options.leafSags[3] !== undefined ? options.leafSags[3]
-        : (0.50 + _sr(39) * 0.15);
-      leafDefs.push({ ang: ang3, len: len3, w: w3, sag: sag3 });
-    }
-    if (n > 4) {
-      const ang4 = options.leafAngles && options.leafAngles[4] !== undefined ? options.leafAngles[4]
-        : (UP + lean * 0.12 + (_sr(42) - 0.5) * 0.15);
-      const len4 = options.leafLengths && options.leafLengths[4] !== undefined ? options.leafLengths[4]
-        : (BL * L * (0.70 + _sr(43) * 0.15));
-      const w4 = options.leafWidths && options.leafWidths[4] !== undefined ? options.leafWidths[4]
-        : (BW * (0.58 + _sr(44) * 0.10));
-      const sag4 = options.leafSags && options.leafSags[4] !== undefined ? options.leafSags[4]
-        : (0.38 + _sr(45) * 0.12);
-      leafDefs.push({ ang: ang4, len: len4, w: w4, sag: sag4 });
-    }
-    for (let i = 5; i < n; i++) {
-      let ang, len, w, sag;
-      if (options.leafAngles && options.leafAngles[i] !== undefined) {
-        ang = options.leafAngles[i];
-      } else {
-        const r = _sr(40 + i);
-        if (r < 0.45) ang = UP + lean * 0.08 + (_sr(41 + i) - 0.5) * 0.25;
-        else if (r < 0.75) ang = UP + (_sr(42 + i) < 0.5 ? 0.30 : -0.30) + (_sr(43 + i) - 0.5) * 0.15;
-        else ang = UP + (_sr(44 + i) < 0.5 ? 0.55 : -0.55) + (_sr(45 + i) - 0.5) * 0.15;
-      }
-      if (options.leafLengths && options.leafLengths[i] !== undefined) {
-        len = options.leafLengths[i];
-      } else {
-        len = BL * L * (0.38 + _sr(46 + i) * 0.32);
-      }
-      if (options.leafWidths && options.leafWidths[i] !== undefined) {
-        w = options.leafWidths[i];
-      } else {
-        w = BW * (0.42 + _sr(47 + i) * 0.22);
-      }
-      if (options.leafSags && options.leafSags[i] !== undefined) {
-        sag = options.leafSags[i];
-      } else {
-        const r = _sr(40 + i);
-        sag = r < 0.45 ? 0.25 + _sr(48 + i) * 0.12 : 0.45 + _sr(48 + i) * 0.20;
-      }
-      leafDefs.push({ ang: ang, len: len, w: w, sag: sag });
-    }
-
-    for (let i = 0; i < leafDefs.length; i++) {
-      const def = leafDefs[i];
-      const b = baseOffset(i);
-      const flip = _sr(300 + i) < 0.5 ? -1 : 1;
-      const pts = cubicLeaf(b.x, b.y, def.ang, def.len, def.sag, flip);
-      leaves.push({
-        id: i, kind: 'leaf', points: pts, angle: def.ang, length: def.len,
-        width: def.w, depth: 0, children: [], hasLeaf: false,
-        leafTone: tones[i] || 'dan'
-      });
-    }
-
-    // 花的位置数据
-    const flowers = [];
-    const sortedLeaves = leaves.slice().sort(function(a, b) { return b.length - a.length; });
-    if (options.flowerPosition) {
-      // 精确指定花的位置
-      if (Array.isArray(options.flowerPosition)) {
-        for (let fi = 0; fi < options.flowerPosition.length; fi++) {
-          const fp = options.flowerPosition[fi];
-          flowers.push({
-            x: fp.x !== undefined ? fp.x : x,
-            y: fp.y !== undefined ? fp.y : y - 40,
-            size: fp.size !== undefined ? fp.size : (fi === 0 ? 7.5 : 5.0),
-            isMain: fi === 0
-          });
-        }
-      }
-    } else {
-      // 默认2-4朵花（与原逻辑一致）
-      const flowerCount = 2 + (_sr(55) > 0.4 ? 1 : 0) + (_sr(59) > 0.7 ? 1 : 0);
-      for (let fi = 0; fi < flowerCount; fi++) {
-        const leafIdx = fi < sortedLeaves.length ? fi : (fi % sortedLeaves.length);
-        const leaf = sortedLeaves[leafIdx];
-        if (!leaf || leaf.points.length < 5) continue;
-        const idx = Math.floor(leaf.points.length * (0.28 + _sr(56 + fi) * 0.25));
-        const p = leaf.points[idx];
-        const isMain = fi === 0;
-        const fsz = (isMain ? 7.5 : 5.0) + _sr(57 + fi) * 1.2;
-        flowers.push({ x: p.x, y: p.y, size: fsz, isMain: isMain });
-      }
-    }
-
-    return { leaves: leaves, flowers: flowers, seed: seed, lean: lean };
-  }
-
   class Plant {
-    constructor(x, y, si, opts) {
+    constructor(x, y, si) {
       this.x = x; this.y = y;
       this.species = species[si];
       this.growth = 0;
       this.branches = [];
-      this.seed = (opts && opts.seed !== undefined) ? opts.seed : Math.random() * 10000;
+      this.seed = Math.random() * 10000;
       this.age = 0; this.dying = false; this.fade = 1;
-      this._opts = opts || null;        // v5.0: Command-driven构图参数
-      this._cmdFlowers = null;          // v5.0: Command指定的花数据
-      this._pid = null;                 // v5.0: Plant注册表ID
       this.buildBranches();
       this.maxGrowth = this.branches.length;
       this.leafTimer = 200 + Math.random() * 400;
       this.redBlossomId = -1;
-      // v5.0: compose模式立即完成生长
-      if (opts && opts.instant) {
-        this.growth = this.maxGrowth;
-      }
     }
     rand(offset) {
       const s = Math.sin(this.seed + offset * 127.1) * 43758.5453;
@@ -1317,11 +828,7 @@ body.gallery-mode #toast { display:none !important; }
       if (sp.name === '竹') {
         this.buildBamboo();
       } else if (sp.name === '兰') {
-        // v5.0: 使用buildOrchidData生成构图数据，支持options覆盖
-        const data = buildOrchidData(this.x, this.y, sp, this._opts || undefined);
-        this.branches = data.leaves;
-        this._cmdFlowers = data.flowers;
-        this.seed = data.seed;
+        this.buildOrchid();
       } else if (sp.name === '柳') {
         this.buildWillow();
       } else {
@@ -2212,31 +1719,17 @@ body.gallery-mode #toast { display:none !important; }
     drawOrchidFlowers(ctx, time, alpha) {
       const leaves = this.branches.filter(function(b){ return b.kind === 'leaf'; });
       if (leaves.length < 2) return;
-      // v5.0: 优先使用Command指定的花数据
-      let flowerList;
-      if (this._cmdFlowers && this._cmdFlowers.length > 0) {
-        flowerList = this._cmdFlowers;
-      } else {
-        leaves.sort(function(a,b){ return b.length - a.length; });
-        const flowerCount = 2 + (this.rand(55) > 0.4 ? 1 : 0) + (this.rand(59) > 0.7 ? 1 : 0);
-        flowerList = [];
-        for (let fi = 0; fi < flowerCount; fi++) {
-          const leafIdx = fi < leaves.length ? fi : (fi % leaves.length);
-          const leaf = leaves[leafIdx];
-          if (!leaf || leaf.points.length < 5) continue;
-          const idx = Math.floor(leaf.points.length * (0.28 + this.rand(56+fi)*0.25));
-          const p = leaf.points[idx];
-          const isMain = fi === 0;
-          const fsz = (isMain ? 7.5 : 5.0) + this.rand(57+fi)*1.2;
-          flowerList.push({ x: p.x, y: p.y, size: fsz, isMain: isMain });
-        }
-      }
-      for (let fi = 0; fi < flowerList.length; fi++) {
-        const fl = flowerList[fi];
-        const p = { x: fl.x, y: fl.y };
-        const sway = Math.sin(time*0.002+fi)*0.04;
-        const isMain = fl.isMain !== false;
-        const fsz = fl.size || (isMain ? 7.5 : 5.0);
+      leaves.sort(function(a,b){ return b.length - a.length; });
+      const flowerCount = 2 + (this.rand(55) > 0.4 ? 1 : 0) + (this.rand(59) > 0.7 ? 1 : 0);
+      for (let fi = 0; fi < flowerCount; fi++) {
+        const leafIdx = fi < leaves.length ? fi : (fi % leaves.length);
+        const leaf = leaves[leafIdx];
+        if (!leaf || leaf.points.length < 5) continue;
+        const idx = Math.floor(leaf.points.length * (0.28 + this.rand(56+fi)*0.25));
+        const p = leaf.points[idx];
+        const sway = Math.sin(time*0.002+idx+fi)*0.04;
+        const isMain = fi === 0;
+        const fsz = (isMain ? 7.5 : 5.0) + this.rand(57+fi)*1.2;
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(sway);
@@ -2247,6 +1740,7 @@ body.gallery-mode #toast { display:none !important; }
           const pa = petalAngles[pet] + (this.rand(60+pet+fi)-0.5)*0.08;
           const pLen = fsz * (pet < 3 ? 1.0 : 0.55);
           const pWid = fsz * (pet < 3 ? 0.45 : 0.35);
+          // Brush-stamp petals instead of flat ellipse fill
           const petalColor = isMain ? (pet < 3 ? INK.zhong : INK.dan) : (pet < 3 ? INK.dan : INK.qing);
           const petalAlpha = (isMain ? (pet < 3 ? 0.60 : 0.45) : (pet < 3 ? 0.50 : 0.38)) * alpha;
           ctx.save();
@@ -2268,6 +1762,7 @@ body.gallery-mode #toast { display:none !important; }
           }
           ctx.restore();
         }
+        // 花心胭脂点——醒目
         ctx.fillStyle = INK.rouge;
         ctx.globalAlpha = 0.75*alpha;
         ctx.beginPath();
@@ -2367,15 +1862,10 @@ body.gallery-mode #toast { display:none !important; }
     }
   }
   function randomizeWind() {
-    bus.dispatch({
-      type: 'setWind',
-      params: {
-        strength: 0.08 + Math.random() * 0.17,
-        gust: 0.15 + Math.random() * 0.2,
-        direction: Math.random() > 0.5 ? 1 : -1
-      },
-      actor: 'human'
-    });
+    wind.targetStrength = 0.08+Math.random()*0.17;
+    wind.direction = Math.random()>0.5?1:-1;
+    wind.gustStrength = 0.15+Math.random()*0.2;
+    wind.gustStart = performance.now();
   }
   function drawGround(ctx) {
     const grad = ctx.createLinearGradient(0, groundY-40, 0, H);
@@ -2424,389 +1914,6 @@ body.gallery-mode #toast { display:none !important; }
     ctx.fill();
     ctx.globalAlpha = 1;
   }
-
-  // ═══════════════════════════════════════════════════════════════
-  // Command Handlers 注册（v5.0）
-  // ═══════════════════════════════════════════════════════════════
-
-  // plantSpecies: 高层Command，展开为原子Command序列
-  bus.register('plantSpecies', {
-    validate: function(p) {
-      if (typeof p.x !== 'number' || typeof p.y !== 'number') return 'x,y required';
-      if (typeof p.si !== 'number' || p.si < 0 || p.si >= species.length) return 'invalid si';
-      return null;
-    },
-    expand: function(p, ctx) {
-      var subs = [];
-      var x = Math.max(10, Math.min(W-10, p.x));
-      var y = Math.max(10, Math.min(H-10, p.y));
-      var opts = p.options || {};
-      // 第一阶段：兰花走精确构图，其他物种走addStem原子（保留旧路径）
-      if (p.si === 4) {
-        // 兰花：通过buildOrchidData生成原子Command
-        var sp = species[p.si];
-        var data = buildOrchidData(x, y, sp, opts);
-        // addStem for each leaf
-        for (var i = 0; i < data.leaves.length; i++) {
-          var leaf = data.leaves[i];
-          subs.push({
-            type: 'addStem',
-            params: {
-              points: leaf.points,
-              thickness: leaf.width,
-              inkTone: leaf.leafTone || 'nong',
-              plantX: x, plantY: y, si: p.si,
-              kind: 'leaf',
-              branchId: leaf.id,
-              angle: leaf.angle,
-              length: leaf.length,
-              seed: data.seed,
-              opts: opts
-            }
-          });
-        }
-        // addFlower for each flower
-        for (var j = 0; j < data.flowers.length; j++) {
-          var fl = data.flowers[j];
-          subs.push({
-            type: 'addFlower',
-            params: {
-              x: fl.x, y: fl.y,
-              size: fl.size,
-              isMain: fl.isMain,
-              plantX: x, plantY: y, si: p.si,
-              seed: data.seed,
-              opts: opts
-            }
-          });
-        }
-      } else {
-        // 非兰花：用一个addStem原子Command，内部创建Plant（保留旧构建路径）
-        subs.push({
-          type: 'addStem',
-          params: {
-            plantX: x, plantY: y, si: p.si,
-            legacyPlant: true,
-            seed: opts.seed,
-            opts: opts
-          }
-        });
-      }
-      return subs;
-    }
-  });
-
-  // addStem: 原子Command — 添加枝干/兰叶
-  bus.register('addStem', {
-    validate: function(p) {
-      if (p.legacyPlant) {
-        if (typeof p.plantX !== 'number' || typeof p.plantY !== 'number') return 'plantX,plantY required';
-        if (typeof p.si !== 'number') return 'si required';
-      } else {
-        if (!Array.isArray(p.points) || p.points.length < 2) return 'points array required';
-        if (typeof p.thickness !== 'number') return 'thickness required';
-      }
-      return null;
-    },
-    execute: function(p, ctx) {
-      if (p.legacyPlant || p.si !== 4) {
-        // 非兰花路径：创建完整Plant（保留旧构建）
-        var plantOpts = {};
-        if (p.seed !== undefined) plantOpts.seed = p.seed;
-        if (p.opts) {
-          if (p.opts.animate === false || p.opts.instant) plantOpts.instant = true;
-        }
-        // compose模式默认instant
-        var isCompose = typeof urlParams !== 'undefined' && urlParams.get('compose') === '1';
-        if (isCompose && p.opts && p.opts.animate !== true) plantOpts.instant = true;
-
-        var np = new Plant(p.plantX, p.plantY, p.si, plantOpts);
-        // 检查密度和上限（与plantAt一致）
-        var nearby = 0;
-        for (var i = 0; i < plants.length; i++) {
-          if (plants[i].dying) continue;
-          var dx = plants[i].x - p.plantX, dy = plants[i].y - p.plantY;
-          if (dx*dx + dy*dy < 10000) nearby++;
-        }
-        if (nearby > 3) {
-          return { success: false, error: 'Too dense' };
-        }
-        var aliveCount = 0;
-        for (var j = 0; j < plants.length; j++) if (!plants[j].dying) aliveCount++;
-        if (aliveCount >= MAX_PLANTS) {
-          var oldest = null;
-          for (var k = 0; k < plants.length; k++) {
-            if (plants[k].dying) continue;
-            if (!oldest || plants[k].age > oldest.age) oldest = plants[k];
-          }
-          if (oldest) { oldest.dying = true; createInkSplatter(oldest.x, oldest.y, oldest.species.color); }
-        }
-        plants.push(np);
-        plantHistory.push(np);
-        registerPlant(np);
-        createInkSplatter(p.plantX, p.plantY, species[p.si].color);
-        if (!hasPlanted) {
-          hasPlanted = true;
-          if (dom.hint) { dom.hint.style.opacity = '0'; setTimeout(function(){ dom.hint.style.display='none'; }, 600); }
-        }
-        return { undoData: { plantId: np._pid, isNew: true } };
-      }
-
-      // 兰花路径：addStem创建或追加到Plant
-      // 查找同位置的兰花Plant（由同一组Command创建）
-      var targetPlant = null;
-      for (var pi = plants.length - 1; pi >= 0; pi--) {
-        var pp = plants[pi];
-        if (pp.species.name === '兰' && !pp.dying &&
-            Math.abs(pp.x - p.plantX) < 2 && Math.abs(pp.y - p.plantY) < 2 &&
-            pp._cmdBuilding) {
-          targetPlant = pp;
-          break;
-        }
-      }
-      if (!targetPlant) {
-        // 创建新Plant壳
-        var plantOpts2 = { seed: p.seed, instant: true, _cmdBuilding: true };
-        var isCompose2 = typeof urlParams !== 'undefined' && urlParams.get('compose') === '1';
-        if (isCompose2 && p.opts && p.opts.animate !== true) plantOpts2.instant = true;
-        else if (p.opts && (p.opts.animate === false || p.opts.instant)) plantOpts2.instant = true;
-        targetPlant = new Plant(p.plantX, p.plantY, p.si, plantOpts2);
-        targetPlant._cmdBuilding = true;
-        targetPlant.branches = [];
-        targetPlant._cmdFlowers = [];
-        // 密度检查
-        var nearby2 = 0;
-        for (var ni = 0; ni < plants.length; ni++) {
-          if (plants[ni].dying) continue;
-          var ndx = plants[ni].x - p.plantX, ndy = plants[ni].y - p.plantY;
-          if (ndx*ndx + ndy*ndy < 10000) nearby2++;
-        }
-        if (nearby2 > 3) return { success: false, error: 'Too dense' };
-        var ac = 0;
-        for (var aj = 0; aj < plants.length; aj++) if (!plants[aj].dying) ac++;
-        if (ac >= MAX_PLANTS) {
-          var old2 = null;
-          for (var ak = 0; ak < plants.length; ak++) {
-            if (plants[ak].dying) continue;
-            if (!old2 || plants[ak].age > old2.age) old2 = plants[ak];
-          }
-          if (old2) { old2.dying = true; createInkSplatter(old2.x, old2.y, old2.species.color); }
-        }
-        plants.push(targetPlant);
-        plantHistory.push(targetPlant);
-        registerPlant(targetPlant);
-        createInkSplatter(p.plantX, p.plantY, species[p.si].color);
-        if (!hasPlanted) {
-          hasPlanted = true;
-          if (dom.hint) { dom.hint.style.opacity = '0'; setTimeout(function(){ dom.hint.style.display='none'; }, 600); }
-        }
-      }
-      // 追加branch
-      var branch = {
-        id: p.branchId !== undefined ? p.branchId : targetPlant.branches.length,
-        kind: p.kind || 'leaf',
-        points: p.points,
-        angle: p.angle || 0,
-        length: p.length || 0,
-        width: p.thickness,
-        depth: 0,
-        children: [],
-        hasLeaf: false,
-        leafTone: p.inkTone || 'nong'
-      };
-      targetPlant.branches.push(branch);
-      targetPlant.maxGrowth = targetPlant.branches.length;
-      if (targetPlant.growth < targetPlant.maxGrowth) targetPlant.growth = targetPlant.maxGrowth;
-      // 最后一个addStem后由addFlower负责标记_cmdBuilding=false
-      return { undoData: { plantId: targetPlant._pid, branchIndex: targetPlant.branches.length - 1, isNewPlant: targetPlant.branches.length === 1 } };
-    },
-    undo: function(undoData) {
-      var p = getPlant(undoData.plantId);
-      if (!p) return;
-      // v5.0: 兰花由复合Command创建，undo时整株移除（不逐叶删）
-      if (p._cmdFlowers !== undefined && p.species.name === '兰' && undoData.compositeRoot) {
-        p.dying = true;
-        createInkSplatter(p.x, p.y, p.species.color);
-        var hi = plantHistory.indexOf(p);
-        if (hi >= 0) plantHistory.splice(hi, 1);
-      } else if (undoData.branchIndex !== undefined && undoData.branchIndex >= 0 && p.branches.length > 1) {
-        // 单独addLeaf/addStem（非复合）时移除branch
-        p.branches.splice(undoData.branchIndex, 1);
-        p.maxGrowth = p.branches.length;
-      } else {
-        // 移除整个Plant
-        p.dying = true;
-        createInkSplatter(p.x, p.y, p.species.color);
-        var hi2 = plantHistory.indexOf(p);
-        if (hi2 >= 0) plantHistory.splice(hi2, 1);
-      }
-    }
-  });
-
-  // addLeaf: 原子Command — 添加一片叶子（addStem的语义别名，兰叶专用）
-  bus.register('addLeaf', {
-    validate: function(p) {
-      if (typeof p.baseX !== 'number' || typeof p.baseY !== 'number') return 'baseX,baseY required';
-      if (typeof p.angle !== 'number') return 'angle required';
-      if (typeof p.length !== 'number') return 'length required';
-      return null;
-    },
-    execute: function(p, ctx) {
-      // 用悬臂梁模型生成叶子路径
-      var N = 40;
-      var pts = [];
-      var cx = p.baseX, cy = p.baseY;
-      var DOWN = Math.PI/2;
-      var droop = DOWN - p.angle;
-      while (droop > Math.PI) droop -= Math.PI*2;
-      while (droop < -Math.PI) droop += Math.PI*2;
-      var sag = p.curve !== undefined ? p.curve : 0.38;
-      var bend = sag * 0.8;
-      var flip = p.flip || 1;
-      var twist = flip * 0.04;
-      for (var i = 0; i <= N; i++) {
-        var t = i/N;
-        pts.push({x:cx, y:cy});
-        if (i < N) {
-          var dt = 1/N;
-          var a = p.angle + droop*bend*t*t + Math.sin(t*Math.PI)*twist;
-          cx += Math.cos(a)*p.length*dt;
-          cy += Math.sin(a)*p.length*dt;
-        }
-      }
-      // 转发为addStem
-      return bus._handlers['addStem'].execute({
-        points: pts,
-        thickness: p.thickness || 6,
-        inkTone: p.inkTone || 'nong',
-        plantX: p.plantX !== undefined ? p.plantX : p.baseX,
-        plantY: p.plantY !== undefined ? p.plantY : p.baseY,
-        si: 4,
-        kind: 'leaf',
-        seed: p.seed
-      }, ctx);
-    },
-    undo: function(undoData) {
-      bus._handlers['addStem'].undo(undoData);
-    }
-  });
-
-  // addFlower: 原子Command — 添加花朵
-  bus.register('addFlower', {
-    validate: function(p) {
-      if (typeof p.x !== 'number' || typeof p.y !== 'number') return 'x,y required';
-      if (typeof p.size !== 'number') return 'size required';
-      return null;
-    },
-    execute: function(p, ctx) {
-      // 找到同位置的兰花Plant
-      var targetPlant = null;
-      for (var pi = plants.length - 1; pi >= 0; pi--) {
-        var pp = plants[pi];
-        if (pp.species.name === '兰' && !pp.dying &&
-            Math.abs(pp.x - p.plantX) < 2 && Math.abs(pp.y - p.plantY) < 2) {
-          targetPlant = pp;
-          break;
-        }
-      }
-      if (!targetPlant) {
-        // 没有Plant则创建一个
-        targetPlant = new Plant(p.plantX, p.plantY, 4, { seed: p.seed, instant: true });
-        targetPlant.branches = [];
-        targetPlant._cmdFlowers = [];
-        plants.push(targetPlant);
-        plantHistory.push(targetPlant);
-        registerPlant(targetPlant);
-      }
-      if (!targetPlant._cmdFlowers) targetPlant._cmdFlowers = [];
-      var flower = {
-        x: p.x, y: p.y, size: p.size,
-        isMain: p.isMain !== false,
-        petals: p.petals || 5,
-        angle: p.angle || 0
-      };
-      targetPlant._cmdFlowers.push(flower);
-      // 标记构建完成
-      targetPlant._cmdBuilding = false;
-      return { undoData: { plantId: targetPlant._pid, flowerIndex: targetPlant._cmdFlowers.length - 1 } };
-    },
-    undo: function(undoData) {
-      var p = getPlant(undoData.plantId);
-      if (p && undoData.flowerIndex >= 0) {
-        var fls = p._cmdFlowers;
-        if (fls && fls.length > undoData.flowerIndex) {
-          fls.splice(undoData.flowerIndex, 1);
-        }
-      }
-    }
-  });
-
-  // setWind: 设置风
-  bus.register('setWind', {
-    validate: function(p) {
-      if (p.strength !== undefined && (typeof p.strength !== 'number' || p.strength < 0 || p.strength > 1))
-        return 'strength must be 0-1';
-      if (p.direction !== undefined && p.direction !== 1 && p.direction !== -1)
-        return 'direction must be 1 or -1';
-      return null;
-    },
-    execute: function(p, ctx) {
-      var prev = {
-        strength: wind.strength,
-        targetStrength: wind.targetStrength,
-        direction: wind.direction,
-        gustStrength: wind.gustStrength,
-        gustStart: wind.gustStart
-      };
-      if (p.strength !== undefined) { wind.strength = p.strength; wind.targetStrength = p.strength; }
-      if (p.gust !== undefined) { wind.gustStrength = p.gust; wind.gustStart = performance.now(); }
-      if (p.direction !== undefined) wind.direction = p.direction;
-      return { undoData: prev };
-    },
-    undo: function(undoData) {
-      wind.strength = undoData.strength;
-      wind.targetStrength = undoData.targetStrength;
-      wind.direction = undoData.direction;
-      wind.gustStrength = undoData.gustStrength;
-      wind.gustStart = undoData.gustStart;
-    }
-  });
-
-  // clear: 清空画布
-  bus.register('clear', {
-    validate: function() { return null; },
-    execute: function(p, ctx) {
-      var snapshot = [];
-      for (var i = 0; i < plants.length; i++) {
-        var pp = plants[i];
-        if (!pp.dying) {
-          if (!pp._pid) registerPlant(pp);
-          snapshot.push({ plantId: pp._pid, dying: pp.dying, fade: pp.fade });
-        }
-        pp.dying = true;
-      }
-      var prevLeaves = fallingLeaves.slice();
-      fallingLeaves.length = 0;
-      plantHistory.length = 0;
-      showToast('园已清');
-      return { undoData: { snapshot: snapshot, prevLeaves: prevLeaves } };
-    },
-    undo: function(undoData) {
-      for (var i = 0; i < undoData.snapshot.length; i++) {
-        var s = undoData.snapshot[i];
-        var p = getPlant(s.plantId);
-        if (p) {
-          p.dying = s.dying;
-          p.fade = s.fade;
-          if (plants.indexOf(p) === -1) plants.push(p);
-        }
-      }
-      for (var j = 0; j < undoData.prevLeaves.length; j++) {
-        fallingLeaves.push(undoData.prevLeaves[j]);
-      }
-    }
-  });
-
   function createInkSplatter(x, y, color) {
     const c = color || INK.zhong;
     for (let i = 0; i < 8; i++) {
@@ -2840,17 +1947,23 @@ body.gallery-mode #toast { display:none !important; }
     }
   }
   function clearGarden() {
-    bus.dispatch({ type: 'clear', params: {}, actor: 'human' });
+    for (const p of plants) { if (!p.dying) p.dying = true; }
+    fallingLeaves = [];
+    plantHistory = [];
+    showToast('园已清');
   }
   function undoLastPlant() {
-    // v5.0: 经Command Bus undo
-    const r = bus.undo();
-    if (r.success) {
-      if (navigator.vibrate) { try{navigator.vibrate(15)}catch(e){} }
-      showToast('已撤');
-    } else {
-      showToast('无可撤');
+    while (plantHistory.length > 0) {
+      const p = plantHistory.pop();
+      if (plants.indexOf(p) !== -1 && !p.dying) {
+        p.dying = true;
+        createInkSplatter(p.x, p.y, p.species.color);
+        if (navigator.vibrate) { try{navigator.vibrate(15)}catch(e){} }
+        showToast('已撤一株');
+        return;
+      }
     }
+    showToast('无可撤');
   }
   let toastTimer = null;
   function showToast(msg) {
@@ -3025,15 +2138,36 @@ body.gallery-mode #toast { display:none !important; }
   function plantAt(x, y) {
     y = Math.max(10, Math.min(H-10, y));
     x = Math.max(10, Math.min(W-10, x));
+    let nearby = 0;
+    for (let i = 0; i < plants.length; i++) {
+      if (plants[i].dying) continue;
+      const dx = plants[i].x - x, dy2 = plants[i].y - y;
+      if (dx*dx + dy2*dy2 < 10000) nearby++;
+    }
+    if (nearby > 3) { showToast('此处已密'); return; }
+    let aliveCount = 0;
+    for (let j = 0; j < plants.length; j++) if (!plants[j].dying) aliveCount++;
+    if (aliveCount >= MAX_PLANTS) {
+      let oldest = null;
+      for (const p of plants) {
+        if (p.dying) continue;
+        if (!oldest || p.age > oldest.age) oldest = p;
+      }
+      if (oldest) {
+        oldest.dying = true;
+        createInkSplatter(oldest.x, oldest.y, oldest.species.color);
+      }
+      showToast('园满，新草替旧株');
+    }
     const si = resolvePlantIndex();
-    // v5.0: 经Command Bus
-    const r = bus.dispatch({
-      type: 'plantSpecies',
-      params: { x: x, y: y, si: si, options: {} },
-      actor: 'human'
-    });
-    if (!r.success && r.error === 'Too dense') {
-      showToast('此处已密');
+    const np = new Plant(x, y, si);
+    plants.push(np);
+    plantHistory.push(np);
+    createInkSplatter(x, y, species[si].color);
+    if (!hasPlanted) {
+      hasPlanted = true;
+      dom.hint.style.opacity = '0';
+      setTimeout(function(){ dom.hint.style.display = 'none'; }, 600);
     }
   }
   function saveSnapshot() {
@@ -3173,7 +2307,16 @@ body.gallery-mode #toast { display:none !important; }
   }, 4200);
   setTimeout(function() {
     if (urlParams.get('compose') === '1') {
-      // v5.0: 出画创作模式 — 统一Command Bus入口
+      // 出画创作模式：不自动种植，等待外部构图指令
+      window.__inkPlant = function(x, y, si) {
+        if (si !== undefined) selectedPlant = si;
+        plantAt(x, y);
+      };
+      window.__inkClear = function() {
+        plants.length = 0;
+        plantHistory.length = 0;
+      };
+      window.__inkSetWind = function(s) { wind = s; };
       hasPlanted = true;
       dom.hint.style.display = 'none';
       return;
@@ -3188,70 +2331,11 @@ body.gallery-mode #toast { display:none !important; }
         const rx = s.x + (Math.random()-0.5)*0.1;
         const x = W * rx;
         const y = H * s.yRatio + (Math.random()-0.5)*30;
-        bus.dispatch({
-          type: 'plantSpecies',
-          params: { x: x, y: y, si: s.si, options: {} },
-          actor: 'system'
-        });
+        plants.push(new Plant(x, y, s.si));
+        createInkSplatter(x, y, species[s.si].color);
       }, i*400);
     });
   }, 500);
-
-  // ═══════════════════════════════════════════════════════════════
-  // v5.0: 全局Compose API — 人和Agent统一通过Command Bus
-  // ═══════════════════════════════════════════════════════════════
-  window.__inkDispatch = function(command) {
-    if (!command.actor) command.actor = 'agent';
-    if (!command.timestamp) command.timestamp = Date.now();
-    return bus.dispatch(command);
-  };
-  window.__inkPlant = function(x, y, si, opts) {
-    if (si !== undefined) selectedPlant = si;
-    return bus.dispatch({
-      type: 'plantSpecies',
-      params: { x: x, y: y, si: si, options: opts || {} },
-      actor: 'agent'
-    });
-  };
-  window.__inkClear = function() {
-    return bus.dispatch({ type: 'clear', params: {}, actor: 'agent' });
-  };
-  window.__inkSetWind = function(s) {
-    return bus.dispatch({
-      type: 'setWind',
-      params: { strength: s.strength, gust: s.gust, direction: s.direction },
-      actor: 'agent'
-    });
-  };
-  window.__inkUndo = function() { return bus.undo(); };
-  window.__inkRedo = function() { return bus.redo(); };
-  window.__inkGetHistory = function() { return bus.getHistory(); };
-  window.__inkLoadHistory = function(history) { return bus.loadHistory(history); };
-  window.__inkGetEventLog = function() { return bus.getEventLog(); };
-  window.__inkCanUndo = function() { return bus.canUndo(); };
-  window.__inkCanRedo = function() { return bus.canRedo(); };
-  // Debug accessors (for testing/inspection)
-  window.__inkDebug = function() {
-    return {
-      plants: plants.map(function(p) {
-        return { alive: !p.dying, dying: p.dying, species: p.species.name, branches: p.branches.length,
-          flowers: p._cmdFlowers ? p._cmdFlowers.length : 0,
-          angles: p.species.name === '兰' ? p.branches.map(function(b){return Math.round(b.angle*100)/100;}) : [] };
-      }),
-      wind: { strength: wind.strength, direction: wind.direction },
-      canUndo: bus.canUndo(), canRedo: bus.canRedo(),
-      undoStack: bus._undoStack.length, redoStack: bus._redoStack.length,
-      stackTop: bus._undoStack.length > 0 ? {
-        type: bus._undoStack[bus._undoStack.length-1].type,
-        composite: bus._undoStack[bus._undoStack.length-1].composite,
-        subLen: (bus._undoStack[bus._undoStack.length-1].subEntries||[]).length,
-        subs: (bus._undoStack[bus._undoStack.length-1].subEntries||[]).map(function(e){
-          return { type: e.type, cr: !!(e.undoData && e.undoData.compositeRoot), bi: e.undoData ? e.undoData.branchIndex : null };
-        })
-      } : null
-    };
-  };
-
   rafId = requestAnimationFrame(loop);
   document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
 })();
