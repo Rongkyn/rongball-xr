@@ -29,8 +29,8 @@ canvas#scene {
   cursor:crosshair}
 #titleBlock {
   position:fixed;
-  top:22px;
-  left:26px;
+  top:66px;
+  left:18px;
   z-index:10;
   pointer-events:none;
   color:var(--ink)}
@@ -235,6 +235,68 @@ canvas#scene {
   pointer-events:none;
   z-index:10}
 
+/* 画集弹窗 */
+#galleryBtn {
+  position:fixed; top:18px; left:18px;
+  width:38px; height:38px; border-radius:50%;
+  border:1px solid var(--line);
+  background:rgba(232,223,200,.88);
+  font-family:"ZCOOL XiaoWei",serif; font-size:15px;
+  color:var(--ink-soft); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  z-index:20; transition:all .25s ease;
+  backdrop-filter:blur(4px);
+  box-shadow:0 2px 10px rgba(80,60,30,.08)}
+#galleryBtn:hover { background:var(--seal); color:#f0e8d6; border-color:var(--seal-deep); transform:scale(1.05) }
+#galleryModal {
+  position:fixed; inset:0; z-index:100;
+  background:rgba(25,22,18,.78);
+  display:none; align-items:center; justify-content:center;
+  backdrop-filter:blur(8px); padding:24px}
+#galleryModal.open { display:flex }
+.gm-inner {
+  background:var(--paper);
+  border-radius:12px; max-width:1100px; width:100%;
+  max-height:90vh; overflow:hidden;
+  display:flex; flex-direction:column;
+  box-shadow:0 40px 120px -30px rgba(0,0,0,.7);
+  border:1px solid rgba(80,60,30,.18)}
+.gm-head {
+  padding:22px 28px 14px; border-bottom:1px solid var(--line);
+  display:flex; align-items:baseline; gap:14px; flex-shrink:0}
+.gm-head h2 { font-family:"Ma Shan Zheng",serif; font-size:26px; color:var(--ink); margin:0; font-weight:400 }
+.gm-head .sub { font-size:13px; color:var(--ink-mid); letter-spacing:1px }
+.gm-close {
+  margin-left:auto; background:none; border:none;
+  font-size:24px; color:var(--ink-mid); cursor:pointer;
+  width:36px; height:36px; border-radius:50%; transition:all .2s}
+.gm-close:hover { background:rgba(90,74,56,.1); color:var(--ink)}
+.gm-body { padding:24px 28px 28px; overflow-y:auto }
+.gm-grid {
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr));
+  gap:22px}
+.gm-card {
+  background:#f8f2e6; border-radius:8px; overflow:hidden;
+  border:1px solid var(--line); text-decoration:none; color:inherit;
+  transition:transform .25s ease, box-shadow .25s ease; cursor:pointer}
+.gm-card:hover { transform:translateY(-4px); box-shadow:0 18px 40px -20px rgba(40,30,20,.45) }
+.gm-card img { width:100%; display:block; aspect-ratio:1000/680; object-fit:cover; background:var(--paper-2) }
+.gm-card .meta { padding:14px 16px 16px }
+.gm-card .t { display:flex; align-items:baseline; gap:10px }
+.gm-card .t h3 { font-family:"Ma Shan Zheng",serif; font-size:20px; color:var(--ink); margin:0; font-weight:400 }
+.gm-card .t .date { font-size:11px; color:var(--ink-mid); margin-left:auto; letter-spacing:.5px }
+.gm-card .desc { font-size:12.5px; color:var(--ink-soft); line-height:1.7; margin:8px 0 0; letter-spacing:.3px }
+.gm-empty { text-align:center; color:var(--ink-mid); padding:60px 20px; font-size:14px; letter-spacing:2px }
+
+@media (max-width:640px) {
+  .gm-grid { grid-template-columns:1fr; gap:16px }
+  .gm-head { padding:18px 18px 12px }
+  .gm-head h2 { font-size:22px }
+  .gm-body { padding:18px }
+  #galleryModal { padding:0 }
+  .gm-inner { max-height:100vh; border-radius:0; min-height:100vh }
+}
+
 @media (max-width:640px) {
   #titleBlock h1 {
   font-size:28px;
@@ -284,6 +346,21 @@ body.gallery-mode #toast { display:none !important; }
 <body>
 <canvas id="scene"></canvas>
 <canvas id="sealCanvas"></canvas>
+
+<button id="galleryBtn" title="绒球画集">集</button>
+
+<div id="galleryModal">
+  <div class="gm-inner">
+    <div class="gm-head">
+      <h2>绒球画集</h2>
+      <span class="sub">用墨园作出的画</span>
+      <button class="gm-close" title="合上">×</button>
+    </div>
+    <div class="gm-body">
+      <div class="gm-grid" id="gmGrid"></div>
+    </div>
+  </div>
+</div>
 
 <div id="titleBlock">
   <h1>墨园</h1>
@@ -2114,6 +2191,66 @@ body.gallery-mode #toast { display:none !important; }
   }, 500);
   rafId = requestAnimationFrame(loop);
   document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+})();
+</script>
+
+<script>
+// 画集：展示用墨园作出的作品
+(function(){
+  // 作品清单（同一目录下）
+  const WORKS = [
+    {
+      file: '幽兰.png',
+      title: '幽兰',
+      date: '2026.08.14',
+      desc: '折枝兰草七至九叶，长叶交叉成凤眼，三花着生叶间，花心一点胭脂。九轮迭代方得。'
+    },
+    {
+      file: '三友图-盘虬.png',
+      title: '三友图·盘虬',
+      date: '2026.08.14',
+      desc: '松、竹、梅共处一纸。墨园的第一幅作品，亦是此后画房流程的起点。'
+    }
+  ];
+
+  const btn = document.getElementById('galleryBtn');
+  const modal = document.getElementById('galleryModal');
+  const grid = document.getElementById('gmGrid');
+  const closeBtn = modal.querySelector('.gm-close');
+
+  // 画廊模式(?gallery=1)下隐藏画集入口
+  if (new URLSearchParams(location.search).get('gallery') === '1') {
+    btn.style.display = 'none';
+  }
+
+  function render(){
+    grid.innerHTML = WORKS.map(function(w){
+      return ''
+        + '<a class="gm-card" href="' + w.file + '" target="_blank" rel="noopener">'
+        +   '<img src="' + w.file + '" alt="' + w.title + '" loading="lazy">'
+        +   '<div class="meta">'
+        +     '<div class="t"><h3>' + w.title + '</h3><span class="date">' + w.date + '</span></div>'
+        +     '<p class="desc">' + w.desc + '</p>'
+        +   '</div>'
+        + '</a>';
+    }).join('');
+  }
+
+  function open(e){
+    if(e) e.stopPropagation();
+    render();
+    modal.classList.add('open');
+  }
+  function close(){ modal.classList.remove('open'); }
+
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  modal.addEventListener('click', function(e){
+    if (e.target === modal) close();
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') close();
+  });
 })();
 </script>
 </body>
