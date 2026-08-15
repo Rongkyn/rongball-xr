@@ -10,3 +10,16 @@ Thumbs.db
 # Temp
 *.tmp
 /tmp/
+
+# Bamboo iteration process screenshots
+gallery/works/bamboo_*.png
+gallery/works/p4_verify_*.png
+gallery/works/fix6b_base_*.png
+
+# CDP debug scripts
+gallery/studio/builder/cdp-*.js
+gallery/studio/builder/p4-*.js
+gallery/studio/builder/p4_stats.json
+
+# Backups
+gallery/works/*.bak*
