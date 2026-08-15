@@ -1729,9 +1729,11 @@ body.gallery-mode #toast { display:none !important; }
       const opts = this._opts || {};
       const isCompose = typeof urlParams !== 'undefined' && urlParams.get('compose') === '1';
       const rand = (o) => this.rand(o);
-      const H = isCompose ? 480 : 280;
-      const W = isCompose ? 12 : 8;
-      const Lmul = isCompose ? 1.85 : 1.0;
+      // v12.2: 非compose H提升到460（原420），让竹在1600画布上更挺拔
+      const H = isCompose ? 480 : 460;
+      // v12.2 骨架修复：非compose W=16/Lmul=1.6（原8/1.0），竿有挺拔骨架、枝长跟着放大
+      const W = isCompose ? 12 : 16;
+      const Lmul = isCompose ? 1.85 : 1.6;
       let hMulOpt = typeof opts.heightMul === 'number' ? opts.heightMul : 1;
       let stalkCount = opts.stalkCount !== undefined ? opts.stalkCount
         : (isCompose ? 1 : (1 + (rand(2) > 0.55 ? 1 : 0)));
@@ -1919,9 +1921,9 @@ body.gallery-mode #toast { display:none !important; }
           isShort: isShort, _composeRole: curRole,
         });
 
-        // v12.0 P2-fix: 出枝阈值从0.40-0.50改为0.38-0.46（光竿比例约38-46%，破棒棒糖）
-        // v12.0 P2-fix2: 矮竿出枝阈值 0.32-0.38（光竿约32-38%），普通竿 0.38-0.46
-        const branchStartT = isShort ? (0.32 + rand(s*60) * 0.06) : (0.38 + rand(s*60) * 0.08);
+        // v12.2: 降低出枝阈值——普通竿 0.25-0.32（原0.38-0.46），矮竿 0.26-0.32（原0.32-0.38）
+        // 让枝从中下部多个节生出，破除"下部光竿+顶部伞盖"的路灯感
+        const branchStartT = isShort ? (0.26 + rand(s*60) * 0.06) : (0.25 + rand(s*60) * 0.07);
         let midBranchCount = 0; // 矮竿 t=0.40-0.65 分枝计数（保底4-5枝）
         let lastSide = 0;
         for (let ni = 0; ni < nodes.length; ni++) {
