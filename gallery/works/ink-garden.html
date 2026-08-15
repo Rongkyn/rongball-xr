@@ -1731,9 +1731,9 @@ body.gallery-mode #toast { display:none !important; }
       const rand = (o) => this.rand(o);
       // v12.2: 非compose H提升到460（原420），让竹在1600画布上更挺拔
       const H = isCompose ? 480 : 460;
-      // v12.2 骨架修复：非compose W=16/Lmul=1.6（原8/1.0），竿有挺拔骨架、枝长跟着放大
+      // v12.2 fix2: 非compose W=16保持；Lmul 1.6→1.05（短枝挺拔，草书笔意），依据《怎样画竹》"短而健"
       const W = isCompose ? 12 : 16;
-      const Lmul = isCompose ? 1.85 : 1.6;
+      const Lmul = isCompose ? 1.85 : 1.05;
       let hMulOpt = typeof opts.heightMul === 'number' ? opts.heightMul : 1;
       let stalkCount = opts.stalkCount !== undefined ? opts.stalkCount
         : (isCompose ? 1 : (1 + (rand(2) > 0.55 ? 1 : 0)));
@@ -1921,9 +1921,9 @@ body.gallery-mode #toast { display:none !important; }
           isShort: isShort, _composeRole: curRole,
         });
 
-        // v12.2: 降低出枝阈值——普通竿 0.25-0.32（原0.38-0.46），矮竿 0.26-0.32（原0.32-0.38）
-        // 让枝从中下部多个节生出，破除"下部光竿+顶部伞盖"的路灯感
-        const branchStartT = isShort ? (0.26 + rand(s*60) * 0.06) : (0.25 + rand(s*60) * 0.07);
+        // v12.2 fix2: "离地五节始生枝"——普通竿从62%-67%出枝，矮竿从56%-61%出枝
+        // 下部约60%为光竿，顶部40%出短枝+叶簇，形成正确竹形剪影（不像树）
+        const branchStartT = isShort ? (0.56 + rand(s*60) * 0.05) : (0.62 + rand(s*60) * 0.05);
         let midBranchCount = 0; // 矮竿 t=0.40-0.65 分枝计数（保底4-5枝）
         let lastSide = 0;
         for (let ni = 0; ni < nodes.length; ni++) {
