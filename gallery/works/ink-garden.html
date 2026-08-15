@@ -3270,8 +3270,9 @@ body.gallery-mode #toast { display:none !important; }
       // 老叶焦浓(nong)用浓stamp，中叶重墨(zhong)，嫩叶淡墨(dan)用干笔stamp带飞白
       // v8.6: 同簇浓淡穿插——前半浓墨，后40%强制淡墨破叶
       let tone = b.leafTone || 'nong';
-      const _totalForTone = strokes;
-      if (n >= Math.floor(_totalForTone*0.55) && tone === 'nong' && this.rand(b.id*7+n*3) < 0.75) tone = 'dan';
+      // v12.0: 修复 strokes/n 未定义——浓淡穿插按叶序稳定随机，不依赖外部循环变量
+      const _leafIdx = (b.id || 0) % 9;
+      if (_leafIdx >= 5 && tone === 'nong' && this.rand(b.id*7) < 0.75) tone = 'dan';
       let leafColor, useStamp, baseOpacity;
       let feibaiAmt = 0.55, dryStart = 0.42, streaks = 7;
       if (tone === 'dan') {
