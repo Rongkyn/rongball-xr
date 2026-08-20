@@ -23,3 +23,16 @@ gallery/studio/builder/p4_stats.json
 
 # Backups
 gallery/works/*.bak*
+
+# Local task / scratch
+_patches/
+codeact/
+gallery/works/_*.py
+gallery/works/cdp_*.py
+gallery/works/debug_*.py
+gallery/works/*.json
+gallery/works/*.diff
+gallery/works/moyun_frames/
+gallery/works/spike_*.py
+gallery/works/take_screenshot.py
+gallery/works/v112_patch*.py

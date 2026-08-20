@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>墨韵 · Mo Yun</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  background:#e8dfc8;
+  font-family:'Noto Serif SC','Songti SC','STSong','Georgia',serif;
+  user-select:none;-webkit-user-select:none;touch-action:none;
+  cursor:crosshair;
+}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
+
+.ui{position:fixed;z-index:10;pointer-events:none}
+
+.title-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:20;pointer-events:none;
+  transition:opacity 1.2s ease;
+  background:radial-gradient(ellipse at center,rgba(232,223,200,0.3) 0%,rgba(232,223,200,0) 70%);
+}
+.title-overlay h1{
+  font-size:48px;color:#2e2820;letter-spacing:16px;font-weight:400;
+  text-shadow:0 2px 8px rgba(46,40,32,0.15);
+  margin-bottom:12px;
+}
+.title-overlay p{
+  font-size:14px;color:rgba(68,58,48,0.6);letter-spacing:4px;
+}
+.title-overlay .hint{
+  margin-top:40px;font-size:13px;color:rgba(107,94,76,0.5);
+  letter-spacing:2px;animation:pulse 2.5s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:0.4}50%{opacity:0.9}}
+
+.title-bar{
+  top:24px;left:0;right:0;text-align:center;
+  opacity:0;transition:opacity 1s ease 0.5s;
+}
+.title-bar h1{
+  font-size:20px;color:#443a30;letter-spacing:8px;font-weight:400;
+}
+.title-bar .sub{
+  font-size:11px;color:rgba(107,94,76,0.5);margin-top:4px;letter-spacing:3px;
+}
+
+.controls{
+  bottom:28px;left:0;right:0;display:flex;justify-content:center;gap:20px;
+  pointer-events:auto;opacity:0;transition:opacity 1s ease 1s;
+}
+.ctrl-btn{
+  background:none;border:1px solid rgba(68,58,48,0.25);
+  color:#6b5e4c;font-size:12px;letter-spacing:2px;
+  padding:8px 20px;border-radius:2px;cursor:pointer;
+  font-family:inherit;transition:all .3s;
+}
+.ctrl-btn:hover{background:rgba(46,40,32,0.06);border-color:rgba(68,58,48,0.5);color:#2e2820}
+
+.seal{
+  position:fixed;bottom:24px;right:28px;z-index:10;
+  width:48px;height:48px;opacity:0;transition:opacity 1.5s ease 1.5s;
+  pointer-events:none;
+}
+.seal svg{width:100%;height:100%}
+
+/* Scale guide (subtle pentatonic positions) */
+.scale-guide{
+  position:fixed;top:0;left:0;right:0;height:3px;z-index:5;
+  display:flex;opacity:0;transition:opacity 1s ease 1s;pointer-events:none;
+}
+.scale-guide .tick{
+  flex:1;border-left:1px solid rgba(68,58,48,0.12);
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div class="title-overlay" id="titleOverlay">
+  <h1>墨 韵</h1>
+  <p>落 墨 成 音</p>
+  <div class="hint">轻触宣纸</div>
+</div>
+
+<div class="ui title-bar" id="titleBar">
+  <h1>墨 韵</h1>
+  <div class="sub">MO YUN · INK RESONANCE</div>
+</div>
+
+<div class="scale-guide" id="scaleGuide">
+  <div class="tick"></div><div class="tick"></div><div class="tick"></div>
+  <div class="tick"></div><div class="tick"></div><div class="tick"></div>
+  <div class="tick"></div><div class="tick"></div><div class="tick"></div>
+</div>
+
+<div class="controls" id="controls">
+  <button class="ctrl-btn" id="btnClear">清 纸</button>
+  <button class="ctrl-btn" id="btnWind">微 风</button>
+</div>
+
+<div class="seal" id="seal">
+  <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="2" width="56" height="56" rx="3" fill="#9a3a35" stroke="#7a2a25" stroke-width="1.5"/>
+    <text x="30" y="38" text-anchor="middle" fill="#f0e8d8" font-size="28" font-family="serif" font-weight="bold">絨</text>
+  </svg>
+</div>
+
+<script>
+// ============================================================
+// 墨韵 Mo Yun — Ink Resonance
+// Interactive audiovisual piece: click rice paper to drop ink,
+// each drop creates a guqin-like plucked string tone.
+// X → pitch (pentatonic), Y → velocity/ink density.
+// ============================================================
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+// --- DPR & Resize ---
+let W, H, DPR;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  paperBgReady = false;
+  initWind();
+  renderPaperBg();
+}
+window.addEventListener('resize', resize);
+
+// Generate paper noise once on an offscreen canvas (tiled)
+const paperCanvas = document.createElement('canvas');
+const paperCtx = paperCanvas.getContext('2d');
+function generatePaperTexture(){
+  const s = 256;
+  paperCanvas.width = s; paperCanvas.height = s;
+  const img = paperCtx.createImageData(s, s);
+  for(let i=0; i<img.data.length; i+=4){
+    const v = Math.random()*20 - 10;
+    img.data[i] = 232 + v;
+    img.data[i+1] = 223 + v;
+    img.data[i+2] = 200 + v;
+    img.data[i+3] = 18 + Math.random()*12;
+  }
+  paperCtx.putImageData(img, 0, 0);
+}
+generatePaperTexture();
+
+function drawPaperFull(){
+  // Pre-rendered paper background is drawn once; this is kept for resize
+  if(paperBgReady) return;
+  renderPaperBg();
+}
+
+let paperBgCanvas = document.createElement('canvas');
+let paperBgCtx = paperBgCanvas.getContext('2d');
+let paperBgReady = false;
+
+function renderPaperBg(){
+  paperBgCanvas.width = W * DPR;
+  paperBgCanvas.height = H * DPR;
+  paperBgCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // Base
+  paperBgCtx.fillStyle = '#e8dfc8';
+  paperBgCtx.fillRect(0, 0, W, H);
+  // Tile paper texture
+  const pat = paperBgCtx.createPattern(paperCanvas, 'repeat');
+  paperBgCtx.fillStyle = pat;
+  paperBgCtx.fillRect(0, 0, W, H);
+  // Warm vignette
+  const g = paperBgCtx.createRadialGradient(W*0.5, H*0.42, 0, W*0.5, H*0.42, Math.max(W,H)*0.75);
+  g.addColorStop(0, 'rgba(245,238,218,0.35)');
+  g.addColorStop(0.6, 'rgba(232,223,200,0)');
+  g.addColorStop(1, 'rgba(180,168,140,0.18)');
+  paperBgCtx.fillStyle = g;
+  paperBgCtx.fillRect(0, 0, W, H);
+  paperBgReady = true;
+}
+
+function drawPaperBg(){
+  if(!paperBgReady) renderPaperBg();
+  ctx.drawImage(paperBgCanvas, 0, 0, W, H);
+}
+
+// ============================================================
+// AUDIO: Karplus-Strong plucked string synthesis
+// ============================================================
+let audioCtx = null;
+let masterGain = null;
+let reverbGain = null;
+let convolver = null;
+
+function initAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.7;
+  masterGain.connect(audioCtx.destination);
+
+  // Simple reverb via convolver with generated impulse response
+  convolver = audioCtx.createConvolver();
+  convolver.buffer = generateReverbIR(2.5, 2.0);
+  reverbGain = audioCtx.createGain();
+  reverbGain.gain.value = 0.25;
+  convolver.connect(reverbGain);
+  reverbGain.connect(masterGain);
+}
+
+function generateReverbIR(duration, decay){
+  const sr = audioCtx.sampleRate;
+  const len = sr * duration;
+  const ir = audioCtx.createBuffer(2, len, sr);
+  for(let ch=0; ch<2; ch++){
+    const data = ir.getChannelData(ch);
+    for(let i=0; i<len; i++){
+      const t = i / len;
+      data[i] = (Math.random()*2 - 1) * Math.pow(1 - t, decay);
+    }
+  }
+  return ir;
+}
+
+// Pentatonic scale: C D E G A, two octaves (C3 to A4)
+const PENTATONIC = [
+  130.81, // C3  宫
+  146.83, // D3  商
+  164.81, // E3  角
+  196.00, // G3  徵
+  220.00, // A3  羽
+  261.63, // C4
+  293.66, // D4
+  329.63, // E4
+  392.00, // G4
+  440.00, // A4
+];
+
+function freqFromX(x){
+  const idx = Math.floor((x / W) * PENTATONIC.length);
+  return PENTATONIC[Math.max(0, Math.min(PENTATONIC.length-1, idx))];
+}
+
+function velocityFromY(y){
+  // Top = soft (0.3), bottom = strong (1.0)
+  return 0.3 + (1 - y / H) * 0.7;
+}
+
+// Karplus-Strong synthesis into an AudioBuffer
+function pluckString(freq, velocity){
+  const sr = audioCtx.sampleRate;
+  // Guqin: long sustain, especially for low notes
+  const dur = Math.min(5.0, 2.0 + (150/freq) * 2.0);
+  const totalSamples = Math.floor(sr * dur);
+  const buffer = audioCtx.createBuffer(1, totalSamples, sr);
+  const data = buffer.getChannelData(0);
+
+  // Delay line length
+  const N = Math.floor(sr / freq);
+  const delayLine = new Float32Array(N);
+
+  // Initial excitation: noise burst with short attack
+  // Guqin pluck near bridge = brighter, slightly metallic attack
+  const attackLen = Math.floor(N * 0.3);
+  for(let i=0; i<N; i++){
+    if(i < attackLen){
+      // Triangular-ish noise for softer attack than pure white noise
+      const u1 = Math.random(), u2 = Math.random();
+      const noise = Math.cos(2*Math.PI*u2) * Math.sqrt(-2*Math.log(u1));
+      delayLine[i] = noise * (1 - i/attackLen*0.3);
+    } else {
+      delayLine[i] = (Math.random()*2 - 1) * 0.05;
+    }
+  }
+
+  // Damping: higher frequencies decay faster (guqin characteristic)
+  // Closer to 1 = longer sustain. Guqin has very long sustain.
+  const damping = 0.9985 - (freq / 2000) * 0.003;
+  const actualDamping = Math.max(0.995, Math.min(0.9995, damping));
+
+  // Karplus-strong loop
+  let idx = 0;
+  for(let i=0; i<totalSamples; i++){
+    const next = (idx + 1) % N;
+    // Average filter (low-pass) with dynamic damping
+    const val = delayLine[idx];
+    const filtered = 0.5 * (val + delayLine[next]) * actualDamping;
+    delayLine[idx] = filtered;
+    data[i] = filtered;
+    idx = next;
+  }
+
+  // Apply amplitude envelope: instant attack, natural exponential decay
+  const attackSamples = Math.floor(sr * 0.003);
+  for(let i=0; i<totalSamples; i++){
+    let env;
+    if(i < attackSamples){
+      env = i / attackSamples;
+    } else {
+      const t = (i - attackSamples) / (totalSamples - attackSamples);
+      env = Math.exp(-t * 2.8);
+    }
+    data[i] *= env * velocity * 0.45;
+  }
+
+  // Add subtle octave harmonic (fan yin / 泛音) for velocity > 0.5
+  if(velocity > 0.45){
+    const harmBuffer = audioCtx.createBuffer(1, totalSamples, sr);
+    const hd = harmBuffer.getChannelData(0);
+    const N2 = Math.floor(sr / (freq * 2));
+    const dl2 = new Float32Array(N2);
+    for(let i=0; i<N2; i++){
+      dl2[i] = (Math.random()*2 - 1) * 0.25;
+    }
+    let idx2 = 0;
+    for(let i=0; i<totalSamples; i++){
+      const next2 = (idx2 + 1) % N2;
+      const val2 = dl2[idx2];
+      hd[i] = 0.5 * (val2 + dl2[next2]) * 0.996;
+      dl2[idx2] = hd[i];
+      idx2 = next2;
+    }
+    const harmMix = 0.06 * velocity;
+    for(let i=0; i<totalSamples; i++){
+      const t = i/totalSamples;
+      data[i] += hd[i] * harmMix * Math.exp(-t * 4);
+    }
+  }
+
+  return buffer;
+}
+
+function playNote(freq, velocity){
+  if(!audioCtx) initAudio();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+
+  const buffer = pluckString(freq, velocity);
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+
+  // Per-note gain with slight panning based on X
+  const noteGain = audioCtx.createGain();
+  noteGain.gain.value = 1.0;
+
+  const pan = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+  if(pan){
+    // Pan based on frequency position in scale (left=low, right=high)
+    const freqIdx = PENTATONIC.indexOf(freq);
+    pan.pan.value = (freqIdx / (PENTATONIC.length - 1)) * 1.6 - 0.8;
+  }
+
+  src.connect(noteGain);
+  if(pan){
+    noteGain.connect(pan);
+    pan.connect(masterGain);
+    pan.connect(convolver);
+  } else {
+    noteGain.connect(masterGain);
+    noteGain.connect(convolver);
+  }
+
+  src.start();
+}
+
+// ============================================================
+// VISUAL: Ink drops, ripples, string vibration
+// ============================================================
+
+// Ink palette from Ink Builder
+const INK = {
+  jiao: '#1a1612',  // 焦
+  nong: '#2e2820',  // 浓
+  zhong: '#443a30', // 重
+  dan: '#6b5e4c',   // 淡
+  qing: '#9a8d76',   // 清
+  yanzhi: '#9a3a35', // 胭脂
+};
+
+// Permanent ink marks (accumulated on paper)
+const inkMarks = [];
+
+// Active animations (ripples, string vibrations)
+const ripples = [];
+const stringVibes = [];
+const windParticles = [];
+
+// Wind state
+let windStrength = 0;
+let windTarget = 0;
+
+function dropInk(x, y, velocity){
+  const freq = freqFromX(x);
+  const vel = velocity !== undefined ? velocity : velocityFromY(y);
+
+  // Play sound
+  playNote(freq, vel);
+
+  // Determine ink density from velocity
+  let inkColor;
+  if(vel > 0.85) inkColor = INK.jiao;
+  else if(vel > 0.65) inkColor = INK.nong;
+  else if(vel > 0.45) inkColor = INK.zhong;
+  else if(vel > 0.3) inkColor = INK.dan;
+  else inkColor = INK.qing;
+
+  // Ink drop size — kept modest for elegance
+  const baseRadius = 12 + vel * 28;
+
+  // Create permanent ink mark with organic shape
+  const mark = {
+    x, y,
+    radius: baseRadius,
+    color: inkColor,
+    opacity: 0.65 + vel * 0.3,
+    coreAlpha: 0.7 + vel * 0.3,
+    seed: Math.random() * 1000,
+    growth: 0, // 0→1 animation
+    splatters: generateSplatters(x, y, baseRadius, vel),
+  };
+  inkMarks.push(mark);
+
+  // Ripple — very subtle, single ring
+  ripples.push({
+    x, y,
+    radius: baseRadius * 0.3,
+    maxRadius: baseRadius * 1.8 + 15,
+    opacity: 0.1,
+    life: 1,
+  });
+
+  // String vibration (visualize the plucked string horizontally)
+  const freqIdx = PENTATONIC.indexOf(freq);
+  const stringY = (freqIdx / (PENTATONIC.length - 1)) * H * 0.7 + H * 0.15;
+  stringVibes.push({
+    x: x,
+    y: stringY,
+    amplitude: 6 + vel * 12,
+    frequency: 1.5 + freqIdx * 0.3,
+    life: 1,
+    color: inkColor,
+  });
+
+  // Occasional yanzhi (cinnabar) accent for strong hits
+  if(vel > 0.8 && Math.random() > 0.6){
+    inkMarks.push({
+      x: x + (Math.random()-0.5)*baseRadius*0.6,
+      y: y + (Math.random()-0.5)*baseRadius*0.6,
+      radius: baseRadius * 0.15,
+      color: INK.yanzhi,
+      opacity: 0.7,
+      seed: Math.random()*1000,
+      growth: 0,
+      splatters: [],
+    });
+  }
+}
+
+function generateSplatters(x, y, radius, vel){
+  const splatters = [];
+  const count = Math.floor(2 + vel * 5);
+  for(let i=0; i<count; i++){
+    const angle = Math.random() * Math.PI * 2;
+    const dist = radius * (0.6 + Math.random() * 1.2);
+    splatters.push({
+      dx: Math.cos(angle) * dist,
+      dy: Math.sin(angle) * dist,
+      r: 0.5 + Math.random() * 2 * vel,
+      opacity: 0.15 + Math.random() * 0.3,
+    });
+  }
+  return splatters;
+}
+
+// Draw an organic ink blotch using radial gradient + noise
+function drawInkMark(mark, t){
+  const growth = mark.growth;
+  const r = mark.radius * (0.3 + growth * 0.7);
+
+  ctx.save();
+  ctx.globalAlpha = mark.opacity * Math.min(1, growth * 2);
+
+  // Main blob — irregular shape
+  ctx.beginPath();
+  const points = 24;
+  for(let i=0; i<=points; i++){
+    const angle = (i / points) * Math.PI * 2;
+    // Organic variation using noise-like function
+    const n = Math.sin(angle * 3 + mark.seed) * 0.12
+            + Math.sin(angle * 5 + mark.seed * 1.7) * 0.08
+            + Math.sin(angle * 7 + mark.seed * 0.3) * 0.05;
+    const rr = r * (1 + n);
+    const px = mark.x + Math.cos(angle) * rr;
+    const py = mark.y + Math.sin(angle) * rr;
+    if(i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+
+  // Soft radial fill for ink bleed effect
+  const grad = ctx.createRadialGradient(
+    mark.x, mark.y, 0,
+    mark.x, mark.y, r * 1.2
+  );
+  grad.addColorStop(0, mark.color);
+  grad.addColorStop(0.5, mark.color);
+  grad.addColorStop(0.75, hexToRgba(mark.color, 0.6));
+  grad.addColorStop(1, hexToRgba(mark.color, 0));
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Darker wet core
+  if(growth > 0.2){
+    ctx.beginPath();
+    ctx.arc(mark.x, mark.y, r * 0.4, 0, Math.PI*2);
+    ctx.fillStyle = mark.color;
+    ctx.globalAlpha = (mark.coreAlpha || 0.8) * Math.min(1, (growth-0.2)*2);
+    ctx.fill();
+    // Even darker center dot for jiao/nong
+    if(mark.color === INK.jiao || mark.color === INK.nong){
+      ctx.beginPath();
+      ctx.arc(mark.x, mark.y, r * 0.18, 0, Math.PI*2);
+      ctx.fillStyle = '#0f0d0a';
+      ctx.globalAlpha = 0.7 * Math.min(1, (growth-0.2)*2);
+      ctx.fill();
+    }
+  }
+
+  // Splatters
+  ctx.globalAlpha = mark.opacity * 0.5 * growth;
+  ctx.fillStyle = mark.color;
+  for(const s of (mark.splatters || [])){
+    ctx.beginPath();
+    ctx.arc(mark.x + s.dx, mark.y + s.dy, s.r * growth, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function hexToRgba(hex, alpha){
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function drawRipple(r){
+  if(r.isConnector) return; // removed feature
+  ctx.save();
+  ctx.strokeStyle = `rgba(68,58,48,${r.opacity * r.life})`;
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.arc(r.x, r.y, r.radius, 0, Math.PI*2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawStringVibe(sv, time){
+  if(sv.life < 0.02) return;
+  ctx.save();
+  // String only visible near the pluck point, fades quickly
+  const alpha = sv.life * 0.4;
+  ctx.strokeStyle = sv.color;
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = 0.5;
+  ctx.lineCap = 'round';
+
+  // Only draw string segment around pluck point (not full width)
+  const span = W * 0.35;
+  const startX = Math.max(0, sv.x - span);
+  const endX = Math.min(W, sv.x + span);
+  const steps = 50;
+
+  ctx.beginPath();
+  for(let i=0; i<=steps; i++){
+    const x = startX + (endX - startX) * (i / steps);
+    const dist = Math.abs(x - sv.x);
+    const env = Math.max(0, 1 - dist / span);
+    const phase = time * sv.frequency * Math.PI * 2 + i * 0.3;
+    const vib = Math.sin(phase) * sv.amplitude * env * sv.life;
+    if(i===0) ctx.moveTo(x, sv.y + vib);
+    else ctx.lineTo(x, sv.y + vib);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// --- Wind particles ---
+function initWind(){
+  windParticles.length = 0;
+  for(let i=0; i<30; i++){
+    windParticles.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: 0, vy: 0,
+      size: 0.5 + Math.random() * 1.5,
+      opacity: 0.1 + Math.random() * 0.2,
+    });
+  }
+}
+
+function updateWind(dt){
+  windStrength += (windTarget - windStrength) * 0.02;
+  for(const p of windParticles){
+    p.vx += windStrength * 0.5 * dt;
+    p.vy += (Math.random()-0.5) * 0.3 * dt;
+    p.vx *= 0.98;
+    p.vy *= 0.95;
+    p.x += p.vx;
+    p.y += p.vy;
+    if(p.x > W + 10) p.x = -10;
+    if(p.x < -10) p.x = W + 10;
+    if(p.y > H + 10) p.y = -10;
+    if(p.y < -10) p.y = H + 10;
+  }
+}
+
+function drawWind(){
+  if(windStrength < 0.05) return;
+  ctx.save();
+  ctx.fillStyle = 'rgba(107,94,76,0.4)';
+  for(const p of windParticles){
+    ctx.globalAlpha = p.opacity * windStrength * 3;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ============================================================
+// Animation loop
+// ============================================================
+let lastTime = 0;
+let animTime = 0;
+let hasInteracted = false;
+
+function animate(timestamp){
+  if(!lastTime) lastTime = timestamp;
+  const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+  lastTime = timestamp;
+  animTime += dt;
+
+  // Clear with pre-rendered paper
+  drawPaperBg();
+
+  // Wind
+  updateWind(dt);
+  drawWind();
+
+  // Draw permanent ink marks (with growth animation for new ones)
+  for(const mark of inkMarks){
+    if(mark.growth < 1){
+      mark.growth = Math.min(1, mark.growth + dt * 2.5);
+    }
+    drawInkMark(mark);
+  }
+
+  // Draw string vibrations — brief flash, visual decay faster than audio
+  for(const sv of stringVibes){
+    sv.life *= Math.pow(0.005, dt); // ~0.4s visual flash
+    sv.amplitude *= Math.pow(0.02, dt);
+    drawStringVibe(sv, animTime);
+  }
+  // Clean up dead vibes
+  for(let i=stringVibes.length-1; i>=0; i--){
+    if(stringVibes[i].life < 0.01) stringVibes.splice(i, 1);
+  }
+
+  // Draw ripples (on top)
+  for(const r of ripples){
+    r.radius += (r.maxRadius - r.radius) * 3 * dt;
+    r.life -= dt * 0.6;
+    drawRipple(r);
+  }
+  for(let i=ripples.length-1; i>=0; i--){
+    if(ripples[i].life <= 0) ripples.splice(i, 1);
+  }
+
+  requestAnimationFrame(animate);
+}
+
+// ============================================================
+// Interaction
+// ============================================================
+function handlePointer(x, y){
+  if(!hasInteracted){
+    hasInteracted = true;
+    document.getElementById('titleOverlay').style.opacity = '0';
+    setTimeout(()=>{ document.getElementById('titleOverlay').style.display='none'; }, 1200);
+    document.getElementById('titleBar').style.opacity = '1';
+    document.getElementById('controls').style.opacity = '1';
+    document.getElementById('seal').style.opacity = '0.8';
+    document.getElementById('scaleGuide').style.opacity = '1';
+  }
+  const vel = velocityFromY(y);
+  dropInk(x, y, vel);
+}
+
+canvas.addEventListener('pointerdown', (e)=>{
+  e.preventDefault();
+  handlePointer(e.clientX, e.clientY);
+});
+
+// Keyboard support (space = random note)
+window.addEventListener('keydown', (e)=>{
+  if(e.code === 'Space'){
+    e.preventDefault();
+    const x = Math.random() * W;
+    const y = H * 0.3 + Math.random() * H * 0.5;
+    handlePointer(x, y);
+  }
+});
+
+// Buttons
+document.getElementById('btnClear').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  inkMarks.length = 0;
+  ripples.length = 0;
+  stringVibes.length = 0;
+});
+
+let windOn = false;
+document.getElementById('btnWind').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  windOn = !windOn;
+  windTarget = windOn ? 0.8 : 0;
+  e.target.style.opacity = windOn ? '1' : '0.6';
+});
+
+// ============================================================
+// Boot
+// ============================================================
+resize();
+initWind();
+
+// Subtle ambient animation even before interaction
+window.addEventListener('load', ()=>{
+  requestAnimationFrame(animate);
+});
+
+// Also start immediately
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>

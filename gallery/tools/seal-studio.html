@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>绒球印坊 / Rongball Seal Studio</title>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f3ef;
+  --panel: #ffffff;
+  --text: #2c2c2c;
+  --text-light: #888;
+  --border: #e0ddd6;
+  --accent: #c8161d;
+  --accent-light: #f8e8e9;
+  --radius: 8px;
+}
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* ===== Header ===== */
+header {
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 28px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-shrink: 0;
+}
+header h1 { font-size: 20px; font-weight: 700; letter-spacing: 1px; }
+header .sub { font-size: 13px; color: var(--text-light); letter-spacing: 0.5px; }
+header .seal-icon {
+  display: inline-block;
+  width: 28px; height: 28px;
+  background: var(--accent);
+  border-radius: 4px;
+  position: relative;
+  vertical-align: middle;
+}
+header .seal-icon::after {
+  content: '';
+  position: absolute;
+  top: 6px; left: 6px; right: 6px; bottom: 6px;
+  border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 2px;
+}
+
+/* ===== Layout ===== */
+main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.controls {
+  width: 310px;
+  min-width: 310px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.preview-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  gap: 20px;
+}
+
+/* ===== Control Sections ===== */
+.section { margin-bottom: 22px; }
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-light);
+  margin-bottom: 10px;
+}
+
+/* Pattern grid */
+.pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.pattern-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 11px;
+  color: var(--text);
+}
+.pattern-btn:hover { border-color: #ccc; background: #fafaf8; }
+.pattern-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+}
+.pattern-btn .icon { font-size: 22px; line-height: 1; }
+
+/* Toggle group */
+.toggle-group { display: flex; gap: 6px; }
+.toggle-btn {
+  flex: 1;
+  padding: 8px 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  transition: all 0.15s;
+  text-align: center;
+}
+.toggle-btn:hover { border-color: #ccc; }
+.toggle-btn.active {
+  border-color: var(--accent);
+  background: var(--accent-light);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Color swatches */
+.color-row { display: flex; gap: 10px; }
+.color-swatch {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+}
+.color-swatch:hover { transform: scale(1.1); }
+.color-swatch.active { border-color: var(--text); }
+
+/* Slider */
+.slider-row { display: flex; align-items: center; gap: 12px; }
+.slider-row input[type="range"] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+}
+.slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.slider-row .val {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 38px;
+  text-align: right;
+  color: var(--accent);
+}
+
+/* Download button */
+.dl-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  letter-spacing: 1px;
+}
+.dl-btn:hover { background: #a81218; }
+.dl-btn:active { transform: scale(0.98); }
+
+/* ===== Preview ===== */
+.canvas-wrap {
+  background:
+    linear-gradient(45deg, #e8e5df 25%, transparent 25%),
+    linear-gradient(-45deg, #e8e5df 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e8e5df 75%),
+    linear-gradient(-45deg, transparent 75%, #e8e5df 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+#preview-canvas {
+  display: block;
+  width: 400px;
+  height: 400px;
+}
+.preview-info {
+  font-size: 12px;
+  color: var(--text-light);
+  text-align: center;
+}
+
+/* Hidden render canvas */
+#render-canvas { display: none; }
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  main { flex-direction: column; }
+  .controls {
+    width: 100%;
+    min-width: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 45vh;
+  }
+  #preview-canvas { width: 300px; height: 300px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="seal-icon"></span>
+  <h1>绒球印坊</h1>
+  <span class="sub">Rongball Seal Studio</span>
+</header>
+
+<main>
+  <!-- ===== Controls ===== -->
+  <aside class="controls">
+    <!-- Pattern -->
+    <div class="section">
+      <div class="section-label">图案 Pattern</div>
+      <div class="pattern-grid" id="pattern-grid"></div>
+    </div>
+
+    <!-- Shape -->
+    <div class="section">
+      <div class="section-label">形状 Shape</div>
+      <div class="toggle-group" id="shape-group">
+        <button class="toggle-btn active" data-val="square">方章</button>
+        <button class="toggle-btn" data-val="circle">圆章</button>
+      </div>
+    </div>
+
+    <!-- Style -->
+    <div class="section">
+      <div class="section-label">印式 Style</div>
+      <div class="toggle-group" id="style-group">
+        <button class="toggle-btn active" data-val="zhuwen">朱文（阳刻）</button>
+        <button class="toggle-btn" data-val="baiwen">白文（阴刻）</button>
+      </div>
+    </div>
+
+    <!-- Border -->
+    <div class="section">
+      <div class="section-label">边框 Border</div>
+      <div class="toggle-group" id="border-group">
+        <button class="toggle-btn" data-val="none">无</button>
+        <button class="toggle-btn active" data-val="thin">细边</button>
+        <button class="toggle-btn" data-val="thick">粗边</button>
+      </div>
+    </div>
+
+    <!-- Aging -->
+    <div class="section">
+      <div class="section-label">做旧 Aging</div>
+      <div class="slider-row">
+        <input type="range" id="aging-slider" min="0" max="100" value="20">
+        <span class="val" id="aging-val">20%</span>
+      </div>
+    </div>
+
+    <!-- Color -->
+    <div class="section">
+      <div class="section-label">印泥颜色 Color</div>
+      <div class="color-row" id="color-row">
+        <div class="color-swatch active" data-color="#c8161d" style="background:#c8161d" title="朱砂红"></div>
+        <div class="color-swatch" data-color="#8b1a1a" style="background:#8b1a1a" title="深红"></div>
+        <div class="color-swatch" data-color="#e34234" style="background:#e34234" title="朱膘"></div>
+      </div>
+    </div>
+
+    <!-- Download -->
+    <div class="section">
+      <button class="dl-btn" id="dl-btn">⬇ 下载 PNG (1200×1200)</button>
+    </div>
+  </aside>
+
+  <!-- ===== Preview ===== -->
+  <section class="preview-area">
+    <div class="canvas-wrap">
+      <canvas id="preview-canvas" width="400" height="400"></canvas>
+    </div>
+    <div class="preview-info" id="preview-info">绒球本体 · 方章 · 朱文</div>
+  </section>
+</main>
+
+<!-- Hidden high-res canvas for rendering/export -->
+<canvas id="render-canvas" width="1200" height="1200"></canvas>
+
+<script>
+// ============================================================
+// 绒球印坊 / Rongball Seal Studio
+// 纯Canvas 2D印章生成工具
+// ============================================================
+
+(function () {
+  'use strict';
+
+  // ---------- Constants ----------
+  const RENDER_SIZE = 1200;  // Internal hi-res canvas
+  const CX = RENDER_SIZE / 2;
+  const CY = RENDER_SIZE / 2;
+  const OUTER_R = RENDER_SIZE * 0.46;  // outer radius for circle, half-size for square
+
+  // ============================================================
+  // Seeded PRNG (mulberry32)
+  // ============================================================
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0;
+      seed = (seed + 0x6D2B79F5) | 0;
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function hashString(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+    }
+    return h;
+  }
+
+  // ============================================================
+  // Pattern Drawing Functions
+  // Each pattern has two methods:
+  //   foreground(ctx, cx, cy, r) — draws the main solid shapes
+  //   details(ctx, cx, cy, r)    — draws internal lines/dots
+  // Both use current fillStyle/strokeStyle.
+  // ============================================================
+
+  // ---------- Helper: draw rongball base (body + ears) ----------
+  function rongballBase(ctx, cx, cy, r, opts) {
+    opts = opts || {};
+    const bodyR = r * (opts.bodyScale || 0.68);
+    const bodyCY = cy + r * (opts.bodyOffsetY || 0.06);
+    const earR = r * (opts.earScale || 0.16);
+    const earOffX = r * (opts.earOffsetX || 0.33);
+    const earOffY = r * (opts.earOffsetY || -0.48);
+
+    // Ears
+    ctx.beginPath();
+    ctx.arc(cx - earOffX, cy + earOffY, earR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + earOffX, cy + earOffY, earR, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body
+    ctx.beginPath();
+    ctx.arc(cx, bodyCY, bodyR, 0, Math.PI * 2);
+    ctx.fill();
+
+    return { bodyR, bodyCY, earR, earOffX, earOffY };
+  }
+
+  // Helper: draw two dot eyes
+  function dotEyes(ctx, cx, cy, r, offsets) {
+    const ox = r * 0.2, oy = r * -0.02, eyeR = r * 0.08;
+    ctx.beginPath();
+    ctx.arc(cx - ox, cy + oy, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + ox, cy + oy, eyeR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Helper: draw arc eyes (closed/happy)
+  function arcEyes(ctx, cx, cy, r, upsideDown) {
+    const ox = r * 0.2, oy = r * -0.02, eyeW = r * 0.1, eyeH = r * 0.07;
+    ctx.lineWidth = r * 0.055;
+    ctx.lineCap = 'round';
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      if (upsideDown) {
+        // happy: arc like ︶
+        ctx.arc(cx + s * ox, cy + oy, eyeW, Math.PI * 0.15, Math.PI * 0.85);
+      } else {
+        // sleeping: arc like ︵
+        ctx.arc(cx + s * ox, cy + oy + eyeH * 0.6, eyeW, Math.PI * 1.15, Math.PI * 1.85);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // Helper: heart shape
+  function drawHeart(ctx, x, y, size) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + size * 0.35);
+    ctx.bezierCurveTo(x, y + size * 0.05, x - size * 0.5, y, x - size * 0.5, y + size * 0.32);
+    ctx.bezierCurveTo(x - size * 0.5, y + size * 0.6, x, y + size * 0.85, x, y + size * 1.15);
+    ctx.bezierCurveTo(x, y + size * 0.85, x + size * 0.5, y + size * 0.6, x + size * 0.5, y + size * 0.32);
+    ctx.bezierCurveTo(x + size * 0.5, y, x, y + size * 0.05, x, y + size * 0.35);
+    ctx.fill();
+  }
+
+  // Helper: cherry blossom petal
+  function drawPetal(ctx, cx, cy, size, angle) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.bezierCurveTo(size * 0.25, -size * 0.15, size * 0.45, -size * 0.75, 0, -size);
+    ctx.bezierCurveTo(-size * 0.45, -size * 0.75, -size * 0.25, -size * 0.15, 0, 0);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Helper: Z letter
+  function drawZ(ctx, x, y, size) {
+    const w = size * 0.45, h = size * 0.45;
+    ctx.lineWidth = size * 0.14;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - w, y - h);
+    ctx.lineTo(x + w, y - h);
+    ctx.lineTo(x - w, y + h);
+    ctx.lineTo(x + w, y + h);
+    ctx.stroke();
+  }
+
+  // Helper: question mark
+  function drawQuestionMark(ctx, x, y, size) {
+    ctx.lineWidth = size * 0.16;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(x, y - size * 0.15, size * 0.28, 0, Math.PI * 1.55);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y + size * 0.35, size * 0.075, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Helper: spiral (yarn ball)
+  function drawSpiral(ctx, cx, cy, maxR, turns) {
+    ctx.lineWidth = maxR * 0.12;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    const steps = turns * 60;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const angle = t * turns * Math.PI * 2;
+      const r = maxR * t;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Helper: compute intersection points of two circles.
+  // Returns array of {x, y} points (0, 1, or 2).
+  function circleIntersections(c1, c2) {
+    const dx = c2.x - c1.x, dy = c2.y - c1.y;
+    const d = Math.hypot(dx, dy);
+    if (d > c1.r + c2.r || d < Math.abs(c1.r - c2.r) || d === 0) return [];
+    const a = (c1.r * c1.r - c2.r * c2.r + d * d) / (2 * d);
+    const h2 = c1.r * c1.r - a * a;
+    if (h2 < 0) return [];
+    const h = Math.sqrt(h2);
+    const mx = c1.x + a * dx / d;
+    const my = c1.y + a * dy / d;
+    const px = -dy / d * h;
+    const py =  dx / d * h;
+    return [
+      { x: mx + px, y: my + py },
+      { x: mx - px, y: my - py }
+    ];
+  }
+
+  // Trace a single closed path combining the body circle with two ear
+  // circles. The two ears sit on the upper-left and upper-right of the
+  // body. This produces a clean continuous silhouette with no wedge
+  // artifacts at ear-body junctions.
+  //
+  // Ear layout (in body-local coords):
+  //   left ear  at (-earOffX, -earOffY)   right ear at (+earOffX, -earOffY)
+  //
+  // Path sequence (screen coords, y-down):
+  //   1. body arc clockwise from left-upper cross to right-upper cross (forehead)
+  //   2. right ear outer arc CCW from right-lower to right-upper (over the ear)
+  //   3. body arc CCW from right-lower all the way around bottom to left-lower
+  //   4. left ear outer arc CCW from left-lower to left-upper (over the ear)
+  function traceBallOutline(ctx, cx, bodyCY, bodyR, earR, earOffX, earOffY) {
+    const body = { x: cx, y: bodyCY, r: bodyR };
+    const eL = { x: cx - earOffX, y: bodyCY - earOffY, r: earR };
+    const eR = { x: cx + earOffX, y: bodyCY - earOffY, r: earR };
+
+    const iL = circleIntersections(body, eL);
+    const iR = circleIntersections(body, eR);
+    if (iL.length < 2 || iR.length < 2) {
+      // Fallback: just the body circle
+      ctx.beginPath();
+      ctx.arc(cx, bodyCY, bodyR, 0, Math.PI * 2);
+      return;
+    }
+
+    // For each ear, identify the "upper" (closer to top of head) and
+    // "lower" (closer to side of head) intersection points.
+    // Screen-y is smaller when higher, so pick the point with smaller y.
+    iL.sort((a, b) => a.y - b.y);
+    iR.sort((a, b) => a.y - b.y);
+    const leftUpper  = iL[0], leftLower  = iL[1];
+    const rightUpper = iR[0], rightLower = iR[1];
+
+    function angle(c, p) { return Math.atan2(p.y - c.y, p.x - c.x); }
+    const aLU_b = angle(body, leftUpper),  aLL_b = angle(body, leftLower);
+    const aRU_b = angle(body, rightUpper), aRL_b = angle(body, rightLower);
+    const aLU_e = angle(eL, leftUpper),    aLL_e = angle(eL, leftLower);
+    const aRU_e = angle(eR, rightUpper),   aRL_e = angle(eR, rightLower);
+
+    ctx.beginPath();
+    // 1. Forehead arc: body from left-upper to right-upper, clockwise
+    //    (short arc over the top between the two ear roots).
+    ctx.arc(cx, bodyCY, bodyR, aLU_b, aRU_b, false);
+    // 2. Right ear outer arc: from right-upper clockwise around the
+    //    outer (top/right) side to right-lower (276° sweep).
+    ctx.arc(eR.x, eR.y, earR, aRU_e, aRL_e, false);
+    // 3. Body arc from right-lower clockwise all the way around the
+    //    bottom and left side to left-lower.
+    ctx.arc(cx, bodyCY, bodyR, aRL_b, aLL_b, false);
+    // 4. Left ear outer arc: from left-lower clockwise around the
+    //    outer (left/top) side to left-upper, closing the path.
+    ctx.arc(eL.x, eL.y, earR, aLL_e, aLU_e, false);
+    ctx.closePath();
+  }
+
+  // ============================================================
+  // Jittered / knife-carved stroke utilities
+  // ============================================================
+
+  // Add a jittered arc segment to the current path.
+  // Endpoints are NOT jittered so adjacent segments join seamlessly.
+  function jitteredArcTo(ctx, cx, cy, r, a0, a1, ccw, amp, rng) {
+    let sweep = ccw ? (a0 - a1) : (a1 - a0);
+    if (sweep < 0) sweep += Math.PI * 2;
+    if (sweep < 0.001) return;
+    const segs = Math.max(24, Math.ceil(sweep / 0.045));
+    const pts = [];
+    for (let i = 0; i <= segs; i++) {
+      const t = i / segs;
+      const a = ccw ? a0 - sweep * t : a0 + sweep * t;
+      const j = (i === 0 || i === segs) ? 0 : (rng() - 0.5) * amp * 2;
+      const rr = r + j;
+      pts.push({ x: cx + Math.cos(a) * rr, y: cy + Math.sin(a) * rr });
+    }
+    for (let i = 1; i < pts.length - 1; i++) {
+      const xc = (pts[i].x + pts[i + 1].x) / 2;
+      const yc = (pts[i].y + pts[i + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+  }
+
+  // Add a jittered cubic bezier to the current path.
+  // Assumes path is already at (x0,y0).
+  function jitteredBezierTo(ctx, x0, y0, cp1x, cp1y, cp2x, cp2y, x1, y1, amp, rng) {
+    const segs = 28;
+    const pts = [];
+    for (let i = 0; i <= segs; i++) {
+      const t = i / segs;
+      const mt = 1 - t;
+      let x = mt*mt*mt*x0 + 3*mt*mt*t*cp1x + 3*mt*t*t*cp2x + t*t*t*x1;
+      let y = mt*mt*mt*y0 + 3*mt*mt*t*cp1y + 3*mt*t*t*cp2y + t*t*t*y1;
+      if (i > 0 && i < segs) {
+        x += (rng() - 0.5) * amp * 2;
+        y += (rng() - 0.5) * amp * 2;
+      }
+      pts.push({ x, y });
+    }
+    for (let i = 1; i < pts.length - 1; i++) {
+      const xc = (pts[i].x + pts[i + 1].x) / 2;
+      const yc = (pts[i].y + pts[i + 1].y) / 2;
+      ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+  }
+
+  // Build continuous body+ears outline as a single jittered path.
+  // Caller does ctx.stroke() after.
+  function buildBallPath(ctx, cx, bodyCY, bodyR, earR, earOffX, earOffY, amp, rng) {
+    const body = { x: cx, y: bodyCY, r: bodyR };
+    const eL = { x: cx - earOffX, y: bodyCY - earOffY, r: earR };
+    const eR = { x: cx + earOffX, y: bodyCY - earOffY, r: earR };
+    const iL = circleIntersections(body, eL);
+    const iR = circleIntersections(body, eR);
+    if (iL.length < 2 || iR.length < 2) {
+      ctx.beginPath();
+      ctx.arc(cx, bodyCY, bodyR, 0, Math.PI * 2);
+      return;
+    }
+    iL.sort((a, b) => a.y - b.y);
+    iR.sort((a, b) => a.y - b.y);
+    const leftUpper = iL[0], leftLower = iL[1];
+    const rightUpper = iR[0], rightLower = iR[1];
+    function ang(c, p) { return Math.atan2(p.y - c.y, p.x - c.x); }
+    const aLU_b = ang(body, leftUpper), aLL_b = ang(body, leftLower);
+    const aRU_b = ang(body, rightUpper), aRL_b = ang(body, rightLower);
+    const aLU_eL = ang(eL, leftUpper), aLL_eL = ang(eL, leftLower);
+    const aRU_eR = ang(eR, rightUpper), aRL_eR = ang(eR, rightLower);
+
+    ctx.beginPath();
+    ctx.moveTo(leftUpper.x, leftUpper.y);
+    // 1. Forehead: body arc left-upper → right-upper
+    jitteredArcTo(ctx, cx, bodyCY, bodyR, aLU_b, aRU_b, false, amp, rng);
+    // 2. Right ear outer arc
+    jitteredArcTo(ctx, eR.x, eR.y, earR, aRU_eR, aRL_eR, false, amp, rng);
+    // 3. Body arc around bottom
+    jitteredArcTo(ctx, cx, bodyCY, bodyR, aRL_b, aLL_b, false, amp, rng);
+    // 4. Left ear outer arc
+    jitteredArcTo(ctx, eL.x, eL.y, earR, aLL_eL, aLU_eL, false, amp, rng);
+    ctx.closePath();
+  }
+
+  // Draw inner ear arcs (C-shaped bezier with jitter)
+  function drawInnerEars(ctx, eL, eR, earR, lw, amp, rng) {
+    const ir = earR * 0.50;
+    ctx.lineWidth = lw;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Left inner ear (C opening right / toward head)
+    ctx.beginPath();
+    ctx.moveTo(eL.x + ir * 0.15, eL.y - ir * 0.85);
+    jitteredBezierTo(ctx,
+      eL.x + ir * 0.15, eL.y - ir * 0.85,
+      eL.x - ir * 1.2, eL.y - ir * 0.85,
+      eL.x - ir * 1.2, eL.y + ir * 0.85,
+      eL.x + ir * 0.15, eL.y + ir * 0.85,
+      amp * 0.6, rng
+    );
+    ctx.stroke();
+
+    // Right inner ear (C opening left / toward head)
+    ctx.beginPath();
+    ctx.moveTo(eR.x - ir * 0.15, eR.y - ir * 0.85);
+    jitteredBezierTo(ctx,
+      eR.x - ir * 0.15, eR.y - ir * 0.85,
+      eR.x + ir * 1.2, eR.y - ir * 0.85,
+      eR.x + ir * 1.2, eR.y + ir * 0.85,
+      eR.x - ir * 0.15, eR.y + ir * 0.85,
+      amp * 0.6, rng
+    );
+    ctx.stroke();
+  }
+
+  // ============================================================
+  // Ball-pattern scattered accessories (line-art)
+  // Yarn balls (spirals) and loose thread-ends placed around the
+  // rongball to fill the seal face like 鼠钱印's coins.
+  // ============================================================
+
+  // Yarn ball motif — a small spiral with optional direction and partial turns.
+  // cw: true=clockwise, false=counter-clockwise (default true)
+  // partial: if true, only draw partial spiral (broken/occluded look)
+  function drawYarnSpiral(ctx, x, y, s, turns, cw, partial) {
+    turns = turns || 2.5;
+    cw = cw !== false;
+    ctx.lineWidth = s * 0.16;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    const steps = Math.floor(turns * 60);
+    const startT = partial ? turns * 0.15 : 0;
+    const endT = partial ? turns * 0.75 : 1;
+    const stepStart = Math.floor(startT * steps);
+    const stepEnd = Math.floor(endT * steps);
+    for (let i = stepStart; i <= stepEnd; i++) {
+      const t = i / steps;
+      const angle = cw ? t * turns * Math.PI * 2 : -t * turns * Math.PI * 2;
+      const rad = s * t;
+      const px = x + Math.cos(angle) * rad;
+      const py = y + Math.sin(angle) * rad;
+      if (i === stepStart) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+
+  // Scattered yarn spirals and tiny seal-mud dots around the rongball.
+  // 5-6 spirals with size hierarchy, mixed rotation, partial spirals.
+  // Dense at sides and bottom, open space between ears at top.
+  function drawBallDecor(ctx, cx, cy, r) {
+    // Spirals: 2 large anchors, 3-4 smaller, mixed CW/CCW, 1 partial
+    const spirals = [
+      // Two large anchor spirals
+      { x: -0.70, y:  0.10, s: 0.075, t: 2.5, cw: true,  partial: false },
+      { x:  0.68, y:  0.28, s: 0.072, t: 2.5, cw: false, partial: false },
+      // Medium/small spirals
+      { x: -0.62, y:  0.50, s: 0.048, t: 2.0, cw: false, partial: false },
+      { x:  0.58, y:  0.52, s: 0.045, t: 2.0, cw: true,  partial: false },
+      { x: -0.30, y:  0.74, s: 0.040, t: 2.0, cw: true,  partial: false },
+      // Partial spiral at upper-left (suggests being cut off by edge)
+      { x: -0.72, y: -0.48, s: 0.042, t: 2.0, cw: true,  partial: true  }
+    ];
+    for (const sp of spirals) {
+      drawYarnSpiral(
+        ctx, cx + sp.x * r, cy + sp.y * r,
+        sp.s * r, sp.t, sp.cw, sp.partial
+      );
+    }
+
+    // Tiny solid dots (seal-mud sand holes / 印泥砂眼), 6-8 total
+    const dots = [
+      { x:  0.55, y: -0.15, d: 0.014 },
+      { x: -0.52, y: -0.22, d: 0.010 },
+      { x:  0.30, y:  0.70, d: 0.012 },
+      { x:  0.72, y:  0.50, d: 0.009 },
+      { x: -0.15, y: -0.68, d: 0.011 },
+      { x:  0.12, y:  0.78, d: 0.008 },
+      { x: -0.74, y:  0.42, d: 0.010 }
+    ];
+    for (const d of dots) {
+      ctx.beginPath();
+      ctx.arc(cx + d.x * r, cy + d.y * r, d.d * r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ============================================================
+  // Pattern Library
+  // ============================================================
+  const patterns = [
+    {
+      id: 'ball',
+      name: '绒球本体',
+      icon: '🔴',
+      block: true,
+
+      // ---- Build organic rongball silhouette ----
+      // Wide round body + two asymmetric ears as a single continuous path.
+      _buildSilhouette(ctx, cx, cy, r) {
+        const s = r;
+        const bx = cx;
+        const by = cy + s * 0.01;
+
+        let sd = 7;
+        function jr() { sd = (sd * 1103515245 + 12345) & 0x7fffffff; return sd / 0x7fffffff; }
+
+        // Body outline points clockwise from just right of left ear.
+        // Ears are integrated bumps — not separate shapes.
+        // Left ear: shorter, tilted outward, rounded tip.
+        // Right ear: taller, more upright, rounded tip.
+        const raw = [
+          // === LEFT side, starting from forehead going DOWN ===
+          // Forehead between ears
+          [-0.02, -0.42],
+          // Left ear base rising
+          [-0.10, -0.44],
+          [-0.18, -0.50],
+          [-0.24, -0.58],
+          [-0.27, -0.62],  // left ear tip (outer)
+          [-0.30, -0.60],
+          [-0.30, -0.54],
+          [-0.26, -0.48],
+          [-0.20, -0.44],
+          // Left shoulder
+          [-0.32, -0.38],
+          [-0.44, -0.26],
+          [-0.52, -0.10],
+          [-0.56, 0.08],
+          // Left flank
+          [-0.56, 0.26],
+          [-0.52, 0.42],
+          // Left hip
+          [-0.44, 0.54],
+          [-0.32, 0.62],
+          [-0.18, 0.66],
+          // Bottom belly (smooth round)
+          [-0.04, 0.68],
+          [0.10, 0.67],
+          [0.24, 0.63],
+          // Right hip
+          [0.36, 0.57],
+          [0.46, 0.46],
+          [0.52, 0.32],
+          // Right flank
+          [0.56, 0.16],
+          [0.56, -0.02],
+          [0.52, -0.20],
+          // Right shoulder
+          [0.44, -0.34],
+          [0.34, -0.42],
+          // Right ear base rising
+          [0.30, -0.46],
+          [0.34, -0.56],
+          [0.32, -0.64],
+          [0.26, -0.68],  // right ear tip (taller)
+          [0.18, -0.66],
+          [0.14, -0.58],
+          [0.12, -0.50],
+          [0.10, -0.44],
+          // Back to forehead
+          [0.04, -0.42],
+        ];
+
+        const jit = s * 0.004;
+        const pts = raw.map(p => ({
+          x: bx + p[0] * s + (jr() - 0.5) * jit,
+          y: by + p[1] * s + (jr() - 0.5) * jit
+        }));
+
+        const n = pts.length;
+        ctx.beginPath();
+        ctx.moveTo((pts[n-1].x + pts[0].x)/2, (pts[n-1].y + pts[0].y)/2);
+        for (let i = 0; i < n; i++) {
+          const c = pts[i], nx = pts[(i+1)%n];
+          ctx.quadraticCurveTo(c.x, c.y, (c.x+nx.x)/2, (c.y+nx.y)/2);
+        }
+        ctx.closePath();
+      },
+
+      silhouette(ctx, cx, cy, r) { this._buildSilhouette(ctx, cx, cy, r); },
+
+      // ---- Fur texture ----
+      furLines(ctx, cx, cy, r) {
+        const s = r;
+        const bx = cx, by = cy + s * 0.01;
+        ctx.lineWidth = s * 0.008;
+        ctx.lineCap = 'round';
+
+        let sd = 789;
+        function rng() { sd = (sd * 16807) % 2147483647; return (sd - 1) / 2147483646; }
+
+        const clusters = [
+          [0.10, -0.12, 3, 0.06, -0.6],
+          [-0.16, -0.08, 3, 0.06, 0.7],
+          [0.26, 0.06, 3, 0.06, -1.0],
+          [-0.28, 0.12, 3, 0.06, 1.1],
+          [0.02, 0.24, 4, 0.08, 0],
+          [0.34, -0.12, 2, 0.04, -1.3],
+          [-0.08, -0.26, 2, 0.04, 0.3],
+          [-0.22, 0.36, 2, 0.05, 0.6],
+          [0.18, 0.40, 2, 0.05, -0.4],
+        ];
+
+        for (const [ccx, ccy, cnt, spread, aBase] of clusters) {
+          for (let i = 0; i < cnt; i++) {
+            const px = bx + (ccx + (rng()-0.5)*spread) * s;
+            const py = by + (ccy + (rng()-0.5)*spread) * s;
+            const angle = aBase + (rng()-0.5) * 0.6;
+            const arcLen = s * (0.016 + rng() * 0.018);
+            ctx.beginPath();
+            ctx.arc(px, py, arcLen, angle, angle + 0.5 + rng() * 0.4);
+            ctx.stroke();
+          }
+        }
+      },
+
+      // ---- One eye: small circle, off-center right ----
+      drawEye(ctx, cx, cy, r) {
+        const s = r;
+        const bx = cx, by = cy + s * 0.01;
+        ctx.beginPath();
+        ctx.arc(bx + s * 0.14, by - s * 0.06, s * 0.014, 0, Math.PI * 2);
+        ctx.fill();
+      },
+
+      // ---- Yarn tail ----
+      drawTail(ctx, cx, cy, r) {
+        const s = r;
+        const bx = cx, by = cy + s * 0.01;
+        ctx.lineWidth = s * 0.015;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(bx + s * 0.52, by + s * 0.04);
+        ctx.bezierCurveTo(
+          bx + s * 0.66, by - s * 0.02,
+          bx + s * 0.68, by - s * 0.26,
+          bx + s * 0.52, by - s * 0.46
+        );
+        ctx.stroke();
+
+        // Spiral
+        const scx = bx + s * 0.50, scy = by - s * 0.50;
+        const turns = 2.0, steps = 55;
+        ctx.lineWidth = s * 0.012;
+        ctx.beginPath();
+        for (let i = 0; i <= steps; i++) {
+          const t = i / steps;
+          const a = t * turns * Math.PI * 2 - Math.PI * 0.5;
+          const rad = s * 0.024 * (1 - t * 0.90);
+          const px = scx + Math.cos(a) * rad;
+          const py = scy + Math.sin(a) * rad;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      },
+
+      // ---- Custom block render ----
+      render(ctx, canvas, opts) {
+        const S = canvas.width;
+        const cx = S/2, cy = S/2;
+        const outerR = S * 0.46;
+        const color = opts.color || '#c8161d';
+        const style = opts.style || 'zhuwen';
+        const border = opts.border || 'thin';
+        const shape = opts.shape || 'square';
+        const patR = S * 0.46;
+
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+
+        if (style === 'zhuwen') {
+          this._fillShape(ctx, cx, cy, outerR, shape);
+          if (border !== 'none') {
+            ctx.globalCompositeOperation = 'destination-out';
+            ctx.lineWidth = S * 0.002;
+            ctx.beginPath();
+            if (shape === 'circle') ctx.arc(cx, cy, outerR - S*0.024, 0, Math.PI*2);
+            else { const d = outerR - S*0.024; ctx.rect(cx-d, cy-d, d*2, d*2); }
+            ctx.stroke();
+            ctx.globalCompositeOperation = 'source-over';
+          }
+          ctx.globalCompositeOperation = 'destination-out';
+          this.silhouette(ctx, cx, cy, patR); ctx.fill();
+          this.drawEye(ctx, cx, cy, patR);
+          this.drawTail(ctx, cx, cy, patR);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = color; ctx.strokeStyle = color;
+          this.furLines(ctx, cx, cy, patR);
+        } else {
+          if (border !== 'none') {
+            const bw = border === 'thick' ? S*0.035 : S*0.022;
+            ctx.lineWidth = bw; ctx.lineJoin = 'miter';
+            ctx.beginPath();
+            if (shape === 'square') { const d = outerR - bw/2; ctx.rect(cx-d, cy-d, d*2, d*2); }
+            else ctx.arc(cx, cy, outerR - bw/2, 0, Math.PI*2);
+            ctx.stroke();
+          }
+          ctx.fillStyle = color;
+          this.silhouette(ctx, cx, cy, patR); ctx.fill();
+          ctx.globalCompositeOperation = 'destination-out';
+          this.furLines(ctx, cx, cy, patR);
+          this.drawEye(ctx, cx, cy, patR);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.strokeStyle = color; ctx.fillStyle = color;
+          this.drawTail(ctx, cx, cy, patR);
+        }
+
+        window.__ballGeom = {
+          cx, bodyCY: cy + patR*0.01,
+          bodyR: patR*0.54, earR: patR*0.12,
+          earOffX: patR*0.24, earOffY: patR*0.40,
+          mainLW: S*0.03, r: patR
+        };
+      },
+
+      _fillShape(ctx, cx, cy, r, shape) {
+        ctx.beginPath();
+        if (shape === 'circle') ctx.arc(cx, cy, r, 0, Math.PI*2);
+        else ctx.rect(cx-r, cy-r, r*2, r*2);
+        ctx.fill();
+      }
+    },
+    {
+      id: 'yarn',
+      name: '抱毛线',
+      icon: '🧶',
+      foreground(ctx, cx, cy, r) {
+        // body slightly smaller & lower
+        const base = rongballBase(ctx, cx, cy, r, {
+          bodyScale: 0.6, bodyOffsetY: 0.1,
+          earScale: 0.14, earOffsetY: -0.42
+        });
+        // two little arms reaching down to yarn
+        ctx.lineWidth = r * 0.1;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.3, cy + r * 0.15);
+        ctx.quadraticCurveTo(cx - r * 0.35, cy + r * 0.35, cx - r * 0.18, cy + r * 0.42);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + r * 0.3, cy + r * 0.15);
+        ctx.quadraticCurveTo(cx + r * 0.35, cy + r * 0.35, cx + r * 0.18, cy + r * 0.42);
+        ctx.stroke();
+        // yarn ball in front
+        const yarnX = cx, yarnY = cy + r * 0.42, yarnR = r * 0.28;
+        ctx.beginPath();
+        ctx.arc(yarnX, yarnY, yarnR, 0, Math.PI * 2);
+        ctx.fill();
+        // yarn tail
+        ctx.lineWidth = r * 0.04;
+        ctx.beginPath();
+        ctx.moveTo(yarnX + yarnR * 0.6, yarnY - yarnR * 0.3);
+        ctx.bezierCurveTo(yarnX + r * 0.5, yarnY - r * 0.2, yarnX + r * 0.55, yarnY + r * 0.1, yarnX + r * 0.35, yarnY + r * 0.15);
+        ctx.stroke();
+      },
+      details(ctx, cx, cy, r) {
+        // eyes
+        dotEyes(ctx, cx, cy, r);
+        // spiral lines on yarn ball (carved / red lines)
+        drawSpiral(ctx, cx, cy + r * 0.42, r * 0.2, 3.5);
+      }
+    },
+    {
+      id: 'sleep',
+      name: '睡觉',
+      icon: '😴',
+      foreground(ctx, cx, cy, r) {
+        // curled body — slightly oval horizontal
+        ctx.save();
+        ctx.translate(cx, cy + r * 0.08);
+        ctx.scale(1, 0.88);
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // one flopped ear
+        ctx.beginPath();
+        ctx.arc(cx - r * 0.35, cy - r * 0.42, r * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + r * 0.32, cy - r * 0.38, r * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        // Z z z floating upper-right
+        drawZ(ctx, cx + r * 0.42, cy - r * 0.48, r * 0.22);
+        drawZ(ctx, cx + r * 0.58, cy - r * 0.6, r * 0.16);
+        drawZ(ctx, cx + r * 0.68, cy - r * 0.68, r * 0.11);
+      },
+      details(ctx, cx, cy, r) {
+        // closed eye arcs (sleeping style ︵)
+        arcEyes(ctx, cx, cy + r * 0.05, r, false);
+      }
+    },
+    {
+      id: 'roll',
+      name: '打滚',
+      icon: '🙃',
+      foreground(ctx, cx, cy, r) {
+        // body lying on back — horizontal oval
+        ctx.save();
+        ctx.translate(cx, cy + r * 0.05);
+        ctx.scale(1.15, 0.8);
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // ears to the sides
+        ctx.beginPath();
+        ctx.arc(cx - r * 0.55, cy - r * 0.15, r * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + r * 0.55, cy - r * 0.15, r * 0.13, 0, Math.PI * 2);
+        ctx.fill();
+        // four little limbs sticking up
+        ctx.lineWidth = r * 0.09;
+        ctx.lineCap = 'round';
+        const limbs = [
+          [-0.3, -0.35, -0.42, -0.55],
+          [0.3, -0.35, 0.42, -0.55],
+          [-0.4, 0.25, -0.55, 0.38],
+          [0.4, 0.25, 0.55, 0.38]
+        ];
+        for (const [x1, y1, x2, y2] of limbs) {
+          ctx.beginPath();
+          ctx.moveTo(cx + r * x1, cy + r * y1);
+          ctx.lineTo(cx + r * x2, cy + r * y2);
+          ctx.stroke();
+        }
+      },
+      details(ctx, cx, cy, r) {
+        // happy closed eyes
+        arcEyes(ctx, cx, cy + r * 0.02, r, true);
+        // little smile
+        ctx.lineWidth = r * 0.045;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(cx, cy + r * 0.18, r * 0.1, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        // belly button dot
+        ctx.beginPath();
+        ctx.arc(cx, cy + r * 0.22, r * 0.025, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    },
+    {
+      id: 'fluff',
+      name: '炸毛',
+      icon: '💥',
+      foreground(ctx, cx, cy, r) {
+        // spiky body
+        const spikes = 18;
+        const baseR = r * 0.58;
+        const spikeLen = r * 0.16;
+        ctx.beginPath();
+        for (let i = 0; i < spikes * 2; i++) {
+          const angle = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+          const isTip = i % 2 === 0;
+          const rad = isTip ? baseR + spikeLen : baseR - r * 0.02;
+          // vary spike lengths slightly for organic feel
+          const variation = isTip ? (Math.sin(i * 2.3) * 0.15 + 0.85) : 1;
+          const x = cx + Math.cos(angle) * rad * variation;
+          const y = cy + r * 0.04 + Math.sin(angle) * rad * variation;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fill();
+        // pointy ears
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.38, cy - r * 0.45);
+        ctx.lineTo(cx - r * 0.25, cy - r * 0.72);
+        ctx.lineTo(cx - r * 0.12, cy - r * 0.42);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(cx + r * 0.12, cy - r * 0.42);
+        ctx.lineTo(cx + r * 0.25, cy - r * 0.72);
+        ctx.lineTo(cx + r * 0.38, cy - r * 0.45);
+        ctx.closePath();
+        ctx.fill();
+      },
+      details(ctx, cx, cy, r) {
+        // wide round eyes
+        const ox = r * 0.18, oy = r * 0.02, eyeR = r * 0.11;
+        ctx.beginPath();
+        ctx.arc(cx - ox, cy + oy, eyeR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + ox, cy + oy, eyeR, 0, Math.PI * 2);
+        ctx.fill();
+        // small open mouth (oval)
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + r * 0.22, r * 0.05, r * 0.07, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    },
+    {
+      id: 'think',
+      name: '思考',
+      icon: '🤔',
+      foreground(ctx, cx, cy, r) {
+        const base = rongballBase(ctx, cx, cy, r, { bodyScale: 0.64, bodyOffsetY: 0.08 });
+        // one arm up to cheek
+        ctx.lineWidth = r * 0.1;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx + r * 0.35, cy + r * 0.15);
+        ctx.quadraticCurveTo(cx + r * 0.48, cy - r * 0.05, cx + r * 0.3, cy - r * 0.12);
+        ctx.stroke();
+        // question mark above head
+        drawQuestionMark(ctx, cx + r * 0.05, cy - r * 0.62, r * 0.3);
+      },
+      details(ctx, cx, cy, r) {
+        // left eye normal dot, right eye squint (short line)
+        ctx.beginPath();
+        ctx.arc(cx - r * 0.18, cy + r * 0.02, r * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.lineWidth = r * 0.05;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx + r * 0.12, cy + r * 0.04);
+        ctx.lineTo(cx + r * 0.26, cy + r * 0.0);
+        ctx.stroke();
+      }
+    },
+    {
+      id: 'happy',
+      name: '开心',
+      icon: '💖',
+      foreground(ctx, cx, cy, r) {
+        rongballBase(ctx, cx, cy, r);
+        // heart to the upper right
+        drawHeart(ctx, cx + r * 0.55, cy - r * 0.55, r * 0.28);
+      },
+      details(ctx, cx, cy, r) {
+        // crescent happy eyes
+        arcEyes(ctx, cx, cy, r, true);
+        // big smile
+        ctx.lineWidth = r * 0.05;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(cx, cy + r * 0.08, r * 0.16, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        // cheek blush — small circles (carved / red dots)
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath();
+        ctx.arc(cx - r * 0.3, cy + r * 0.15, r * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + r * 0.3, cy + r * 0.15, r * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    },
+    {
+      id: 'sakura',
+      name: '樱花',
+      icon: '🌸',
+      foreground(ctx, cx, cy, r) {
+        rongballBase(ctx, cx, cy, r, { bodyScale: 0.66, earOffsetY: -0.45 });
+        // cherry blossom on top of head
+        const flowerCX = cx, flowerCY = cy - r * 0.58, petalSize = r * 0.18;
+        for (let i = 0; i < 5; i++) {
+          const angle = (i / 5) * Math.PI * 2 - Math.PI / 2;
+          const px = flowerCX + Math.cos(angle) * petalSize * 0.45;
+          const py = flowerCY + Math.sin(angle) * petalSize * 0.45;
+          drawPetal(ctx, px, py, petalSize, angle + Math.PI / 2);
+        }
+      },
+      details(ctx, cx, cy, r) {
+        dotEyes(ctx, cx, cy, r);
+        // small smile
+        ctx.lineWidth = r * 0.045;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(cx, cy + r * 0.1, r * 0.1, Math.PI * 0.15, Math.PI * 0.85);
+        ctx.stroke();
+        // flower center dot
+        ctx.beginPath();
+        ctx.arc(cx, cy - r * 0.58, r * 0.04, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    },
+    // ============================================================
+    // v3: 绒球本印 — 正在缠绕中的线团
+    // 不是动物，不是完成的线球，是缠绕过程中活的形体。
+    // 顶部一根翘线头是神气，两个点眼安静地看。
+    // ============================================================
+    {
+      id: 'rongball-v3',
+      name: '绒球',
+      icon: '🧶',
+      block: true,
+
+      render(ctx, canvas, opts) {
+        const S = canvas.width;
+        const cx = S / 2, cy = S / 2;
+        const outerR = S * 0.46;
+        const color = opts.color || '#c8161d';
+        const shape = opts.shape || 'square';
+        const style = opts.style || 'zhuwen';
+        const border = opts.border || 'thin';
+
+        const borderWidth = border === 'none' ? 0
+          : border === 'thick' ? S * 0.035 : S * 0.018;
+        const innerR = border !== 'none'
+          ? outerR - borderWidth - S * 0.015 : outerR * 0.92;
+        const R = innerR * 0.6;
+        const ox = cx;
+        const oy = cy + innerR * 0.04;
+
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Seal background for zhuwen
+        if (style === 'zhuwen') {
+          fillSealShape(ctx, cx, cy, outerR, shape);
+        }
+
+        // Border
+        if (border !== 'none') {
+          ctx.lineWidth = borderWidth;
+          ctx.beginPath();
+          if (shape === 'circle') {
+            ctx.arc(cx, cy, outerR - borderWidth/2, 0, Math.PI*2);
+          } else {
+            const d = outerR - borderWidth/2;
+            ctx.rect(cx-d, cy-d, d*2, d*2);
+          }
+          ctx.stroke();
+        }
+
+        function buildBlobPath() {
+          ctx.beginPath();
+          const N = 80;
+          for (let i = 0; i <= N; i++) {
+            const a = (i / N) * Math.PI * 2;
+            const w = 1 + Math.sin(a*3+0.5)*0.015 + Math.sin(a*5+1.2)*0.008;
+            const px = ox + Math.cos(a) * R * w;
+            const py = oy + Math.sin(a) * R * w;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+        }
+
+        function drawWinding(lw) {
+          ctx.lineWidth = lw;
+          // spiral
+          const steps = 180;
+          ctx.beginPath();
+          for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const a = t * 3 * Math.PI*2 - Math.PI*0.3;
+            const rad = R * t * 0.8;
+            const px = ox + Math.cos(a)*rad;
+            const py = oy + Math.sin(a)*rad*0.96;
+            if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+          }
+          ctx.stroke();
+          // crossing arcs
+          const arcs = [[-1.0,1.0,0.0],[0.5,2.3,0.3],[1.2,3.2,-0.2],[-0.3,1.8,0.5]];
+          for (const [s,e,tilt] of arcs) {
+            ctx.beginPath();
+            for (let i=0;i<=40;i++){
+              const t=i/40, a=s+(e-s)*t;
+              const rad=R*(0.12+Math.sin(t*Math.PI)*0.78);
+              const px=ox+Math.cos(a+tilt)*rad;
+              const py=oy+Math.sin(a+tilt)*rad*0.9;
+              if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+            }
+            ctx.stroke();
+          }
+        }
+
+        function drawTip(lw) {
+          ctx.lineWidth = lw;
+          ctx.beginPath();
+          // 起点在 blob 内部 (R*0.5 < R)，向上穿出球面，向右弯，末端在球外开放空间微回钩
+          ctx.moveTo(ox, oy - R*0.55);
+          ctx.bezierCurveTo(
+            ox + R*0.05, oy - R*0.85,
+            ox + R*0.30, oy - R*1.08,
+            ox + R*0.30, oy - R*1.25
+          );
+          ctx.bezierCurveTo(
+            ox + R*0.30, oy - R*1.32,
+            ox + R*0.22, oy - R*1.30,
+            ox + R*0.18, oy - R*1.22
+          );
+          ctx.stroke();
+        }
+
+        function drawLoose(lw) {
+          ctx.lineWidth = lw;
+          // 右侧散线：从球内出发，向右下方飘逸，开放收尾
+          ctx.beginPath();
+          ctx.moveTo(ox + R*0.55, oy + R*0.15);
+          ctx.bezierCurveTo(
+            ox + R*0.85, oy + R*0.05,
+            ox + R*1.15, oy + R*0.30,
+            ox + R*1.20, oy + R*0.45
+          );
+          ctx.stroke();
+          // 左下散线：从球内出发，向左下方微弯，开放收尾
+          ctx.beginPath();
+          ctx.moveTo(ox - R*0.40, oy + R*0.45);
+          ctx.bezierCurveTo(
+            ox - R*0.65, oy + R*0.60,
+            ox - R*0.85, oy + R*0.85,
+            ox - R*0.82, oy + R*1.00
+          );
+          ctx.stroke();
+        }
+
+        function drawEyes() {
+          const ey = oy+R*0.08, es = R*0.13, er = R*0.05;
+          ctx.beginPath(); ctx.arc(ox-es,ey,er,0,Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(ox+es,ey,er,0,Math.PI*2); ctx.fill();
+        }
+
+        if (style === 'zhuwen') {
+          // red bg -> white blob -> red winding -> white eyes
+          ctx.globalCompositeOperation = 'destination-out';
+          buildBlobPath(); ctx.fill();
+          drawTip(R*0.08); drawLoose(R*0.045);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = color; ctx.strokeStyle = color;
+          drawWinding(R*0.065);
+          ctx.globalCompositeOperation = 'destination-out';
+          drawEyes();
+          ctx.globalCompositeOperation = 'source-over';
+        } else {
+          // white bg -> red blob -> white winding -> red eyes
+          buildBlobPath(); ctx.fill();
+          drawTip(R*0.08); drawLoose(R*0.045);
+          ctx.globalCompositeOperation = 'destination-out';
+          drawWinding(R*0.065);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = color;
+          drawEyes();
+        }
+      }
+    }
+  ];
+
+  // ============================================================
+  // Seal Rendering
+  // ============================================================
+
+  /**
+   * Main render function.
+   * Draws the complete seal onto the given canvas.
+   */
+  function renderSeal(canvas, opts) {
+    const ctx = canvas.getContext('2d');
+    const S = canvas.width;
+    const cx = S / 2, cy = S / 2;
+    const outerR = S * 0.46;
+
+    ctx.clearRect(0, 0, S, S);
+
+    const color = opts.color || '#c8161d';
+    const shape = opts.shape || 'square';   // square | circle
+    const style = opts.style || 'zhuwen';   // zhuwen (red bg, white figure) | baiwen (red figure)
+    const border = opts.border || 'thin';   // none | thin | thick
+    const aging = opts.aging != null ? opts.aging : 20;
+    const pattern = patterns.find(p => p.id === opts.patternId) || patterns[0];
+
+    // Block patterns (v2: fill-based, not line-art) handle their own rendering
+    if (pattern.block && pattern.render) {
+      pattern.render(ctx, canvas, opts);
+      // Apply aging after block render
+      if (aging > 0) {
+        const seed = hashString(pattern.id + shape + style + border);
+        applyAging(ctx, S, cx, cy, outerR, shape, aging, seed);
+      }
+      return;
+    }
+
+    // Determine inner drawing area (inside border)
+    let borderOuterR = outerR;
+    let innerR = outerR;
+    let borderWidth = 0;
+
+    if (border !== 'none') {
+      borderWidth = border === 'thick' ? S * 0.035 : S * 0.018;
+      if (shape === 'circle' && border === 'thick') {
+        // double ring for circle
+      }
+      innerR = outerR - borderWidth - S * 0.015;
+    }
+
+    // ---- Build the seal on the canvas ----
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+
+    // The pattern radius (slightly inside the border/edge)
+    const patR = (border !== 'none' ? innerR : outerR * 0.92);
+
+    if (style === 'zhuwen') {
+      // ===== 朱文: red background, figure carved white =====
+      // The entire seal area is red. The figure is carved out (destination-out),
+      // leaving a white/transparent silhouette. Internal details are drawn back
+      // in red on top of the carved area.
+
+      // 1. Fill outer shape with red
+      fillSealShape(ctx, cx, cy, outerR, shape);
+
+      // 2. Define the border: carve a very thin inner line so the red
+      //    outer rim reads as a single border. The line is 2px hairline
+      //    positioned so the rim is ~22px wide (slightly thinner than
+      //    the main figure line at ~82px, achieving 文粗边细 rhythm).
+      if (border !== 'none') {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = S * 0.0018;
+        ctx.beginPath();
+        if (shape === 'circle') {
+          ctx.arc(cx, cy, outerR - S * 0.022, 0, Math.PI * 2);
+        } else {
+          const d = outerR - S * 0.022;
+          ctx.rect(cx - d, cy - d, d * 2, d * 2);
+        }
+        ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      // 3. Carve the figure (destination-out) — white lines on red
+      ctx.globalCompositeOperation = 'destination-out';
+      pattern.foreground(ctx, cx, cy, patR);
+
+      // 3b. For line-art: carve the continuous body+ears outline as a
+      // single white path on the red seal. No disc mask needed.
+      if (pattern.lineArt && pattern.postForeground) {
+        pattern.postForeground(ctx, cx, cy, patR);
+      }
+
+      // 4. Draw internal details (eyes, mouth).
+      // For line-art: zhuwen body interior is red seal, so carve details
+      // white (destination-out); baiwen body interior is white, so draw
+      // details in red (source-over).
+      if (pattern.lineArt) {
+        ctx.globalCompositeOperation = 'destination-out';
+        pattern.details(ctx, cx, cy, patR);
+        ctx.globalCompositeOperation = 'source-over';
+      } else {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        pattern.details(ctx, cx, cy, patR);
+      }
+
+    } else {
+      // ===== 白文: transparent background, figure in red =====
+
+      // 1. Draw border if any (single border)
+      if (border !== 'none') {
+        if (shape === 'square') {
+          // Single rectangle border (stroke, not evenodd fill)
+          ctx.lineWidth = borderWidth;
+          ctx.lineJoin = 'miter';
+          ctx.beginPath();
+          const d = outerR - borderWidth / 2;
+          ctx.rect(cx - d, cy - d, d * 2, d * 2);
+          ctx.stroke();
+        } else {
+          ctx.lineWidth = borderWidth;
+          ctx.beginPath();
+          ctx.arc(cx, cy, outerR - borderWidth / 2, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      // 2. Draw figure in red
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      pattern.foreground(ctx, cx, cy, patR);
+
+      // 2b. For line-art: draw the continuous body+ears outline in red
+      // on top of foreground (feet + accessories). No mask needed.
+      if (pattern.lineArt && pattern.postForeground) {
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        pattern.postForeground(ctx, cx, cy, patR);
+      }
+
+      // 3. Details
+      if (!pattern.lineArt) {
+        ctx.globalCompositeOperation = 'destination-out';
+        pattern.details(ctx, cx, cy, patR);
+        ctx.globalCompositeOperation = 'source-over';
+      } else {
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        pattern.details(ctx, cx, cy, patR);
+      }
+    }
+
+    // ---- Apply aging effect ----
+    if (aging > 0) {
+      const seed = hashString(pattern.id + shape + style + border);
+      applyAging(ctx, S, cx, cy, outerR, shape, aging, seed);
+    }
+  }
+
+  /**
+   * Fill the outer seal shape (square or circle).
+   */
+  function fillSealShape(ctx, cx, cy, r, shape) {
+    ctx.beginPath();
+    if (shape === 'circle') {
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    } else {
+      ctx.rect(cx - r, cy - r, r * 2, r * 2);
+    }
+    ctx.fill();
+  }
+
+  // ============================================================
+  // Aging / Distress Effect
+  // ============================================================
+  function applyAging(ctx, S, cx, cy, outerR, shape, agingPercent, seed) {
+    const rng = mulberry32(seed);
+    // intensity controls erosion density, but base is already much lower
+    // than the old full-screen noise. aging=40 → moderate edge erosion.
+    const intensity = agingPercent / 100;
+
+    // ============================================================
+    // Phase 1: Carve erosion (destination-out) — removes ink
+    // Works for both zhuwen (carves white gaps in red lines/border)
+    // and baiwen (carves gaps in red lines/border).
+    // ============================================================
+    ctx.globalCompositeOperation = 'destination-out';
+
+    // ---- 1a. Border erosion: roughness along the frame + 1-2 breaks ----
+    if (shape === 'square') {
+      const bw = S * 0.018; // approximate border width
+      const edgeMargin = outerR - bw * 0.5;
+
+      // Rough spots along each edge (small notches).
+      // Top & right erode more (natural wear), bottom & left slightly less.
+      const edgeRoughCount = Math.floor(24 + 44 * intensity);
+      for (let i = 0; i < edgeRoughCount; i++) {
+        const side = Math.floor(rng() * 4);
+        const along = rng() * 2 - 1;
+        // Top/right: slightly larger notches; bottom/left: smaller
+        const wearFactor = (side === 0 || side === 3) ? 1.3 : 0.8;
+        const size = (1.5 + rng() * (2 + 4 * intensity)) * wearFactor;
+        let ex, ey, rw, rh;
+        if (side === 0) { // top
+          ex = cx + along * edgeMargin; ey = cy - edgeMargin;
+          rw = size * (1.5 + rng()); rh = size * 0.9;
+        } else if (side === 1) { // bottom
+          ex = cx + along * edgeMargin; ey = cy + edgeMargin;
+          rw = size * (1.2 + rng()); rh = size * 0.7;
+        } else if (side === 2) { // left
+          ex = cx - edgeMargin; ey = cy + along * edgeMargin;
+          rw = size * 0.7; rh = size * (1.2 + rng());
+        } else { // right
+          ex = cx + edgeMargin; ey = cy + along * edgeMargin;
+          rw = size * 0.9; rh = size * (1.5 + rng());
+        }
+        ctx.save();
+        ctx.translate(ex, ey);
+        ctx.rotate(rng() * Math.PI);
+        ctx.fillRect(-rw / 2, -rh / 2, rw, rh);
+        ctx.restore();
+      }
+
+      // 1 natural border break near upper-right (small, irregular)
+      if (rng() < 0.85) {
+        const bx = cx + outerR * (0.82 + rng() * 0.14);
+        const by = cy - outerR * (0.82 + rng() * 0.14);
+        const bw2 = 5 + rng() * (6 + 10 * intensity);
+        const bh2 = 4 + rng() * (5 + 8 * intensity);
+        // Overlapping small blobs for organic shape
+        for (let k = 0; k < 3; k++) {
+          const ox = (rng() - 0.5) * bw2 * 0.8;
+          const oy = (rng() - 0.5) * bh2 * 0.8;
+          const rr = bw2 * (0.3 + rng() * 0.35);
+          ctx.beginPath();
+          ctx.arc(bx + ox, by + oy, rr, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Corner rounding (slight erosion at 4 corners)
+      const corners = [
+        [cx - outerR, cy - outerR], [cx + outerR, cy - outerR],
+        [cx - outerR, cy + outerR], [cx + outerR, cy + outerR]
+      ];
+      for (const c of corners) {
+        if (rng() < 0.3 + intensity * 0.5) {
+          const cSize = 3 + rng() * 8 * intensity;
+          ctx.beginPath();
+          ctx.arc(c[0] + (rng() - 0.5) * 4, c[1] + (rng() - 0.5) * 4, cSize, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    } else {
+      // Circular border erosion
+      const borderR = outerR - S * 0.01;
+      const notchCount = Math.floor(12 + 30 * intensity);
+      for (let i = 0; i < notchCount; i++) {
+        const a = rng() * Math.PI * 2;
+        const size = 2 + rng() * (3 + 8 * intensity);
+        const nx = cx + Math.cos(a) * borderR;
+        const ny = cy + Math.sin(a) * borderR;
+        ctx.beginPath();
+        ctx.arc(nx, ny, size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ---- 1b. Line-edge erosion: tiny notches along the ball outline ----
+    // Very small (2-5px) irregular marks, not big round holes.
+    const geom = window.__ballGeom;
+    if (geom) {
+      const g = geom;
+      const chipCount = Math.floor(6 + 14 * intensity);
+      for (let i = 0; i < chipCount; i++) {
+        const a = rng() * Math.PI * 2;
+        // Tiny notch size: 2-5px, elongated perpendicular to line
+        const nx = g.cx + Math.cos(a) * g.bodyR;
+        const ny = g.bodyCY + Math.sin(a) * g.bodyR;
+        const nw = 2 + rng() * (2 + 4 * intensity);
+        const nh = 1.5 + rng() * (2 + 3 * intensity);
+        ctx.save();
+        ctx.translate(nx, ny);
+        ctx.rotate(a + Math.PI / 2); // perpendicular to radial
+        ctx.fillRect(-nw / 2, -nh / 2, nw, nh);
+        ctx.restore();
+      }
+      // 1-2 tiny chips on ears
+      for (let e = 0; e < 2; e++) {
+        if (rng() < 0.4 + intensity * 0.3) {
+          const ex = g.cx + (e === 0 ? -1 : 1) * g.earOffX;
+          const ey = g.bodyCY - g.earOffY;
+          const ea = rng() * Math.PI * 2;
+          const cxp = ex + Math.cos(ea) * g.earR * 0.85;
+          const cyp = ey + Math.sin(ea) * g.earR * 0.85;
+          const cs = 1.5 + rng() * 3;
+          ctx.save();
+          ctx.translate(cxp, cyp);
+          ctx.rotate(rng() * Math.PI);
+          ctx.fillRect(-cs/2, -cs/2, cs, cs * (0.6 + rng() * 0.5));
+          ctx.restore();
+        }
+      }
+    }
+
+    // ---- 1c. Interior sand holes: very sparse (5-8 tiny dots) ----
+    const sandCount = Math.floor(5 + 4 * intensity);
+    for (let i = 0; i < sandCount; i++) {
+      const a = rng() * Math.PI * 2;
+      const d = rng() * outerR * 0.7;
+      const sx = cx + Math.cos(a) * d;
+      const sy = cy + Math.sin(a) * d;
+      const sr = 0.8 + rng() * 2.5;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ============================================================
+    // Phase 2: For zhuwen (red seal), fill back tiny red patches
+    // at border breaks to simulate broken-but-not-gone erosion.
+    // We skip this — destination-out gaps already look natural.
+    // ============================================================
+
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  // ============================================================
+  // UI State & Bindings
+  // ============================================================
+  const state = {
+    patternId: 'rongball-v3',
+    shape: 'square',
+    style: 'zhuwen',
+    border: 'thin',
+    aging: 20,
+    color: '#c8161d'
+  };
+
+  const renderCanvas = document.getElementById('render-canvas');
+  const previewCanvas = document.getElementById('preview-canvas');
+  const previewInfo = document.getElementById('preview-info');
+  const agingSlider = document.getElementById('aging-slider');
+  const agingVal = document.getElementById('aging-val');
+
+  // Build pattern buttons
+  const patternGrid = document.getElementById('pattern-grid');
+  patterns.forEach((p, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'pattern-btn' + (idx === 0 ? ' active' : '');
+    btn.dataset.id = p.id;
+    btn.innerHTML = `<span class="icon">${p.icon}</span><span>${p.name}</span>`;
+    btn.addEventListener('click', () => {
+      state.patternId = p.id;
+      document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      rerender();
+    });
+    patternGrid.appendChild(btn);
+  });
+
+  // Toggle groups helper
+  function bindToggleGroup(groupId, key, borderAware) {
+    const group = document.getElementById(groupId);
+    group.addEventListener('click', e => {
+      const btn = e.target.closest('.toggle-btn');
+      if (!btn) return;
+      state[key] = btn.dataset.val;
+      group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (borderAware) updateBorderOptions();
+      rerender();
+    });
+  }
+
+  bindToggleGroup('shape-group', 'shape', true);
+  bindToggleGroup('style-group', 'style');
+  bindToggleGroup('border-group', 'border');
+
+  // Update border options when shape changes
+  function updateBorderOptions() {
+    const borderGroup = document.getElementById('border-group');
+    const buttons = borderGroup.querySelectorAll('.toggle-btn');
+    if (state.shape === 'circle') {
+      buttons[0].textContent = '无';
+      buttons[1].textContent = '单圈';
+      buttons[2].textContent = '双圈';
+    } else {
+      buttons[0].textContent = '无';
+      buttons[1].textContent = '细边';
+      buttons[2].textContent = '粗边';
+    }
+  }
+
+  // Aging slider
+  agingSlider.addEventListener('input', () => {
+    state.aging = parseInt(agingSlider.value, 10);
+    agingVal.textContent = state.aging + '%';
+    rerender();
+  });
+
+  // Color swatches
+  document.getElementById('color-row').addEventListener('click', e => {
+    const swatch = e.target.closest('.color-swatch');
+    if (!swatch) return;
+    state.color = swatch.dataset.color;
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    swatch.classList.add('active');
+    rerender();
+  });
+
+  // ============================================================
+  // Render to preview (downscale from hi-res)
+  // ============================================================
+  function rerender() {
+    renderSeal(renderCanvas, state);
+    const pctx = previewCanvas.getContext('2d');
+    pctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+    pctx.drawImage(renderCanvas, 0, 0, previewCanvas.width, previewCanvas.height);
+
+    // Update info text
+    const pat = patterns.find(p => p.id === state.patternId);
+    const shapeLabel = state.shape === 'square' ? '方章' : '圆章';
+    const styleLabel = state.style === 'zhuwen' ? '朱文' : '白文';
+    previewInfo.textContent = `${pat.name} · ${shapeLabel} · ${styleLabel}`;
+  }
+
+  // ============================================================
+  // Export PNG
+  // ============================================================
+  document.getElementById('dl-btn').addEventListener('click', () => {
+    // Ensure latest render
+    renderSeal(renderCanvas, state);
+    const dataURL = renderCanvas.toDataURL('image/png');
+    const pat = patterns.find(p => p.id === state.patternId);
+    const now = new Date();
+    const dateStr = now.getFullYear().toString() +
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0');
+    const fileName = `rongball-seal-${pat.id}-${dateStr}.png`;
+
+    const a = document.createElement('a');
+    a.href = dataURL;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+
+  // Expose for testing / CDP validation
+  window.__sealStudio = {
+    renderSeal,
+    state,
+    patterns,
+    renderCanvas,
+    previewCanvas,
+    rerender,
+    setPattern(id) { state.patternId = id; rerender(); },
+    setShape(s) { state.shape = s; rerender(); },
+    setStyle(s) { state.style = s; rerender(); },
+    setBorder(b) { state.border = b; rerender(); },
+    setAging(a) { state.aging = a; agingSlider.value = a; agingVal.textContent = a + '%'; rerender(); },
+    exportDataURL() { renderSeal(renderCanvas, state); return renderCanvas.toDataURL('image/png'); }
+  };
+
+  // Initial render
+  rerender();
+
+})();
+</script>
+</body>
+</html>
