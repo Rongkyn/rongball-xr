@@ -63,6 +63,16 @@
 
 ## 六、Studio 欠账
 
+**契约升级（待主人审 `AIOS_GameStudio映射审计_20260918.md` 后执行 P0×3）**：
+- [ ] P0-1 两个契约新增「事实权威与工作目录」节：git 仓=唯一权威面，日期夹=无权威临时台，merge-back 是收官义务，挂廊=展示投影
+- [ ] P0-2 每日创作 loop 登记为正式 Loop Contract（「无 commit hash 的收官简报不成立」）
+- [ ] P0-3 修 L2 v1.2 契约漂移：artifacts/verdict/sessions 规定了但不存在，按实际最小结构改合同
+- [ ] P1×4（Ready 四行闸/retry 数字/notes 机读抬头/回流变收官闸）与 P2×4 待排期
+- [ ] 反向回流 AIOS（主人决定）：三硬闸 WIP cap、五维气韵评鉴可补 AIOS C1/C4 缺口
+
+**执行面欠账**：
 - [ ] cdp-harness 回流避坑 8/9/10（桂雨 notes：僵尸 Chrome 占调试端口串台、headless 无音频硬件良性噪声过滤、清僵尸+换端口重开协议、禁 `.catch(()=>null)` 吞错）
+- [ ] 过程档补齐（夜审 P1）：绒丝/墨洇/秋虫/踏雪/天灯/月波/桂雨 缺 process 目录或 notes
+- [ ] 夜审脚本 P0 改名误报修复：云盘 gui-yu-v0917.html 与仓内 gui-yu.html 内容一致（39263B 相同），需按归一文件名/内容哈希匹配
 - [ ] POOL.md 9 月体检：audio-lib 采用记录复核；noise-lib / season-lib 重复实现提取；踏雪三件套 candidate 去留；残荷超疏水珠模型入池评估；墨洇液体物理 → ink-sim.js 选型
 - [ ] 周日资产管理员体检复跑（最后一次 08-30）
