@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>苔痕 · Tai Hen</title>
+<!-- uses: lib/audio-lib.js v1.1（strikeBell 磬音；RongCDP 验收见 20260908/accept_taihen.js） -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #5c6660;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; position: fixed; top: 0; left: 0; }
+  #rd { z-index: 1; }
+  #state { position: fixed; bottom: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; z-index: -1; }
+
+  .ui {
+    position: fixed;
+    pointer-events: none;
+    user-select: none;
+    z-index: 10;
+  }
+  .title {
+    top: 26px; left: 30px;
+    font-size: 17px;
+    letter-spacing: 10px;
+    color: #cdd4ca;
+    opacity: 0;
+    animation: fadeIn 3s ease 1s forwards;
+  }
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #98a29a;
+    margin-top: 7px;
+  }
+  @keyframes fadeIn { to { opacity: 0.75; } }
+
+  .hint {
+    bottom: 58px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 5px;
+    color: #b9c1b6;
+    white-space: nowrap;
+    opacity: 0;
+    animation: hintFade 12s ease 1s forwards;
+  }
+  @keyframes hintFade {
+    0% { opacity: 0; }
+    12% { opacity: 0.65; }
+    70% { opacity: 0.65; }
+    100% { opacity: 0; }
+  }
+  /* 印章：朱红方印（不依赖外部字体） */
+  .seal {
+    position: fixed;
+    bottom: 26px; right: 30px;
+    z-index: 10;
+    pointer-events: none;
+    width: 38px; height: 38px;
+    background: rgba(176, 58, 42, 0.92);
+    color: #f7ece2;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    letter-spacing: 0;
+    border-radius: 4px;
+    transform: rotate(-4deg);
+    opacity: 0;
+    transition: opacity 2.5s ease;
+  }
+  .seal.show { opacity: 0.9; }
+
+  .btn {
+    position: fixed;
+    top: 22px;
+    z-index: 20;
+    pointer-events: auto;
+    background: rgba(92,102,96,0.35);
+    border: 1px solid #a8b0a4;
+    color: #d8ddd4;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 2s ease 2s forwards;
+    transition: all 0.4s ease;
+  }
+  .btn:hover {
+    border-color: #d8ddd4;
+    color: #f2f4ee;
+    background: rgba(160,170,160,0.25);
+  }
+  #btnClear { right: 26px; }
+  #btnSound { right: 86px; }
+
+  /* 题诗与印章（vertical-rl 下子元素从右往左自然成列；
+     实测 Songti 等衬线字族在 vertical-rl 下 block 高度塌缩叠字，
+     须显式行高 + 每字成行；sans-serif 无此坑，harness 实量） */
+  #poem {
+    position: fixed; right: 7%; top: 15%; z-index: 9;
+    writing-mode: vertical-rl;
+    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: clamp(20px, 3.4vh, 26px);
+    line-height: 1.9;
+    letter-spacing: 0;
+    color: rgba(236, 234, 222, 0.92);
+    text-shadow: 0 1px 8px rgba(20, 30, 24, 0.6);
+    opacity: 0; transition: opacity 4s ease;
+    pointer-events: none;
+  }
+  #poem.show { opacity: 0.88; }
+  /* 竖排诗（headless Chrome 实测四轮定稿）：弃用 writing-mode:vertical-rl ——
+     Songti/Sans 在该模式下纯文本高度塌缩叠字、block/inline-block 组合均出现列重叠；
+     改为 flex row-reverse 从右往左成列（右为上联，合古制），列内每字 display:block
+     在常规横排模式下纵向堆叠，零行高玄学，探针实量字框定高竖叠、列距稳定。 */
+  #poem {
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-start;
+    gap: 26px;
+    writing-mode: horizontal-tb;
+  }
+  #poem .line, #poem .attrib {
+    width: 1.05em;
+    text-align: center;
+    flex: none;
+  }
+  #poem .line > span, #poem .attrib > span {
+    display: block;
+    height: 1.4em;
+    line-height: 1.4;
+  }
+  #poem .attrib {
+    font-size: 12px; letter-spacing: 2px;
+    color: rgba(200, 208, 196, 0.72);
+    padding-top: 60px;
+    width: 1.3em;
+  }
+</style>
+</head>
+<body>
+<canvas id="rd"></canvas>
+<div id="state">{}</div>
+
+<div class="ui title">
+  苔 痕
+  <div class="subtitle">tai hen · moss along the water</div>
+</div>
+<div class="ui hint">轻 点 青 石 · 苔 沿 水 痕 生</div>
+<div class="ui seal" id="seal">绒 球</div>
+<button class="btn" id="btnSound">♪</button>
+<button class="btn" id="btnClear">再 来</button>
+
+<div id="poem">
+  <span class="line"><span>苔</span><span>痕</span><span>上</span><span>阶</span><span>绿</span></span>
+  <span class="line line1"><span>草</span><span>色</span><span>入</span><span>帘</span><span>青</span></span>
+  <span class="attrib"><span>刘</span><span>禹</span><span>锡</span><span>陋</span><span>室</span><span>铭</span></span>
+</div>
+
+<script src="lib/audio-lib.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  // ---------- URL 钩子（验收用） ----------
+  const params = new URLSearchParams(location.search);
+  const FAST = params.has('fast');          // 加速物理（每帧 24 模拟步）
+  const SEED = params.get('seed') !== null ? parseInt(params.get('seed'), 10) : (Date.now() % 100000);
+  const AUTO = params.get('auto') !== null ? parseInt(params.get('auto'), 10) : 0;
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  let rng = mulberry32(SEED);
+  const R = () => rng();
+
+  const rd = document.getElementById('rd');
+  const ctx = rd.getContext('2d', { alpha: false });
+  const stateEl = document.getElementById('state');
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let W, H;
+  const SCALE = 3;
+  let gw, gh;
+
+  let A, B, nA, nB;      // Gray-Scott 双场
+  let Wtr;                // 水分场（独立扩散蒸发）
+  let carpet;             // 苔被场：活过的苔留苔
+  let age;                // 苔龄（模拟步）：-1 无苔
+  let dormant;            // 旧苔痕格=1：石头的年月，定住不蔓延、不老化、不持水
+  let grain;              // 石面颗粒
+  let crack;              // 裂缝暗线强度 0..1
+  let evapMod;            // 蒸发调制（缝处保水）
+  let frame = 0;
+  let wetSeason = 0.0;    // 湿润季：洒水后为1，全局指数衰减
+  let taps = 0;           // 洒水次数
+  let imgData, offCanvas, offCtx;
+
+  // Gray-Scott（墨散验证过的苔痕预设 f=0.058/k=0.065）
+  const DA = 1.0, DB = 0.5;
+  const FEED = 0.058, KILL = 0.065;
+  const DT = 1.0;
+  const STEPS_PER_FRAME = FAST ? 24 : 4;
+
+  // 水分
+  const DW = 0.20;         // 水扩散（8 邻域各向同性，见 stepWater）
+  const EVAP = 0.00028;
+  const WET_HOLD = 0.55;
+  const REGROW = 0.04;
+  const WET_DECAY = 0.000045; // 湿润季约 3200+ 模拟步（约 80s 实时 / fast≈13s）
+  const SPREAD = 0.66;
+  function gate(w){
+    if (w < 0.015) return 0;
+    if (w > 0.18) return 1;
+    const t = (w - 0.015) / 0.165;
+    return t * t * (3 - 2 * t);
+  }
+
+  const CARPET_MAX = 1.5;
+  const DEP = 0.026;
+  const TONE_K = 2.8;
+  const AGE_MATURE = 2600;
+  const AGE_OLD = 9000;
+  const COVER_POEM = 0.012;   // 新苔覆盖度阈值 → 题诗（v1 的 0.08 永远到不了）
+
+  // ---- 确定性噪声 ----
+  function hash2(x, y){
+    let h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return h - Math.floor(h);
+  }
+  function vnoise(x, y){
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf);
+    const v = yf * yf * (3 - 2 * yf);
+    const a = hash2(xi, yi), b = hash2(xi + 1, yi);
+    const c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  }
+  // 裂缝：极稀疏细线性裂纹，零穿越线定位
+  function crackAt(x, y){
+    const f1 = vnoise(x * 0.032 + 13.7, y * 0.032 + 7.3) - 0.5;
+    const f2 = vnoise(x * 0.070 - 5.1, y * 0.070 + 9.4) - 0.5;
+    const d1 = Math.abs(f1);
+    const d2 = Math.abs(f2);
+    let c = 0;
+    if (d1 < 0.017) c = Math.max(c, 1 - d1 / 0.017);
+    if (d2 < 0.014) c = Math.max(c, 1 - d2 / 0.014) * 0.7;
+    const gateN = vnoise(x * 0.02 + 3.3, y * 0.02 + 8.8);
+    if (gateN < 0.60) c = 0;
+    return c > 0 ? c * 0.8 : 0;
+  }
+
+  function initArrays(){
+    const n = gw * gh;
+    A = new Float32Array(n);  B = new Float32Array(n);
+    nA = new Float32Array(n); nB = new Float32Array(n);
+    Wtr = new Float32Array(n);
+    carpet = new Float32Array(n);
+    age = new Float32Array(n); age.fill(-1);
+    dormant = new Uint8Array(n);
+    wetSeason = 0.0;
+    grain = new Float32Array(n);
+    crack = new Float32Array(n);
+    evapMod = new Float32Array(n);
+    A.fill(1.0); nA.fill(1.0);
+
+    for (let y = 0; y < gh; y++){
+      for (let x = 0; x < gw; x++){
+        const i = y * gw + x;
+        const hi = vnoise(x * 0.33, y * 0.33);
+        const broad = vnoise(x * 0.045 + 3.1, y * 0.045 + 7.7);   // v2：大尺度石色起伏
+        const speck = hash2(x * 1.7, y * 1.3);
+        grain[i] = 0.90 + 0.10 * hi + 0.06 * (broad - 0.5) + 0.04 * (speck - 0.5);
+        const ck = crackAt(x, y);
+        crack[i] = ck;
+        evapMod[i] = ck > 0.15 ? 0.62 : 1.0;
+      }
+    }
+    seedOldMoss();
+  }
+
+  // 开场旧苔痕：经年的苔，圆润成簇、苔绿偏沉，定住不动
+  function seedOldMoss(){
+    dormantPatch(gw * 0.24, gh * 0.40, 9, 0.92, 0.62);
+    dormantPatch(gw * 0.72, gh * 0.66, 6, 0.80, 0.68);
+    dormantPatch(gw * 0.55, gh * 0.24, 4.5, 0.70, 0.72);
+  }
+  function dormantPatch(cx, cy, r, dens, fill){
+    cx = Math.floor(cx); cy = Math.floor(cy);
+    const R = Math.ceil(r + 2);
+    for (let dy = -R; dy <= R; dy++){
+      for (let dx = -R; dx <= R; dx++){
+        const d2 = dx * dx + dy * dy;
+        if (d2 > (r + 1.2) * (r + 1.2)) continue;
+        const px = cx + dx, py = cy + dy;
+        if (px < 1 || px >= gw-1 || py < 1 || py >= gh-1) continue;
+        const i = py * gw + px;
+        const jitter = 0.70 + 0.30 * hash2(px * 3.1, py * 3.7);
+        const fall = Math.max(0, 1 - Math.sqrt(d2) / (r + 1.2));
+        const inCore = d2 < (r * fill) * (r * fill);
+        const probEdge = dens * fall * jitter;
+        if (inCore || hash2(px * 7.7, py * 5.3) < probEdge){
+          carpet[i] = CARPET_MAX * (inCore ? (0.55 + 0.35 * fall) : fall * 0.8);
+          // v2：旧苔定在壮龄偏沉（0.45~0.7），永不老化 → 不再变近黑
+          age[i] = AGE_MATURE + (AGE_OLD - AGE_MATURE) * (0.30 + 0.25 * hash2(px, py));
+          dormant[i] = 1;
+        }
+      }
+    }
+  }
+
+  function resize(){
+    W = window.innerWidth; H = window.innerHeight;
+    rd.width = W * dpr; rd.height = H * dpr;
+    rd.style.width = W + 'px'; rd.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gw = Math.max(20, Math.floor(W / SCALE));
+    gh = Math.max(20, Math.floor(H / SCALE));
+    initArrays();
+    imgData = ctx.createImageData(gw, gh);
+    offCanvas = document.createElement('canvas');
+    offCanvas.width = gw; offCanvas.height = gh;
+    offCtx = offCanvas.getContext('2d');
+  }
+
+  // 洒水 + 苔种
+  function waterAt(cx, cy, big){
+    cx = Math.floor(cx); cy = Math.floor(cy);
+    wetSeason = 1.0;
+    taps++;
+    const rW = big ? 12 : 7;             // v2.1：拖动小滴 9→7
+    const rS = big ? 4.0 : 2.2;          // v2.1：拖动种团 3.0→2.2
+    const wAmt = big ? 1.15 : 0.6;       // v2.1：拖动小滴水量降，水痕不连续成带
+    for (let dy = -rW; dy <= rW; dy++){
+      for (let dx = -rW; dx <= rW; dx++){
+        const d2 = dx * dx + dy * dy;
+        if (d2 > rW * rW) continue;
+        const px = cx + dx, py = cy + dy;
+        if (px < 1 || px >= gw-1 || py < 1 || py >= gh-1) continue;
+        const i = py * gw + px;
+        const fall = 1 - Math.sqrt(d2) / (rW + 1);
+        Wtr[i] = Math.min(1.2, Wtr[i] + fall * fall * wAmt);
+        if (dormant[i]) continue;
+        // v2.1：种团半径用多频 noise 搅出不规则缘（破圆/破菱形）
+        const seedNoise = 0.5 + 0.5 * vnoise(px * 0.55 + cx * 0.1, py * 0.55 + cy * 0.1);
+        const seedNoise2 = 0.5 + 0.5 * vnoise(px * 1.3 + 9.2, py * 1.3 + 3.7);
+        const edgeR = rS * (0.7 + 0.6 * seedNoise * seedNoise2);
+        const inS = Math.sqrt(d2) <= edgeR;
+        const ragged = Math.sqrt(d2) <= edgeR + 1.6 && R() < 0.28 * seedNoise;
+        if (inS || ragged){
+          B[i] = Math.min(1, B[i] + (big ? 0.55 : 0.45));
+          A[i] = Math.max(0, A[i] - (big ? 0.55 : 0.45));
+          if (age[i] < 0) age[i] = 0;
+        }
+        // 散落孢子
+        if (Math.sqrt(d2) > rS && Math.sqrt(d2) < rW * 0.9 && hash2(px * 13.3, py * 9.7) < 0.028){
+          B[i] = Math.min(1, B[i] + 0.35);
+          A[i] = Math.max(0, A[i] - 0.35);
+          if (age[i] < 0) age[i] = 0;
+        }
+      }
+    }
+  }
+
+  function step(){
+    const g = gw, h = gh;
+
+    // —— 1. 水分场 ——
+    wetSeason *= (1 - WET_DECAY);
+    for (let y = 1; y < h - 1; y++){
+      const row = y * g;
+      for (let x = 1; x < g - 1; x++){
+        const i = row + x;
+        const c = carpet[i];
+        let w = Wtr[i];
+        if (c > 0.05 && dormant[i] === 0){
+          // v2：只有新苔垫自持水汽；旧苔不持水（不再洇出菱形湿晕）
+          const eq = WET_HOLD * wetSeason * (0.85 + 0.35 * Math.min(1, c)) * (crack[i] > 0.15 ? 1.25 : 1.0);
+          if (w < eq) w += (eq - w) * REGROW;
+          else w *= (1 - EVAP * 0.5);
+        } else {
+          w *= (1 - EVAP * 1.4 * evapMod[i]);
+        }
+        if (w > 0.0004){
+          // v2：8 邻域各向同性拉普拉斯（直邻 0.20 / 斜邻 0.05），湿区成圆不成菱形
+          const lap = (Wtr[i-1] + Wtr[i+1] + Wtr[i-g] + Wtr[i+g]) * 0.20
+                    + (Wtr[i-g-1] + Wtr[i-g+1] + Wtr[i+g-1] + Wtr[i+g+1]) * 0.05
+                    - w;
+          w += DW * lap;
+        }
+        Wtr[i] = w > 0 ? (w > 1.2 ? 1.2 : w) : 0;
+      }
+    }
+
+    // —— 2. GS 反应（水门控） ——
+    for (let y = 1; y < h - 1; y++){
+      const row = y * g, rowUp = row - g, rowDn = row + g;
+      for (let x = 1; x < g - 1; x++){
+        const i = row + x;
+        if (dormant[i]){ nA[i] = 1; nB[i] = 0; continue; }  // v2：旧苔不参与反应
+        const a = A[i], b = B[i];
+        const gw_ = gate(Wtr[i]);
+        const lapA = (A[i-1] + A[i+1] + A[rowUp+x] + A[rowDn+x]) * 0.2
+                   + (A[rowUp+x-1] + A[rowUp+x+1] + A[rowDn+x-1] + A[rowDn+x+1]) * 0.05
+                   - a;
+        const lapB = (B[i-1] + B[i+1] + B[rowUp+x] + B[rowDn+x]) * 0.2
+                   + (B[rowUp+x-1] + B[rowUp+x+1] + B[rowDn+x-1] + B[rowDn+x+1]) * 0.05
+                   - b;
+        const abb = a * b * b * gw_;
+        const f = FEED * gw_;
+        let na = a + (DA * lapA - abb + f * (1 - a)) * DT;
+        let nb = b + (DB * lapB + abb - (KILL + f) * b) * DT;
+        nA[i] = na < 0 ? 0 : na > 1 ? 1 : na;
+        nB[i] = nb < 0 ? 0 : nb > 1 ? 1 : nb;
+      }
+    }
+    for (let x = 0; x < g; x++){ nA[x] = 1; nB[x] = 0; nA[(h-1)*g+x] = 1; nB[(h-1)*g+x] = 0; }
+    for (let y = 0; y < h; y++){ nA[y*g] = 1; nB[y*g] = 0; nA[y*g+g-1] = 1; nB[y*g+g-1] = 0; }
+    let t = A; A = nA; nA = t;
+    t = B; B = nB; nB = t;
+
+    // —— 2.5 苔垫营养蔓延（湿季概率渗透，边缘自然） ——
+    if (wetSeason > 0.03){
+      for (let y = 1; y < h - 1; y++){
+        const row = y * g;
+        for (let x = 1; x < g - 1; x++){
+          const i = row + x;
+          if (carpet[i] > 0.2 || dormant[i]) continue;   // v2：旧苔格不是新苔目标
+          const cN = carpet[i-g], cS = carpet[i+g], cW = carpet[i-1], cE = carpet[i+1];
+          let mx = 0, srcI = -1;
+          if (cN > mx){ mx = cN; srcI = i-g; }
+          if (cS > mx){ mx = cS; srcI = i+g; }
+          if (cW > mx){ mx = cW; srcI = i-1; }
+          if (cE > mx){ mx = cE; srcI = i+1; }
+          if (mx > 0.3 && dormant[srcI] === 0){
+            const damp = 0.35 + 0.65 * Math.min(1, Wtr[i] * 2.2);
+            const patch = vnoise(x * 0.16 + 5.2, y * 0.16 + 2.8);
+            const dirGate = patch > 0.34 ? 1.0 : (patch > 0.22 ? 0.45 : 0.05);
+            // v2：石缝保水保苔——缝处蔓延 1.7 倍，苔自然往缝里钻
+            const crackLove = crack[i] > 0.15 ? 1.7 : 1.0;
+            const p = SPREAD * damp * wetSeason * (mx / CARPET_MAX) * dirGate * crackLove;
+            if (R() < p){
+              const nc = Math.min(CARPET_MAX, mx * (0.62 + 0.28 * patch));
+              carpet[i] = Math.max(carpet[i], nc);
+              if (age[i] < 0) age[i] = age[srcI] >= 0 ? age[srcI] : 0;
+              // v2.1：不灌 B——蔓延苔靠沉积与自身纹理成色，避免「煎蛋」亮心
+              B[i] = Math.max(B[i], 0.12);
+              A[i] = Math.min(A[i], 0.88);
+            }
+          }
+        }
+      }
+    }
+
+    // —— 3. 苔被沉积 + 苔龄（旧苔全部跳过：定住的年月） ——
+    for (let y = 1; y < h - 1; y++){
+      const row = y * g;
+      for (let x = 1; x < g - 1; x++){
+        const i = row + x;
+        if (dormant[i]) continue;
+        const b = B[i];
+        if (b > 0.05 && Wtr[i] > 0.01){
+          if (age[i] < 0){
+            let m = -1;
+            const c = [age[i-1], age[i+1], age[i-g], age[i+g]];
+            for (let q = 0; q < 4; q++){ if (c[q] >= 0 && (m < 0 || c[q] < m)) m = c[q]; }
+            age[i] = m >= 0 ? m : 0;
+          }
+          const gw_ = gate(Wtr[i]);
+          const rate = b * DEP * (0.25 + 0.75 * gw_);
+          carpet[i] += rate * (1 - carpet[i] / CARPET_MAX);
+        }
+        if (carpet[i] > 0.25 && age[i] >= 0 && age[i] < 9999){
+          age[i] += 1;
+        }
+      }
+    }
+  }
+
+  // 色板（v2：冷青灰石 + 沉苔绿，荧光压暗）
+  const STONE = [96, 108, 104];
+  const CRACK_C = [62, 70, 67];
+  const YOUNG = [128, 158, 76];
+  const MATURE = [74, 122, 58];
+  const OLD = [30, 54, 34];
+  const LIVING = [160, 184, 90];
+
+  function lerp(a, b, t){ return a + (b - a) * t; }
+  function mossColor(af){
+    if (af < 0.5){
+      const t = af / 0.5;
+      return [lerp(YOUNG[0], MATURE[0], t), lerp(YOUNG[1], MATURE[1], t), lerp(YOUNG[2], MATURE[2], t)];
+    }
+    const t = (af - 0.5) / 0.5;
+    return [lerp(MATURE[0], OLD[0], t), lerp(MATURE[1], OLD[1], t), lerp(MATURE[2], OLD[2], t)];
+  }
+
+  let coverShown = false;
+  let coverRatio = 0;
+  function render(){
+    const data = imgData.data;
+    const n = gw * gh;
+    let cover = 0;
+    for (let i = 0; i < n; i++){
+      const j = i * 4;
+      const x = i % gw, y = (i - x) / gw;
+      let r = STONE[0] * grain[i], gC = STONE[1] * grain[i], bC = STONE[2] * grain[i];
+
+      const ck = crack[i];
+      if (ck > 0){
+        const cm = Math.min(1, ck * 1.1);
+        r = lerp(r, CRACK_C[0], cm * 0.8);
+        gC = lerp(gC, CRACK_C[1], cm * 0.8);
+        bC = lerp(bC, CRACK_C[2], cm * 0.8);
+      }
+
+      const w = Wtr[i];
+      if (w > 0.01){
+        const wt = Math.min(1, w * 1.4);
+        const ws = wt * wt * (3 - 2 * wt);
+        r = lerp(r, r * 0.68, ws * 0.8);
+        gC = lerp(gC, gC * 0.72, ws * 0.8);
+        bC = lerp(bC, bC * 0.80, ws * 0.8);
+      }
+
+      const cm_ = carpet[i];
+      if (cm_ > 0.02){
+        let a = 1 - Math.exp(-TONE_K * cm_ / CARPET_MAX);
+        a = Math.pow(a, 1.25);
+        const af = age[i] < 0 ? 0 : Math.min(1, age[i] / AGE_OLD);
+        const mc = mossColor(af);
+        // v2.1：苔面斑驳——高频噪声调制深浅浓淡，苔是群落不是均匀漆
+        const mott = 0.78 + 0.44 * vnoise(x * 0.9 + (i * 3.7 % 97), y * 0.9 + (i * 2.3 % 89))
+                          + 0.18 * (hash2(x * 5.1, y * 3.7) - 0.5);
+        let mr = mc[0] * mott, mg = mc[1] * mott, mb = mc[2] * mott;
+        if (w > 0.02){
+          const ws = Math.min(1, w);
+          mr *= (1 - 0.25 * ws); mg *= (1 - 0.22 * ws); mb *= (1 - 0.20 * ws);
+        }
+        // 石缝处苔偏深浓（缝里苔最浓）
+        if (ck > 0.15){ mr *= 0.82; mg *= 0.85; mb *= 0.8; }
+        r = lerp(r, mr, a);
+        gC = lerp(gC, mg, a);
+        bC = lerp(bC, mb, a);
+        // 活锋：仅新苔（非旧苔）B 活跃且湿时微弱荧光
+        if (!dormant[i]){
+          const bv = B[i];
+          if (bv > 0.15 && w > 0.05){
+            const live = Math.min(1, (bv - 0.15) / 0.35) * Math.min(1, w * 2);
+            r = lerp(r, LIVING[0], live * 0.30);
+            gC = lerp(gC, LIVING[1], live * 0.30);
+            bC = lerp(bC, LIVING[2], live * 0.30);
+          }
+          cover += Math.min(1, cm_ / CARPET_MAX);
+        }
+      }
+
+      data[j] = r; data[j+1] = gC; data[j+2] = bC; data[j+3] = 255;
+    }
+    offCtx.putImageData(imgData, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(offCanvas, 0, 0, W, H);
+
+    coverRatio = cover / n;
+    if (!coverShown && coverRatio > COVER_POEM){
+      coverShown = true;
+      document.getElementById('poem').classList.add('show');
+      document.getElementById('seal').classList.add('show');
+      chime();
+    }
+
+    // 状态镜像（验收用）
+    stateEl.textContent = JSON.stringify({
+      frame, wet: +wetSeason.toFixed(3), cover: +coverRatio.toFixed(4),
+      taps, poem: coverShown, sound: soundOn, seed: SEED, gw, gh
+    });
+  }
+
+  // ---------- 声音（内联水滴/湿风；磬音用 audio-lib） ----------
+  let soundOn = true;
+  let audioInited = false;
+  let windNodes = null;
+  function initAudio(){
+    if (audioInited) return;
+    audioInited = true;
+    try {
+      RongAudio.init({ master: 0.9, wet: 0.22, reverb: 0.6, reverbDur: 1.6 });
+      // 湿风：棕噪 → 低通 → 慢 LFO
+      const ac = RongAudio.ctx();
+      const len = ac.sampleRate * 2;
+      const buf = ac.createBuffer(1, len, ac.sampleRate);
+      const d = buf.getChannelData(0);
+      let last = 0;
+      for (let i = 0; i < len; i++){
+        const white = Math.random() * 2 - 1;
+        last = (last + 0.02 * white) / 1.02;
+        d[i] = last * 3.2;
+      }
+      const src = ac.createBufferSource();
+      src.buffer = buf; src.loop = true;
+      const lp = ac.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 320;
+      const g = ac.createGain(); g.gain.value = 0.0;
+      const lfo = ac.createOscillator(); lfo.frequency.value = 0.07;
+      const lfoG = ac.createGain(); lfoG.gain.value = 0.010;
+      lfo.connect(lfoG); lfoG.connect(g.gain);
+      src.connect(lp); lp.connect(g);
+      g.connect(RongAudio.out(0));
+      src.start(); lfo.start();
+      g.gain.setTargetAtTime(0.018, ac.currentTime, 3);
+      windNodes = g;
+    } catch (e){ /* 无声环境降级 */ }
+  }
+  let lastDrip = 0;
+  function drip(){
+    if (!soundOn || !audioInited) return;
+    const now = performance.now();
+    if (now - lastDrip < 110) return;
+    lastDrip = now;
+    try {
+      const ac = RongAudio.ctx();
+      const t0 = ac.currentTime;
+      const o = ac.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(740 + Math.random() * 120, t0);
+      o.frequency.exponentialRampToValueAtTime(290, t0 + 0.09);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(0.10, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.16);
+      const pan = ac.createStereoPanner ? ac.createStereoPanner() : null;
+      if (pan) pan.pan.value = Math.random() * 1.2 - 0.6;
+      o.connect(g);
+      if (pan){ g.connect(pan); pan.connect(RongAudio.out(0)); }
+      else g.connect(RongAudio.out(0));
+      o.start(t0); o.stop(t0 + 0.2);
+    } catch (e){}
+  }
+  function chime(){
+    if (!soundOn || !audioInited) return;
+    try {
+      // 五声阶轻磬（C/E/G 三音错落），audio-lib strikeBell
+      const seq = [523.25, 659.25, 783.99];
+      seq.forEach((f, i) => setTimeout(() => RongAudio.strikeBell(f, 0.22 - i * 0.03, { pan: -0.2 + i * 0.2 }), i * 230));
+    } catch (e){}
+  }
+
+  // ---------- 交互 ----------
+  let lastAdd = 0;
+  rd.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    initAudio();
+    waterAt(e.clientX / SCALE, e.clientY / SCALE, true);
+    drip();
+    lastAdd = Date.now();
+  });
+  rd.addEventListener('pointermove', function(e){
+    if (e.buttons === 0) return;
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastAdd < 70) return;
+    lastAdd = now;
+    waterAt(e.clientX / SCALE, e.clientY / SCALE, false);
+    drip();
+  });
+  document.getElementById('btnClear').addEventListener('click', function(){
+    frame = 0; coverShown = false; coverRatio = 0; taps = 0;
+    document.getElementById('poem').classList.remove('show');
+    document.getElementById('seal').classList.remove('show');
+    initArrays();
+  });
+  document.getElementById('btnSound').addEventListener('click', function(){
+    soundOn = !soundOn;
+    this.textContent = soundOn ? '♪' : '✕';
+    try {
+      const ac = RongAudio.ctx();
+      if (soundOn) ac.resume(); else ac.suspend();
+    } catch (e){}
+  });
+
+  function loop(){
+    for (let s = 0; s < STEPS_PER_FRAME; s++) step();
+    render();
+    frame += STEPS_PER_FRAME;
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  loop();
+
+  // 自动洒水（验收 ?auto=N）
+  if (AUTO > 0){
+    const spots = [[0.30,0.42],[0.60,0.30],[0.74,0.60],[0.46,0.66],[0.20,0.70],[0.55,0.50]];
+    for (let i = 0; i < AUTO && i < spots.length; i++){
+      setTimeout(() => {
+        waterAt(spots[i][0] * gw, spots[i][1] * gh, i < 3);
+      }, 400 + i * 500);
+    }
+  }
+})();
+</script>
+</body>
+</html>

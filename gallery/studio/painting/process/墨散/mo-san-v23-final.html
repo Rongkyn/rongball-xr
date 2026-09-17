@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>墨散 · Ink Dissolve</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #efe9dd;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas {
+    display: block;
+    position: fixed;
+    top: 0; left: 0;
+  }
+  #rd { z-index: 1; }
+  #paper { z-index: 2; pointer-events: none; }
+
+  .ui {
+    position: fixed;
+    pointer-events: none;
+    user-select: none;
+    z-index: 10;
+  }
+  .title {
+    top: 26px; left: 30px;
+    font-size: 16px;
+    letter-spacing: 10px;
+    color: #8a7e6e;
+    opacity: 0;
+    animation: fadeIn 3s ease 1s forwards;
+  }
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 4px;
+    color: #b5a690;
+    margin-top: 6px;
+  }
+  @keyframes fadeIn { to { opacity: 0.7; } }
+
+  .hint {
+    bottom: 64px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 4px;
+    color: #a89c8c;
+    white-space: nowrap;
+    opacity: 0;
+    animation: hintFade 10s ease 0.8s forwards;
+  }
+  @keyframes hintFade {
+    0% { opacity: 0; }
+    15% { opacity: 0.6; }
+    65% { opacity: 0.6; }
+    100% { opacity: 0; }
+  }
+  .seal {
+    bottom: 24px; right: 28px;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: #c2301e;
+    opacity: 0;
+    animation: fadeIn 2.5s ease 2.5s forwards;
+  }
+  .btn {
+    position: fixed;
+    top: 22px; right: 26px;
+    z-index: 20;
+    pointer-events: auto;
+    background: none;
+    border: 1px solid #c4b8a8;
+    color: #8a7e6e;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 2s ease 2s forwards;
+    transition: all 0.4s ease;
+  }
+  .btn:hover {
+    border-color: #8a7e6e;
+    color: #5c5040;
+    background: rgba(139,126,110,0.06);
+  }
+  .preset-bar {
+    position: fixed;
+    bottom: 26px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    pointer-events: auto;
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    animation: fadeIn 2s ease 3s forwards;
+  }
+  .preset {
+    background: none;
+    border: 1px solid #c4b8a8;
+    color: #8a7e6e;
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 3px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .preset:hover, .preset.active {
+    border-color: #8a7e6e;
+    color: #5c5040;
+    background: rgba(139,126,110,0.08);
+  }
+</style>
+</head>
+<body>
+<canvas id="rd"></canvas>
+<canvas id="paper"></canvas>
+
+<div class="ui title">
+  墨 散
+  <div class="subtitle">ink dissolve on rice paper</div>
+</div>
+<div class="ui hint">轻触纸面 · 墨自洇散</div>
+<div class="ui seal">绒 球</div>
+
+<button class="btn" id="btnClear">重 新</button>
+<div class="preset-bar">
+  <button class="preset active" data-idx="0">幽 墨</button>
+  <button class="preset" data-idx="1">苔 痕</button>
+  <button class="preset" data-idx="2">星 散</button>
+  <button class="preset" data-idx="3">裂 变</button>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const rd = document.getElementById('rd');
+  const ctx = rd.getContext('2d', { alpha: false });
+  const paper = document.getElementById('paper');
+  const pctx = paper.getContext('2d');
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let W, H;
+  const SCALE = 3;
+  let gw, gh;
+  let A, B, nA, nB;
+  let ink;              // 墨沉积场：B经过处留下色素，落墨不悔
+  let birth;            // 墨龄场：每格首次被B激活的帧号，-1未激活
+  let fEff;             // 每帧预算的有效feed（水随龄渐干）
+  let dbMod;            // 每格扩散系数扰动（纸纤维导向）
+  let edgeMod;          // 干纸边：近纸边吸水渐弱，墨锋淡没而止
+  let grain;            // 每格渲染颗粒（纤维+细噪）
+  let fiberM;           // 每格沉积纤维调制（v21：墨在纸纤维上挂墨不匀，破均匀灰团）
+  let frame = 0;        // 全局帧计数
+  let imgData;
+  let offCanvas, offCtx;
+
+  // Gray-Scott with Pearson 9-point Laplacian
+  const DA = 1.0;
+  const DB = 0.5;
+  let feed = 0.0545;
+  let kill = 0.062;
+  let growthTau = 1500; // 水量：feed指数衰减时间常数（模拟步）
+  const dt = 1.0;
+  const STEPS_PER_FRAME = 4;
+
+  // 墨沉积参数
+  const INK_MAX = 1.6;        // 沉积饱和上限（v23升：焦芯能沉到近纯黑）
+  const DEP_BASE = 0.012;    // 每帧基础沉积率（乘B）
+  const DEP_FRONT = 0.058;   // 水痕线：湿锋梯度加成（v21降：触手尖不被均匀勾边）
+  const TONE_K = 3.2;         // Beer-Lambert 浓度指数（v21升：焦浓对比拉开）
+
+  const PARAMS = [
+    { feed: 0.0545, kill: 0.062, tau: 2600 },  // 幽墨 - 圆洇团（步单位水量）
+    { feed: 0.058,  kill: 0.065, tau: 3200 },  // 苔痕 - 苔点簇
+    { feed: 0.046,  kill: 0.059, tau: 3800 },  // 星散 - 散枝
+    { feed: 0.037,  kill: 0.060, tau: 5600 },  // 裂变 - 冰裂
+  ];
+
+  // ---- 确定性噪声（纤维场用） ----
+  function hash2(x, y){
+    let h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return h - Math.floor(h);
+  }
+  function vnoise(x, y){
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf);
+    const v = yf * yf * (3 - 2 * yf);
+    const a = hash2(xi, yi), b = hash2(xi + 1, yi);
+    const c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  }
+
+  function initArrays(){
+    const n = gw * gh;
+    A  = new Float32Array(n);
+    B  = new Float32Array(n);
+    nA = new Float32Array(n);
+    nB = new Float32Array(n);
+    ink = new Float32Array(n);
+    birth = new Float32Array(n);
+    fEff = new Float32Array(n);
+    birth.fill(-1);
+    fEff.fill(feed);
+    A.fill(1.0);
+    nA.fill(1.0);
+
+    // 纸纤维场：渲染颗粒；干纸边：近边吸水渐弱
+    dbMod = new Float32Array(n);
+    edgeMod = new Float32Array(n);
+    grain = new Float32Array(n);
+    fiberM = new Float32Array(n);
+    const M = 20;  // 干边宽度（格）
+    for (let y = 0; y < gh; y++){
+      for (let x = 0; x < gw; x++){
+        const i = y * gw + x;
+        dbMod[i] = DB;  // 扩散保持恒定（任何空间扰动都会触发波前失稳：±16%蠕虫、±4%助长齿轮）
+        const dxx = Math.min(x, gw - 1 - x), dyy = Math.min(y, gh - 1 - y);
+        const dd = Math.min(dxx, dyy);
+        const tt = dd >= M ? 1 : dd / M;
+        edgeMod[i] = tt * tt * (3 - 2 * tt);
+        const hi = vnoise(x * 0.33, y * 0.33);
+        const streak = vnoise(x * 0.30, y * 0.10);   // 横向帘纹
+        const rnd = hash2(x, y);
+        grain[i] = 0.84 + 0.09 * hi + 0.08 * streak + 0.05 * (rnd - 0.5);
+        // 沉积纤维：横向长条纹为主（帘纹挂墨），叠加细噪；只调沉积不碰扩散，安全
+        const fStreak = vnoise(x * 0.16, y * 0.035);
+        const fFine = vnoise(x * 0.9, y * 0.9);
+        fiberM[i] = 0.62 + 0.42 * fStreak + 0.22 * (fFine - 0.5) + 0.10 * (rnd - 0.5);
+      }
+    }
+  }
+
+  function resize(){
+    W = window.innerWidth;
+    H = window.innerHeight;
+    rd.width = W * dpr;
+    rd.height = H * dpr;
+    rd.style.width = W + 'px';
+    rd.style.height = H + 'px';
+    paper.width = W * dpr;
+    paper.height = H * dpr;
+    paper.style.width = W + 'px';
+    paper.style.height = H + 'px';
+    pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    gw = Math.max(20, Math.floor(W / SCALE));
+    gh = Math.max(20, Math.floor(H / SCALE));
+    initArrays();
+    imgData = ctx.createImageData(gw, gh);
+
+    offCanvas = document.createElement('canvas');
+    offCanvas.width = gw;
+    offCanvas.height = gh;
+    offCtx = offCanvas.getContext('2d');
+
+    seedComposition();
+    drawPaper();
+  }
+
+  // 开场构图：三处墨团，主次分明，留白开阔
+  function seedComposition(){
+    blotAt(gw * 0.26, gh * 0.44, 1, 1.15, 0);     // 主，最大
+    blotAt(gw * 0.72, gh * 0.66, 1, 0.7, 2000);   // 次（虚龄随tau同比例放大）
+    blotAt(gw * 0.54, gh * 0.20, 1, 0.5, 3000);   // 呼应，最小
+  }
+
+  // 一团墨：小点反应种子（光滑环扩张）+ 墨芯直接沉积（落笔焦痕）
+  function blotAt(cx, cy, seedR, coreInk, preAge){
+    cx = Math.floor(cx); cy = Math.floor(cy);
+    const coreR = seedR + 7;
+    for (let dy = -coreR; dy <= coreR; dy++){
+      for (let dx = -coreR; dx <= coreR; dx++){
+        const d2 = dx * dx + dy * dy;
+        if (d2 > coreR * coreR) continue;
+        const px = cx + dx, py = cy + dy;
+        if (px < 1 || px >= gw - 1 || py < 1 || py >= gh - 1) continue;
+        const i = py * gw + px;
+        // 墨芯：中心浓，向外衰减
+        const fall = 1 - Math.sqrt(d2) / (coreR + 1);
+        ink[i] = Math.min(INK_MAX, ink[i] + coreInk * fall * fall);
+        // 反应种子：中心必种，边缘概率种（v21：初始锋面略带毛茬，破完美正圆）
+        const inSeed = d2 <= seedR * seedR;
+        const ragged = d2 <= (seedR + 1.5) * (seedR + 1.5) && Math.random() < 0.45;
+        if (inSeed || ragged){
+          B[i] = Math.min(1, B[i] + 0.9);
+          A[i] = Math.max(0, A[i] - 0.9);
+          birth[i] = frame - (preAge || 0);   // 虚龄：预老的水少，团小
+          fEff[i] = feed;
+        }
+      }
+    }
+  }
+
+  function step(){
+    const g = gw, h = gh;
+    const f = feed, k = kill;
+
+    for (let y = 1; y < h - 1; y++){
+      const row = y * g;
+      const rowUp = row - g;
+      const rowDn = row + g;
+      for (let x = 1; x < g - 1; x++){
+        const i = row + x;
+        const a = A[i], b = B[i];
+
+        const lapA = (A[i-1] + A[i+1] + A[rowUp+x] + A[rowDn+x]) * 0.2
+                   + (A[rowUp+x-1] + A[rowUp+x+1] + A[rowDn+x-1] + A[rowDn+x+1]) * 0.05
+                   - a;
+        // v21：B各向异性扩散——横向纤维导向（0.21/0.19），全场一致不引发随机失稳，只让洇团微呈横向椭圆
+        const lapB = (B[i-1] + B[i+1]) * 0.21
+                   + (B[rowUp+x] + B[rowDn+x]) * 0.19
+                   + (B[rowUp+x-1] + B[rowUp+x+1] + B[rowDn+x-1] + B[rowDn+x+1]) * 0.05
+                   - b;
+
+        const abb = a * b * b;
+        const fe = fEff[i];
+        let na = a + (DA * lapA - abb + fe * (1 - a)) * dt;
+        let nb = b + (dbMod[i] * lapB + abb - (k + fe) * b) * dt;
+        nA[i] = na < 0 ? 0 : na > 1 ? 1 : na;
+        nB[i] = nb < 0 ? 0 : nb > 1 ? 1 : nb;
+      }
+    }
+
+    for (let x = 1; x < g - 1; x++){
+      nA[x] = nA[g + x];
+      nA[(h-1)*g+x] = nA[(h-2)*g+x];
+      nB[x] = 0;              // 吸收边界：墨到纸边而止
+      nB[(h-1)*g+x] = 0;
+    }
+    for (let y = 0; y < h; y++){
+      nA[y*g] = nA[y*g+1];
+      nA[y*g+g-1] = nA[y*g+g-2];
+      nB[y*g] = 0;
+      nB[y*g+g-1] = 0;
+    }
+
+    const tA = A; A = nA; nA = tA;
+    const tB = B; B = nB; nB = tB;
+  }
+
+  // 沉积：B驻留处积墨，湿锋梯度处加重（水痕线），越浓越慢（趋饱和）
+  // 同帧维护墨龄：B首逾阈值记birth；有效feed随龄衰减，水尽则止
+  function deposit(){
+    const g = gw, h = gh;
+    const f0 = feed, tau = growthTau;
+    for (let y = 1; y < h - 1; y++){
+      const row = y * g;
+      for (let x = 1; x < g - 1; x++){
+        const i = row + x;
+        const b = B[i];
+        if (b > 0.06){
+          if (birth[i] < 0){
+            // 墨龄从邻格传播：水从墨团中心来，全团共享生日
+            let m = -1;
+            const b0 = birth[i-1], b1 = birth[i+1], b2 = birth[i-g], b3 = birth[i+g];
+            if (b0 >= 0) m = b0;
+            if (b1 >= 0 && (m < 0 || b1 < m)) m = b1;
+            if (b2 >= 0 && (m < 0 || b2 < m)) m = b2;
+            if (b3 >= 0 && (m < 0 || b3 < m)) m = b3;
+            birth[i] = m >= 0 ? m : frame;
+          }
+          const age = frame - birth[i];
+          fEff[i] = (age > tau * 4 ? 0 : f0 * Math.exp(-Math.pow(age / tau, 1.6))) * edgeMod[i];
+          if (fEff[i] < f0 * 0.12) fEff[i] = 0;  // 涸锋：弱水拖尾是失稳温床，直接冻住
+          const gx = B[i+1] - B[i-1];
+          const gy = B[i+g] - B[i-g];
+          const grad = Math.sqrt(gx * gx + gy * gy);
+          // 水足则墨浓，水竭则墨淡：外环扫过时水量低，自然内浓外淡
+          const water = 0.15 + 0.85 * (fEff[i] / f0);
+          const rate = (b * DEP_BASE + Math.min(grad * 2.0, 1.0) * b * DEP_FRONT) * water * fiberM[i];
+          ink[i] += rate * (1 - ink[i] / INK_MAX);
+        } else if (birth[i] >= 0) {
+          const age = frame - birth[i];
+          if (age > tau * 4) { fEff[i] = 0; birth[i] = -2; }  // -2=已干涸，不再算
+          else {
+            fEff[i] = f0 * Math.exp(-Math.pow(age / tau, 1.6)) * edgeMod[i];
+            if (fEff[i] < f0 * 0.12) fEff[i] = 0;
+          }
+        }
+      }
+    }
+  }
+
+  // 渲染：纸色 →（淡墨暖灰 → 浓墨沉黑）按 Beer-Lambert 混合，颗粒调制
+  function render(){
+    const data = imgData.data;
+    const n = gw * gh;
+    for (let i = 0; i < n; i++){
+      const j = i * 4;
+      const v = ink[i];
+      if (v < 0.004){
+        data[j] = 239; data[j+1] = 233; data[j+2] = 221;
+        data[j+3] = 255;
+        continue;
+      }
+      // v23：gamma 1.35 打开淡端——Beer-Lambert压缩中调，淡晕要宽而透
+      let a = Math.pow(1 - Math.exp(-TONE_K * v), 1.35);
+      // 湿锋：活的水边可见（洇散过程的"秀"）
+      const bw = B[i];
+      if (bw > 0.06){
+        let wet = (bw - 0.06) / 0.29;
+        wet = wet > 1 ? 1 : wet;
+        wet = wet * wet * (3 - 2 * wet) * 0.30;
+        a += wet * (1 - a);
+      }
+      a *= grain[i];
+      if (a > 1) a = 1;
+      // 淡墨偏暖茶，浓墨沉黑（v21：淡端提亮，焦淡区间拉开）
+      const deep = a < 0.45 ? a / 0.45 : 1;
+      const ir = 166 + (28 - 166) * deep;
+      const ig = 156 + (26 - 156) * deep;
+      const ib = 138 + (24 - 138) * deep;
+      data[j]   = 239 + (ir - 239) * a;
+      data[j+1] = 233 + (ig - 233) * a;
+      data[j+2] = 221 + (ib - 221) * a;
+      data[j+3] = 255;
+    }
+    offCtx.putImageData(imgData, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(offCanvas, 0, 0, W, H);
+  }
+
+  function drawPaper(){
+    pctx.clearRect(0, 0, W, H);
+    const tileSize = 256;
+    const tex = document.createElement('canvas');
+    tex.width = tileSize; tex.height = tileSize;
+    const tctx = tex.getContext('2d');
+    const tData = tctx.createImageData(tileSize, tileSize);
+    for (let i = 0; i < tileSize * tileSize * 4; i += 4){
+      const v = (Math.random() - 0.5) * 14;
+      tData.data[i]   = 210 + v;
+      tData.data[i+1] = 200 + v;
+      tData.data[i+2] = 180 + v;
+      tData.data[i+3] = 12 + Math.random() * 10;
+    }
+    tctx.putImageData(tData, 0, 0);
+    pctx.fillStyle = pctx.createPattern(tex, 'repeat');
+    pctx.fillRect(0, 0, W, H);
+
+    const grad = pctx.createRadialGradient(W/2, H/2, Math.min(W,H)*0.15, W/2, H/2, Math.max(W,H)*0.8);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(80,60,30,0.07)');
+    pctx.fillStyle = grad;
+    pctx.fillRect(0, 0, W, H);
+  }
+
+  // 交互：点落一团墨
+  let lastAdd = 0;
+  function pointerDown(e){
+    e.preventDefault();
+    blotAt(e.clientX / SCALE, e.clientY / SCALE, 1, 0.95);
+    lastAdd = Date.now();
+  }
+  function pointerMove(e){
+    if (e.buttons === 0) return;
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastAdd < 60) return;
+    lastAdd = now;
+    blotAt(e.clientX / SCALE, e.clientY / SCALE, 1, 0.6);
+  }
+  rd.addEventListener('pointerdown', pointerDown);
+  rd.addEventListener('pointermove', pointerMove);
+
+  document.getElementById('btnClear').addEventListener('click', function(){
+    initArrays();
+    seedComposition();
+  });
+
+  document.querySelectorAll('.preset').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      document.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const p = PARAMS[parseInt(btn.dataset.idx)];
+      feed = p.feed;
+      kill = p.kill;
+      growthTau = p.tau;
+      frame = 0;
+      initArrays();
+      seedComposition();
+    });
+  });
+
+  function loop(){
+    const spf = STEPS_PER_FRAME;
+    for (let s = 0; s < spf; s++) step();
+    deposit();
+    render();
+    frame += spf;   // 墨龄以模拟步计，水量守恒
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  loop();
+})();
+</script>
+</body>
+</html>

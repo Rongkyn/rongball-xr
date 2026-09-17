@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>残荷 · Can He</title>
+<!-- uses: lib/audio-lib.js v1.1（master 总线出声口；雨声组为作品内联自定义声部） -->
+<!-- 系列第十一件：残荷听雨。超疏水珠模型（钉扎-合并-滚动-聚洼-弯茎倾泻）+ 雨生命周期状态机 -->
+<!-- v3（2026-09-12）：倾泻水流重写——上粗下细半透明水带（深影+亮面双层）+ 沿线流动珠串 + 落点溅水花；泻落珠与水带共用落点 -->
+<!-- v2（2026-09-11）：倾泻时刻补「看得见的水流」——叶缘泻流淡色水带（主带+细分叉，跟踪弯茎叶缘）+ 落点持续涟漪；泻落珠略放大 -->
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #efeae0;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; position: fixed; top: 0; left: 0; }
+  #pond { z-index: 1; }
+  #state { position: fixed; bottom: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; z-index: -1; }
+
+  .ui { position: fixed; pointer-events: none; user-select: none; z-index: 10; }
+  .title {
+    top: 26px; left: 30px;
+    font-size: 17px;
+    letter-spacing: 10px;
+    color: #4a463c;
+    opacity: 0;
+    animation: fadeIn 3s ease 1s forwards;
+  }
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #8a8478;
+    margin-top: 6px;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  .hint {
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 6px;
+    color: #7a7466;
+    opacity: 0;
+    animation: hintFade 9s ease 2.5s forwards;
+  }
+  @keyframes hintFade {
+    0% { opacity: 0; }
+    12% { opacity: 0.6; }
+    70% { opacity: 0.6; }
+    100% { opacity: 0; }
+  }
+
+  /* 印章：朱红方印（不依赖外部字体） */
+  .seal {
+    position: fixed;
+    bottom: 26px; right: 30px;
+    z-index: 10;
+    pointer-events: none;
+    width: 38px; height: 38px;
+    background: rgba(176, 58, 42, 0.92);
+    color: #f7ece2;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    letter-spacing: 0;
+    border-radius: 4px;
+    transform: rotate(-4deg);
+    opacity: 0;
+    transition: opacity 2.5s ease;
+  }
+  .seal.show { opacity: 0.9; }
+
+  .btn {
+    position: fixed;
+    top: 22px;
+    z-index: 20;
+    pointer-events: auto;
+    background: rgba(120, 110, 92, 0.10);
+    border: 1px solid #b8b0a0;
+    color: #5a544a;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 2s ease 2s forwards;
+    transition: all 0.4s ease;
+  }
+  .btn:hover {
+    border-color: #6a6458;
+    color: #3a362e;
+    background: rgba(120, 110, 92, 0.18);
+  }
+  #btnClear { right: 26px; }
+  #btnSound { right: 86px; }
+
+  /* 竖排诗（苔痕四轮定版写法）：flex row-reverse 从右往左成列（右为上联，合古制），
+     列内每字 display:block 横排模式纵向堆叠；每字必须显式 span（含首字）——
+     裸文本节点不定高、间距漂移（苔痕 v2.1 实锤）。 */
+  #poem {
+    position: fixed; right: 7%; top: 13%; z-index: 9;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-start;
+    gap: 26px;
+    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: clamp(20px, 3.4vh, 26px);
+    letter-spacing: 0;
+    color: rgba(74, 66, 52, 0.9);
+    opacity: 0; transition: opacity 4s ease;
+    pointer-events: none;
+  }
+  #poem.show { opacity: 0.86; }
+  #poem .line, #poem .attrib {
+    width: 1.05em;
+    text-align: center;
+    flex: none;
+  }
+  #poem .line > span, #poem .attrib > span {
+    display: block;
+    height: 1.4em;
+    line-height: 1.4;
+  }
+  #poem .attrib {
+    font-size: 12px; letter-spacing: 2px;
+    color: rgba(110, 100, 82, 0.7);
+    padding-top: 60px;
+    width: 1.3em;
+  }
+</style>
+</head>
+<body>
+<canvas id="pond"></canvas>
+<div id="state">{}</div>
+
+<div class="ui title">
+  残 荷
+  <div class="subtitle">can he · rain on withered lotus</div>
+</div>
+<div class="ui hint">轻 点 池 面 · 唤 一 场 雨</div>
+<div class="ui seal" id="seal">绒 球</div>
+<button class="btn" id="btnSound">♪</button>
+<button class="btn" id="btnClear">再 来</button>
+
+<div id="poem">
+  <span class="line"><span>秋</span><span>阴</span><span>不</span><span>散</span><span>霜</span><span>飞</span><span>晚</span></span>
+  <span class="line line1"><span>留</span><span>得</span><span>残</span><span>荷</span><span>听</span><span>雨</span><span>声</span></span>
+  <span class="attrib"><span>李</span><span>商</span><span>隐</span></span>
+</div>
+
+<script src="lib/audio-lib.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  // ---------- URL 钩子（验收用） ----------
+  const params = new URLSearchParams(location.search);
+  const FAST = params.has('fast');
+  const SEED = params.get('seed') !== null ? parseInt(params.get('seed'), 10) : (Date.now() % 100000);
+  const AUTO = params.get('auto') !== null ? parseInt(params.get('auto'), 10) : 0;
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  let rng = mulberry32(SEED);
+  const R = () => rng();
+  const RR = (a, b) => a + (b - a) * R();
+
+  const cvs = document.getElementById('pond');
+  const ctx = cvs.getContext('2d', { alpha: false });
+  const stateEl = document.getElementById('state');
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let W = 0, H = 0;
+
+  // ---------- 全局状态 ----------
+  let frame = 0;
+  let plants = [];      // 梗（含盛水叶/枯叶/莲蓬挂载）
+  let leaves = [];      // 盛水叶（有珠场）
+  let ripples = [];
+  let rainDrops = [];   // 空中的雨
+  let fallDrops = [];   // 倾泻下落的水珠
+  let splashes = [];    // 落点溅起的小水花
+  let rainLevel = 0;    // 雨季强度 0..2（渐衰自停）
+  let pours = 0;
+  let poemShown = false;
+  let soundOn = true;
+  let audioReady = false;
+
+  // ---------- 色彩 ----------
+  const PAPER = '#efeae0';
+  const INK = 'rgba(58,56,48,';
+
+  // 枯赭色阶：中心赭绿 → 枯黄 → 焦茶缘
+  function leafPalette(t){ // t: 0 半枯(盛水) .. 1 全枯
+    const lerp = (a,b,u)=>Math.round(a+(b-a)*u);
+    const stops = [
+      [116,120,76],  // 赭绿
+      [152,136,84],  // 枯黄
+      [108,76,46]    // 焦茶
+    ];
+    const u = Math.min(1, Math.max(0, t)) * 2;
+    const i = Math.min(1, Math.floor(u));
+    const f = u - i;
+    const c = stops[i].map((v,k)=>lerp(v, stops[i+1][k], f));
+    return c;
+  }
+
+  // ---------- 布局生成 ----------
+  function buildLayout(){
+    plants = []; leaves = []; ripples = []; rainDrops = []; fallDrops = [];
+    rainLevel = 0; pours = 0;
+
+    const nStems = 5 + Math.floor(R() * 3); // 5-7 枝（含光梗，线条交错是残荷的骨）
+    // 盛水叶 2-3 片，占据画面左/中部（右侧留诗区净空）
+    const bowlN = 2 + (R() < 0.6 ? 1 : 0);
+    const xs = [];
+    for (let i = 0; i < nStems; i++) xs.push(W * RR(0.08, 0.80));
+    xs.sort((a,b)=>a-b);
+
+    for (let i = 0; i < nStems; i++){
+      const bx = xs[i];
+      const by = H * RR(0.82, 0.97);            // 梗没入水下处
+      const topY = H * RR(0.18, 0.56);
+      const kink = R() < 0.45;                   // 折梗
+      const stem = {
+        bx, by, topY,
+        kink,
+        kinkY: kink ? by - (by - topY) * RR(0.35, 0.55) : 0,
+        kinkX: kink ? bx + RR(-50, 50) : 0,
+        lean: RR(-45, 45),
+        w: RR(2.2, 3.6),
+        bend: 0, bendV: 0, bendDir: RR(0, Math.PI * 2),
+        leaf: null, pod: null, dry: null
+      };
+      plants.push(stem);
+    }
+    // 分配挂载：前 bowlN 枝挂盛水叶（选高度适中的），其余挂枯垂叶或莲蓬
+    const idx = plants.map((p,i)=>i).sort(()=>R()-0.5);
+    let bi = 0;
+    for (const i of idx){
+      const p = plants[i];
+      if (bi < bowlN){
+        const rx = RR(95, 150), ry = rx * RR(0.34, 0.44);
+        const leaf = {
+          stem: p,
+          rx, ry,
+          t: RR(0.45, 0.8),            // 枯度（盛水叶半枯偏枯）
+          rot: RR(-0.35, 0.35),        // 叶面侧倾角（画面内）
+          tilt: RR(0, Math.PI * 2),    // 倾泻方向（叶坡低侧）
+          beads: [],                    // {u,v,m,vx,vy}（归一化叶坐标）
+          pool: 0,
+          pouring: false,
+          sprayT: 0,
+          phase: RR(0, Math.PI*2),
+          tex: null, cx: 0, cy: 0
+        };
+        p.leaf = leaf;
+        p.bendDir = leaf.tilt;
+        leaves.push(leaf);
+        bi++;
+      } else if (R() < 0.45 && plants.filter(q=>q.pod).length < 2){
+        // 莲蓬低垂（锥体自梗顶下垂，小角度摇摆）
+        p.pod = { r: RR(18, 27), tilt: RR(-0.5, 0.5), seeds: 6 + Math.floor(R()*5) };
+      } else if (R() < 0.7){
+        p.dry = { rx: RR(55, 85), fold: RR(0.5, 0.95), rot: RR(-0.8, 0.8), t: RR(0.75, 1) };
+      } // 其余为光梗（纯线条，吴冠中式的骨）
+    }
+    // 盛水叶纹理（离屏一次）
+    for (const lf of leaves) lf.tex = renderLeafTex(lf);
+    layoutGeometry();
+  }
+
+  function layoutGeometry(){
+    // 由梗当前 bend 计算叶心世界坐标（弯茎位移要一眼看见「弯腰」）
+    for (const p of plants){
+      const dx = p.lean + Math.cos(p.bendDir) * p.bend * 110;
+      const dy = -Math.sin(p.bendDir) * p.bend * 40 + p.bend * 55; // 弯垂时下压
+      p.tx = p.bx + dx;
+      p.ty = p.topY + dy;
+      if (p.leaf){ p.leaf.cx = p.tx; p.leaf.cy = p.ty; }
+    }
+  }
+
+  // 叶坐标变换（rot 侧倾一致作用于绘制/命中/珠位）
+  function leafToWorld(lf, u, v){
+    const lx = u * lf.rx, ly = v * lf.ry;
+    const c = Math.cos(lf.rot), s2 = Math.sin(lf.rot);
+    return { x: lf.cx + lx * c - ly * s2, y: lf.cy + lx * s2 + ly * c };
+  }
+  function worldToLeaf(lf, x, y){
+    const dx = x - lf.cx, dy = y - lf.cy;
+    const c = Math.cos(-lf.rot), s2 = Math.sin(-lf.rot);
+    return { u: (dx * c - dy * s2) / lf.rx, v: (dx * s2 + dy * c) / lf.ry };
+  }
+
+  // ---------- 盛水叶纹理（残破叶盘，离屏） ----------
+  function renderLeafTex(lf){
+    const pad = 18;
+    const s = document.createElement('canvas');
+    const px = (lf.rx + pad) * 2, py = (lf.ry + pad) * 2;
+    s.width = px * dpr; s.height = py * dpr;
+    const g = s.getContext('2d');
+    g.scale(dpr, dpr);
+    const cx = px/2, cy = py/2;
+    const c = leafPalette(lf.t);
+
+    // 叶缘路径：半径噪声 + 残破缺口 + 窄深裂口（归一化 u∈[-1,1] 椭圆参数）
+    const notches = [];
+    const nN = 4 + Math.floor(R()*4);
+    for (let i=0;i<nN;i++) notches.push({ a: RR(0, Math.PI*2), w: RR(0.09,0.24), d: RR(0.12,0.34) });
+    const splits = [];
+    const nS = 1 + Math.floor(R()*3);
+    for (let i=0;i<nS;i++) splits.push({ a: RR(0, Math.PI*2), w: RR(0.02,0.05), d: RR(0.3,0.55) });
+    const edge = [];
+    const steps = 96;
+    for (let i=0;i<=steps;i++){
+      const a = (i/steps) * Math.PI*2;
+      let r = 1 + 0.06 * Math.sin(a*3 + lf.phase) + 0.045 * Math.sin(a*7 + lf.phase*2) + 0.02 * Math.sin(a*13 + lf.phase*3);
+      for (const nt of notches){
+        let da = Math.abs(((a - nt.a + Math.PI*3) % (Math.PI*2)) - Math.PI);
+        if (da < nt.w) r -= nt.d * (1 - da/nt.w);
+      }
+      for (const sp of splits){
+        let da = Math.abs(((a - sp.a + Math.PI*3) % (Math.PI*2)) - Math.PI);
+        if (da < sp.w) r -= sp.d * (1 - da/sp.w);
+      }
+      edge.push(r);
+    }
+    g.beginPath();
+    for (let i=0;i<=steps;i++){
+      const a = (i/steps) * Math.PI*2;
+      const x = cx + Math.cos(a) * lf.rx * edge[i];
+      const y = cy + Math.sin(a) * lf.ry * edge[i];
+      i ? g.lineTo(x,y) : g.moveTo(x,y);
+    }
+    g.closePath();
+
+    // 基底径向渐变：中心沉、缘焦
+    const grad = g.createRadialGradient(cx, cy, 2, cx, cy, lf.rx);
+    grad.addColorStop(0, `rgb(${c[0]-26},${c[1]-24},${c[2]-16})`);
+    grad.addColorStop(0.55, `rgb(${c[0]},${c[1]},${c[2]})`);
+    grad.addColorStop(1, `rgb(${Math.max(0,c[0]-52)},${Math.max(0,c[1]-46)},${Math.max(0,c[2]-28)})`);
+    g.fillStyle = grad;
+    g.fill();
+    g.save();
+    g.clip();
+
+    // 枯斑：低透明度随机斑块
+    for (let i=0;i<50;i++){
+      const a = RR(0, Math.PI*2), rr = Math.sqrt(R())*lf.rx*0.95;
+      const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr*(lf.ry/lf.rx);
+      const br = RR(4, 16);
+      g.fillStyle = R()<0.5 ? `rgba(70,50,28,${RR(0.03,0.09)})` : `rgba(150,128,70,${RR(0.03,0.07)})`;
+      g.beginPath(); g.ellipse(x, y, br, br*RR(0.5,1), RR(0,3), 0, Math.PI*2); g.fill();
+    }
+
+    // 放射枯脉
+    const veins = 15 + Math.floor(R()*5);
+    g.strokeStyle = 'rgba(62,46,26,0.30)';
+    g.lineWidth = 1.1;
+    for (let i=0;i<veins;i++){
+      const a = (i/veins)*Math.PI*2 + RR(-0.06,0.06);
+      g.beginPath();
+      g.moveTo(cx, cy);
+      const mx = cx + Math.cos(a)*lf.rx*0.5, my = cy + Math.sin(a)*lf.ry*0.5;
+      const ex = cx + Math.cos(a)*lf.rx*0.94, ey = cy + Math.sin(a)*lf.ry*0.94;
+      g.quadraticCurveTo(mx + RR(-3,3), my + RR(-2,2), ex, ey);
+      g.stroke();
+    }
+
+    // 虫洞（纸色+焦缘）
+    const nHoles = 2 + Math.floor(R()*3);
+    for (let i=0;i<nHoles;i++){
+      const a = RR(0, Math.PI*2), rr = RR(0.25, 0.75)*lf.rx;
+      const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr*(lf.ry/lf.rx);
+      const hr = RR(3, 8);
+      g.fillStyle = 'rgba(84,58,32,0.85)';
+      g.beginPath(); g.ellipse(x, y, hr+1.6, (hr+1.6)*0.8, RR(0,3), 0, Math.PI*2); g.fill();
+      g.fillStyle = PAPER;
+      g.beginPath(); g.ellipse(x, y, hr, hr*0.8, RR(0,3), 0, Math.PI*2); g.fill();
+    }
+
+    // 卷边暗部（一个扇区，枯叶翻卷的背阴面）
+    const curlA = RR(0, Math.PI*2), curlW = RR(1.2, 2.2);
+    const cg = g.createRadialGradient(cx, cy, lf.rx*0.45, cx, cy, lf.rx*1.02);
+    cg.addColorStop(0, 'rgba(58,38,20,0)');
+    cg.addColorStop(1, 'rgba(58,38,20,0.5)');
+    g.fillStyle = cg;
+    g.beginPath();
+    g.moveTo(cx, cy);
+    g.arc(cx, cy, lf.rx*1.05, curlA, curlA + curlW);
+    g.closePath();
+    g.fill();
+
+    // 中心脐
+    g.fillStyle = 'rgba(52,38,22,0.7)';
+    g.beginPath(); g.ellipse(cx, cy, 4, 3, 0, 0, Math.PI*2); g.fill();
+    g.restore();
+
+    // 缘线
+    g.strokeStyle = 'rgba(58,42,24,0.5)';
+    g.lineWidth = 1.3;
+    g.beginPath();
+    for (let i=0;i<=steps;i++){
+      const a = (i/steps) * Math.PI*2;
+      const x = cx + Math.cos(a) * lf.rx * edge[i];
+      const y = cy + Math.sin(a) * lf.ry * edge[i];
+      i ? g.lineTo(x,y) : g.moveTo(x,y);
+    }
+    g.closePath();
+    g.stroke();
+
+    return { cvs: s, w: px, h: py };
+  }
+
+  // ---------- 雨 ----------
+  function spawnRainAt(cx, cy, n, spread){
+    for (let i=0;i<n;i++){
+      const a = RR(0, Math.PI*2), d = Math.abs(RR(-1,1)+RR(-1,1)) * spread;
+      rainDrops.push({
+        tx: cx + Math.cos(a)*d,
+        ty: cy + Math.sin(a)*d*0.6,
+        t: 0, dur: RR(0.22, 0.4),
+        len: RR(46, 84)
+      });
+    }
+  }
+
+  function landDrop(dr){
+    // 命中检测：盛水叶（归一化椭圆距离）
+    for (const lf of leaves){
+      const dx = dr.tx - lf.cx, dy = dr.ty - lf.cy;
+      const du = dx / lf.rx, dv = dy / lf.ry;
+      if (du*du + dv*dv <= 1){
+        lf.beads.push({ u: du, v: dv, m: RR(0.15, 0.32), vx: 0, vy: 0 });
+        if (soundOn && audioReady) sndLeafTick((dr.tx/W)*2-1);
+        return;
+      }
+    }
+    ripples.push({ x: dr.tx, y: dr.ty, r: 3, vr: RR(36, 60), rmax: RR(34, 58), a: 0.30, rings: 2 });
+    if (soundOn && audioReady) sndPondPlip((dr.tx/W)*2-1);
+  }
+
+  // ---------- 水珠物理（叶局部归一化坐标） ----------
+  const M_SLIDE = 0.05;   // 滑动阈值（荷叶效应：小珠慢滚、大珠快滚，速度∝质量）
+  const M_CRIT = 2.8;     // 叶心洼临界 → 弯茎倾泻
+  function stepLeaf(lf, dt){
+    const bs = lf.beads;
+    const bendPull = lf.stem.bend; // 弯茎时珠往倾泻方向滚
+    const pu = Math.cos(lf.tilt), pv = Math.sin(lf.tilt);
+    for (const b of bs){
+      if (b.m > M_SLIDE){
+        // 朝叶心（坡低处）+ 弯茎方向；速度∝(m-M_SLIDE)：小珠蠕行、大珠快滚
+        const k = 2.6 * (b.m - M_SLIDE + 0.06);
+        b.vx += (-b.u * k + pu * bendPull * 2.2) * dt;
+        b.vy += (-b.v * k + pv * bendPull * 2.2) * dt;
+        b.vx *= Math.exp(-dt * 3.0);
+        b.vy *= Math.exp(-dt * 3.0);
+        b.u += b.vx * dt;
+        b.v += b.vy * dt;
+      }
+    }
+    // 合并（相碰并珠，质量相加；动量简单平均）
+    for (let i=0;i<bs.length;i++){
+      const a = bs[i];
+      const ra = 0.08 * Math.cbrt(a.m);
+      for (let j=bs.length-1;j>i;j--){
+        const b = bs[j];
+        const rb = 0.08 * Math.cbrt(b.m);
+        const du = a.u - b.u, dv = a.v - b.v;
+        if (du*du + dv*dv < (ra+rb)*(ra+rb)*0.81){
+          a.m += b.m;
+          a.u = (a.u + b.u)/2; a.v = (a.v + b.v)/2;
+          a.vx = (a.vx + b.vx)/2; a.vy = (a.vy + b.vy)/2;
+          bs.splice(j,1);
+        }
+      }
+    }
+    // 入洼（叶心 0.16 内，凡爬到叶心都汇入）
+    for (let i=bs.length-1;i>=0;i--){
+      const b = bs[i];
+      if (b.u*b.u + b.v*b.v < 0.0256){
+        lf.pool += b.m;
+        bs.splice(i,1);
+      }
+    }
+    // 珠出界回弹（叶缘挡住）
+    for (const b of bs){
+      const d = Math.hypot(b.u, b.v);
+      const r = 0.062 * Math.cbrt(b.m);
+      if (d > 1 - r){
+        const s = (1 - r) / d;
+        b.u *= s; b.v *= s;
+        b.vx *= -0.25; b.vy *= -0.25;
+      }
+    }
+
+    // 倾泻判定
+    if (!lf.pouring && lf.pool > M_CRIT){
+      lf.pouring = true;
+      lf.sprayT = 0;
+      lf.ripT = 0;
+      // 泻流落点（固定，不随弯茎移动；起点每帧跟踪叶缘）
+      const ex0 = lf.cx + Math.cos(lf.tilt) * lf.rx * 0.96;
+      const ey0 = lf.cy + Math.sin(lf.tilt) * lf.ry * 0.96;
+      lf.pourIx = ex0 + Math.cos(lf.tilt) * RR(6, 18);
+      lf.pourIy = ey0 + RR(100, 140);
+      lf.pourStartT = frame;
+    }
+    if (lf.pouring){
+      const st = lf.stem;
+      st.bendV += (1.0 - st.bend) * dt * 9;
+      lf.pool -= lf.pool * dt * 1.05 + dt * 0.35;
+      lf.sprayT -= dt;
+      // 落点持续涟漪（水流击水的阅读感）
+      lf.ripT -= dt;
+      if (lf.ripT <= 0){
+        lf.ripT = 0.16;
+        ripples.push({ x: lf.pourIx, y: lf.pourIy, r: 4, vr: 85, rmax: 70, a: 0.32, rings: 2 });
+      }
+      if (lf.sprayT <= 0 && lf.pool > 0.4){
+        lf.sprayT = 0.055;
+        // 从叶缘低侧跌落水珠（v3：与水带共用固定落点）
+        const ex = lf.cx + Math.cos(lf.tilt) * lf.rx * 0.96;
+        const ey = lf.cy + Math.sin(lf.tilt) * lf.ry * 0.96;
+        fallDrops.push({
+          x: ex + RR(-2, 2), y: ey,
+          vx: (lf.pourIx - ex) * RR(1.4, 2.0), vy: RR(20, 46),
+          tx: lf.pourIx + RR(-3, 3), ty: lf.pourIy, m: RR(0.35, 0.75), t: 0
+        });
+      }
+      if (lf.pool <= 0.4){
+        lf.pouring = false;
+        lf.pool = 0;
+        pours++;
+        if (!poemShown){ showPoem(); }
+      }
+    } else {
+      // 弯茎弹簧回位（阻尼振荡）
+      const st = lf.stem;
+      st.bendV += (-st.bend * 26 - st.bendV * 5.2) * dt;
+    }
+    const st = lf.stem;
+    st.bend += st.bendV * dt;
+    st.bend = Math.max(0, Math.min(1.15, st.bend));
+  }
+
+  // ---------- 涟漪 ----------
+  function stepRipples(dt){
+    for (let i=ripples.length-1;i>=0;i--){
+      const rp = ripples[i];
+      rp.r += rp.vr * dt;
+      if (rp.r > rp.rmax) ripples.splice(i,1);
+    }
+  }
+
+  // ---------- 主循环 ----------
+  let last = performance.now();
+  function loop(now){
+    let dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (FAST) dt *= 3;
+
+    // 雨季渐衰（雨会停）
+    rainLevel *= Math.exp(-dt / (FAST ? 1.4 : 4.2));
+    if (rainLevel > 0.02){
+      // 环境细雨
+      const rate = rainLevel * 5.5;
+      if (R() < rate * dt * 3){
+        spawnRainAt(W * RR(0.06, 0.78), H * RR(0.16, 0.82), 1, 10);
+      }
+    }
+
+    // 空中雨推进
+    for (let i=rainDrops.length-1;i>=0;i--){
+      const dr = rainDrops[i];
+      dr.t += dt / dr.dur;
+      if (dr.t >= 1){ landDrop(dr); rainDrops.splice(i,1); }
+    }
+    // 倾泻水珠推进（v3：x 向固定落点收敛）
+    for (let i=fallDrops.length-1;i>=0;i--){
+      const fd = fallDrops[i];
+      fd.vy += 620 * dt;
+      fd.x += (fd.vx + (fd.tx - fd.x) * 2.2) * dt; fd.y += fd.vy * dt;
+      if (fd.y >= fd.ty){
+        ripples.push({ x: fd.x, y: fd.ty, r: 5, vr: 95, rmax: 95, a: 0.4, rings: 3 });
+        // 落点溅起小水花（2-4 颗，短弧抛射回落）
+        const n = 2 + (R() < 0.5 ? 1 : 0) + (R() < 0.3 ? 1 : 0);
+        for (let k=0;k<n;k++){
+          splashes.push({
+            x: fd.x, y: fd.ty,
+            vx: RR(-46, 46), vy: RR(-120, -52),
+            t: 0, life: RR(0.32, 0.5), r: RR(1.0, 1.9)
+          });
+        }
+        if (soundOn && audioReady && R() < 0.5) sndPourDong((fd.x/W)*2-1, 0.5);
+        fallDrops.splice(i,1);
+      }
+    }
+    // 溅水花推进
+    for (let i=splashes.length-1;i>=0;i--){
+      const sp = splashes[i];
+      sp.t += dt;
+      sp.vy += 520 * dt;
+      sp.x += sp.vx * dt; sp.y += sp.vy * dt;
+      if (sp.t >= sp.life) splashes.splice(i,1);
+    }
+
+    for (const lf of leaves) stepLeaf(lf, dt);
+    layoutGeometry();
+    stepRipples(dt);
+
+    draw();
+    mirror();
+    frame++;
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- 绘制 ----------
+  function draw(){
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(0, 0, W, H);
+
+    // 池面淡墨晕染（极浅，暗示水域）
+    // （固定几块大 wash，用 seed 稳定位置）
+    // 倒影先画（压在景物下）
+    for (const p of plants) drawReflection(p);
+    for (const p of plants) drawStem(p);
+    for (const p of plants){
+      if (p.dry) drawDryLeaf(p);
+      if (p.pod) drawPod(p);
+    }
+    for (const lf of leaves) drawLeaf(lf);
+    drawRipples();
+    drawRain();
+    drawFallDrops();
+    // 泻流在空中：压过雨丝/涟漪，保证水带一眼可读
+    for (const lf of leaves) if (lf.pouring) drawPourStream(lf);
+    drawSplashes();
+  }
+
+  function drawReflection(p){
+    ctx.save();
+    ctx.globalAlpha = 0.13;
+    ctx.strokeStyle = INK + '1)';
+    ctx.lineWidth = p.w;
+    ctx.beginPath();
+    ctx.moveTo(p.bx, p.by);
+    const wob = Math.sin(frame * 0.008 + p.bx) * 5;
+    ctx.quadraticCurveTo(p.bx + p.lean*0.4 + wob, p.by + (p.by - p.ty)*0.35, p.tx + wob, p.by + (p.by - p.ty)*0.7);
+    ctx.stroke();
+    if (p.leaf){
+      ctx.globalAlpha = 0.08;
+      ctx.fillStyle = INK + '1)';
+      ctx.beginPath();
+      ctx.ellipse(p.leaf.cx + wob, p.by + (p.by - p.leaf.cy)*0.7, p.leaf.rx*0.9, p.leaf.ry*0.45, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawStem(p){
+    ctx.save();
+    ctx.strokeStyle = 'rgba(74,60,42,0.78)';
+    ctx.lineWidth = p.w;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(p.bx, p.by);
+    if (p.kink){
+      const kx = p.kinkX + (p.tx - p.bx - p.lean) * 0.3;
+      ctx.lineTo(kx, p.kinkY);
+      ctx.lineTo(p.tx, p.ty);
+    } else {
+      const mx = p.bx + p.lean * 0.5 + (p.tx - p.bx) * 0.4;
+      const my = (p.by + p.ty) / 2;
+      ctx.quadraticCurveTo(mx + RR(-0.1,0.1), my, p.tx, p.ty);
+    }
+    ctx.stroke();
+    // 节
+    if (p.kink){
+      ctx.fillStyle = 'rgba(74,60,42,0.85)';
+      ctx.beginPath();
+      ctx.ellipse(p.kinkX, p.kinkY, p.w*1.4, p.w*1.1, 0, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawLeaf(lf){
+    const t = lf.tex;
+    const bendRot = lf.stem.bend * 0.45; // 弯茎时叶随之前倾
+    ctx.save();
+    ctx.translate(lf.cx, lf.cy);
+    ctx.rotate(lf.rot + bendRot);
+    ctx.drawImage(t.cvs, -t.w/2, -t.h/2, t.w, t.h);
+
+    // 叶面水洼（聚在叶心，微光）
+    if (lf.pool > 0.05){
+      const pr = Math.min(0.5, 0.14 + 0.09 * Math.cbrt(lf.pool));
+      const shimmer = 0.05 * Math.sin(frame * 0.06 + lf.phase);
+      ctx.save();
+      ctx.scale(1, lf.ry / lf.rx);
+      const px0 = pr * lf.rx;
+      const g = ctx.createRadialGradient(0, 0, 1, 0, 0, px0);
+      g.addColorStop(0, `rgba(228,234,220,${0.42 + shimmer})`);
+      g.addColorStop(0.75, `rgba(190,200,180,${0.30 + shimmer})`);
+      g.addColorStop(1, 'rgba(90,100,80,0.35)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, px0, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = 'rgba(60,66,50,0.4)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // 高光
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath(); ctx.arc(-px0*0.3, -px0*0.35, px0*0.16, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+
+    // 水珠（叶局部坐标，随叶旋转）
+    for (const b of lf.beads){
+      const wx = b.u * lf.rx;
+      const wy = b.v * lf.ry;
+      const r = 0.08 * Math.cbrt(b.m) * lf.rx;
+      drawBead(wx, wy, r);
+    }
+    ctx.restore();
+  }
+
+  function drawBead(x, y, r){
+    if (r < 0.8) return;
+    // 影
+    ctx.fillStyle = 'rgba(50,40,22,0.16)';
+    ctx.beginPath(); ctx.ellipse(x + r*0.22, y + r*0.3, r*0.9, r*0.62, 0, 0, Math.PI*2); ctx.fill();
+    // 体（透明感+深缘线）
+    const g = ctx.createRadialGradient(x, y, r*0.1, x, y, r);
+    g.addColorStop(0, 'rgba(240,244,232,0.30)');
+    g.addColorStop(0.8, 'rgba(160,170,150,0.30)');
+    g.addColorStop(1, 'rgba(70,76,58,0.42)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = 'rgba(60,64,48,0.5)';
+    ctx.lineWidth = Math.max(0.7, r*0.09);
+    ctx.stroke();
+    // 高光
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath(); ctx.arc(x - r*0.34, y - r*0.38, r*0.24, 0, Math.PI*2); ctx.fill();
+  }
+
+  function drawDryLeaf(p){
+    // 全枯垂叶：折叠的焦茶片
+    const d = p.dry;
+    const c = leafPalette(d.t);
+    ctx.save();
+    ctx.translate(p.tx, p.ty);
+    ctx.rotate(d.rot);
+    ctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
+    ctx.strokeStyle = 'rgba(58,42,24,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    const s = d.rx;
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(s*0.9, -s*0.25*d.fold, s*0.7, s*0.5);
+    ctx.quadraticCurveTo(s*0.5, s*0.9, 0, s*0.75);
+    ctx.quadraticCurveTo(-s*0.35, s*0.5, 0, 0);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 折线
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.quadraticCurveTo(s*0.4, s*0.25, s*0.55, s*0.6);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPod(p){
+    const d = p.pod;
+    ctx.save();
+    ctx.translate(p.tx, p.ty);
+    ctx.rotate(d.tilt);
+    // 倒锥台莲蓬
+    ctx.fillStyle = 'rgb(96,74,50)';
+    ctx.strokeStyle = 'rgba(52,38,22,0.8)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(-d.r*0.35, 0);
+    ctx.quadraticCurveTo(-d.r*0.9, d.r*1.1, -d.r*0.55, d.r*1.5);
+    ctx.lineTo(d.r*0.55, d.r*1.5);
+    ctx.quadraticCurveTo(d.r*0.9, d.r*1.1, d.r*0.35, 0);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // 顶面
+    ctx.fillStyle = 'rgb(118,96,64)';
+    ctx.beginPath();
+    ctx.ellipse(0, d.r*1.5, d.r*0.58, d.r*0.24, 0, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+    // 莲子孔（浓墨点）
+    ctx.fillStyle = 'rgba(40,28,16,0.9)';
+    for (let i=0;i<d.seeds;i++){
+      const a = (i/d.seeds)*Math.PI*2;
+      const rr = (i%2 ? 0.34 : 0.16) * d.r;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a)*rr, d.r*1.5 + Math.sin(a)*rr*0.4, 1.7, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawRipples(){
+    ctx.save();
+    for (const rp of ripples){
+      const k = 1 - rp.r / rp.rmax;
+      for (let ring = 0; ring < rp.rings; ring++){
+        const rr2 = rp.r * (1 - ring * 0.34);
+        if (rr2 <= 1) continue;
+        ctx.strokeStyle = `rgba(86,94,88,${(rp.a * k * (1 - ring*0.3)).toFixed(3)})`;
+        ctx.lineWidth = 1 + k * 1.1;
+        ctx.beginPath();
+        ctx.ellipse(rp.x, rp.y, rr2, rr2*0.42, 0, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function drawRain(){
+    // 雨意不画雨丝：落点前极短的淡痕
+    ctx.save();
+    for (const dr of rainDrops){
+      const headY = dr.ty - dr.len * (1 - dr.t);
+      const a = 0.10 + 0.14 * dr.t;
+      ctx.strokeStyle = `rgba(96,104,100,${a.toFixed(3)})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(dr.tx + 6, headY - dr.len*0.4);
+      ctx.lineTo(dr.tx, headY + dr.len*0.6);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawFallDrops(){
+    for (const fd of fallDrops){
+      drawBead(fd.x, fd.y, 3.6 + fd.m * 2.8);
+    }
+  }
+
+  // 沿二次贝塞尔取点/切线
+  function qPoint(p0, p1, p2, t){
+    const u = 1 - t;
+    return {
+      x: u*u*p0.x + 2*u*t*p1.x + t*t*p2.x,
+      y: u*u*p0.y + 2*u*t*p1.y + t*t*p2.y
+    };
+  }
+  function qTangent(p0, p1, p2, t){
+    return {
+      x: 2*(1-t)*(p1.x-p0.x) + 2*t*(p2.x-p1.x),
+      y: 2*(1-t)*(p1.y-p0.y) + 2*t*(p2.y-p1.y)
+    };
+  }
+  function ribbonPath(p0, p1, p2, wFn){
+    const N = 18;
+    const left = [], right = [];
+    for (let i=0;i<=N;i++){
+      const t = i / N;
+      const pt = qPoint(p0, p1, p2, t);
+      const tg = qTangent(p0, p1, p2, t);
+      const len = Math.hypot(tg.x, tg.y) || 1;
+      const nx = -tg.y / len, ny = tg.x / len;
+      const w = wFn(t);
+      left.push({ x: pt.x + nx*w, y: pt.y + ny*w });
+      right.push({ x: pt.x - nx*w, y: pt.y - ny*w });
+    }
+    ctx.beginPath();
+    ctx.moveTo(left[0].x, left[0].y);
+    for (let i=1;i<=N;i++) ctx.lineTo(left[i].x, left[i].y);
+    for (let i=N;i>=0;i--) ctx.lineTo(right[i].x, right[i].y);
+    ctx.closePath();
+  }
+
+  // 泻流水线 v3：上粗下细半透明水带（深影底 + 亮面上）+ 沿线流动珠串
+  function drawPourStream(lf){
+    const ex = lf.cx + Math.cos(lf.tilt) * lf.rx * 0.96;
+    const ey = lf.cy + Math.sin(lf.tilt) * lf.ry * 0.96;
+    const ix = lf.pourIx, iy = lf.pourIy;
+    if (iy === undefined) return;
+    const wob = Math.sin(frame * 0.32 + lf.phase) * 2.2;
+    const p0 = { x: ex, y: ey };
+    const p2 = { x: ix, y: iy - 2 };
+    const p1 = { x: (ex + ix) / 2 + wob, y: (ey + iy) / 2 - 12 };
+
+    // 流量：水剩得多时粗，收尾渐细
+    const vol = Math.max(0, Math.min(1, lf.pool / 2.8));
+    const wTop = 3.2 + 3.8 * vol;
+    const wBot = 0.8 + 1.0 * vol;
+
+    ctx.save();
+    ctx.lineCap = 'round';
+
+    // ⓪ 外缘淡晕（水入空气的湿润虚边，去硬边塑料感）
+    const gW = ctx.createLinearGradient(ex, ey, ix, iy);
+    gW.addColorStop(0, 'rgba(150,168,156,0.22)');
+    gW.addColorStop(0.7, 'rgba(158,174,162,0.12)');
+    gW.addColorStop(1, 'rgba(160,176,164,0.03)');
+    ctx.fillStyle = gW;
+    ribbonPath(p0, p1, p2, t => (wTop * (1 - t) + wBot * t) * 1.9);
+    ctx.fill();
+
+    // ① 水带主体（暖灰青，比纸面明显深；上实下虚）
+    const gB = ctx.createLinearGradient(ex, ey, ix, iy);
+    gB.addColorStop(0, 'rgba(96,112,102,0.66)');
+    gB.addColorStop(0.45, 'rgba(106,122,110,0.5)');
+    gB.addColorStop(0.8, 'rgba(118,132,120,0.24)');
+    gB.addColorStop(1, 'rgba(128,142,130,0.06)');
+    ctx.fillStyle = gB;
+    ribbonPath(p0, p1, p2, t => (wTop * (1 - t) + wBot * t));
+    ctx.fill();
+
+    // ② 亮面（迎光窄高光：只占水带宽度 ~22%，上长下短——下落加速后高光断开）
+    const gH = ctx.createLinearGradient(ex, ey, ix, iy);
+    gH.addColorStop(0, 'rgba(246,248,240,0.72)');
+    gH.addColorStop(0.4, 'rgba(240,244,236,0.42)');
+    gH.addColorStop(0.72, 'rgba(238,242,234,0.14)');
+    gH.addColorStop(1, 'rgba(238,242,234,0)');
+    ctx.fillStyle = gH;
+    ribbonPath(p0, p1, p2, t => (wTop * (1 - t) + wBot * t) * 0.22 * (t < 0.82 ? 1 : 0.3));
+    ctx.fill();
+
+    // ③ 沿线流动的水团（水不是静止的线，是断续往下的流；柔边，避免光点感）
+    const flowN = 4;
+    for (let k=0;k<flowN;k++){
+      const tt = ((frame * (0.012 + k * 0.0016) + k / flowN) % 1);
+      const pt = qPoint(p0, p1, p2, tt);
+      const tg = qTangent(p0, p1, p2, tt);
+      const tl = Math.hypot(tg.x, tg.y) || 1;
+      const wHere = wTop * (1 - tt) + wBot * tt;
+      const rr = Math.max(1.1, wHere * 0.5);
+      // 沿流向拉长的小椭圆（运动形变）
+      ctx.save();
+      ctx.translate(pt.x, pt.y);
+      ctx.rotate(Math.atan2(tg.y, tg.x));
+      ctx.scale(1.5, 0.85);
+      const gg = ctx.createRadialGradient(-rr*0.2, -rr*0.2, 0, 0, 0, rr);
+      gg.addColorStop(0, 'rgba(244,247,240,0.7)');
+      gg.addColorStop(0.55, 'rgba(206,220,206,0.38)');
+      gg.addColorStop(1, 'rgba(150,168,152,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.arc(0, 0, rr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ④ 叶缘出水口（水从叶上汇出的那一点，微鼓的亮包）
+    const og = ctx.createRadialGradient(ex, ey, 0, ex, ey, 6 + 4 * vol);
+    og.addColorStop(0, 'rgba(244,247,239,0.72)');
+    og.addColorStop(0.6, 'rgba(180,198,182,0.4)');
+    og.addColorStop(1, 'rgba(180,198,182,0)');
+    ctx.fillStyle = og;
+    ctx.beginPath();
+    ctx.arc(ex, ey, 6 + 4 * vol, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // 溅水花：短促的小白点，上抛时亮、回落时淡
+  function drawSplashes(){
+    ctx.save();
+    for (const sp of splashes){
+      const k = 1 - sp.t / sp.life;
+      ctx.fillStyle = `rgba(214,226,212,${0.75 * k})`;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, sp.r * (0.6 + 0.4 * k), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---------- 声音（自定义声部接 RongAudio master 总线） ----------
+  function initAudio(){
+    if (audioReady) return;
+    try {
+      RongAudio.init({});
+      audioReady = true;
+    } catch(e) { /* 无手势/无音频环境时静默 */ }
+  }
+  function noiseBurst(dur, type, freq, q, gain, pan){
+    const AC = RongAudio.ctx();
+    const n = Math.floor(AC.sampleRate * dur);
+    const buf = AC.createBuffer(1, n, AC.sampleRate);
+    const ch = buf.getChannelData(0);
+    for (let i=0;i<n;i++) ch[i] = (Math.random()*2-1) * (1 - i/n);
+    const src = AC.createBufferSource(); src.buffer = buf;
+    const f = AC.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+    const g = AC.createGain(); g.gain.value = gain;
+    src.connect(f); f.connect(g); g.connect(RongAudio.out(pan));
+    src.start();
+  }
+  function sndLeafTick(pan){  // 雨打叶「嗒」
+    noiseBurst(0.012, 'bandpass', 1500 + Math.random()*1400, 1.2, 0.10 + Math.random()*0.06, pan);
+  }
+  function sndPondPlip(pan){  // 雨打塘「噗」
+    const AC = RongAudio.ctx();
+    const o = AC.createOscillator(); o.type = 'sine';
+    const t = AC.currentTime;
+    o.frequency.setValueAtTime(660 + Math.random()*120, t);
+    o.frequency.exponentialRampToValueAtTime(240, t + 0.10);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(0.05, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+    o.connect(g); g.connect(RongAudio.out(pan));
+    o.start(t); o.stop(t + 0.14);
+    noiseBurst(0.03, 'lowpass', 900, 0.7, 0.03, pan);
+  }
+  function sndPourDong(pan, mul){  // 倾泻入塘「咕咚」
+    const AC = RongAudio.ctx();
+    const o = AC.createOscillator(); o.type = 'sine';
+    const t = AC.currentTime;
+    o.frequency.setValueAtTime(480, t);
+    o.frequency.exponentialRampToValueAtTime(150, t + 0.4);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(0.10 * (mul || 1), t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+    o.connect(g); g.connect(RongAudio.out(pan));
+    o.start(t); o.stop(t + 0.52);
+    noiseBurst(0.2, 'lowpass', 1200, 0.6, 0.05 * (mul || 1), pan);
+  }
+
+  // ---------- 题诗 ----------
+  function showPoem(){
+    poemShown = true;
+    document.getElementById('poem').classList.add('show');
+    document.getElementById('seal').classList.add('show');
+  }
+
+  // ---------- 交互 ----------
+  let dragging = false, lastDrag = 0;
+  cvs.addEventListener('pointerdown', e => {
+    initAudio();
+    dragging = true;
+    rainLevel = Math.min(2, rainLevel + 0.9);
+    spawnRainAt(e.clientX, e.clientY, 5 + Math.floor(R()*5), 60);
+  });
+  cvs.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const now = performance.now();
+    if (now - lastDrag < 70) return;
+    lastDrag = now;
+    rainLevel = Math.min(2, rainLevel + 0.12);
+    spawnRainAt(e.clientX, e.clientY, 1 + (R()<0.4?1:0), 26);
+  });
+  window.addEventListener('pointerup', () => { dragging = false; });
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    rng = mulberry32(Date.now() % 100000);
+    buildLayout();
+    poemShown = false;
+    document.getElementById('poem').classList.remove('show');
+    document.getElementById('seal').classList.remove('show');
+  });
+  document.getElementById('btnSound').addEventListener('click', function(){
+    soundOn = !soundOn;
+    this.style.opacity = soundOn ? '' : '0.4';
+  });
+
+  // ---------- 状态镜像（harness 用） ----------
+  function mirror(){
+    if (frame % 10) return;
+    let beadN = 0, poolSum = 0, pouringN = 0;
+    for (const lf of leaves){ beadN += lf.beads.length; poolSum += lf.pool; if (lf.pouring) pouringN++; }
+    stateEl.textContent = JSON.stringify({
+      frame, rain: +rainLevel.toFixed(3), drops: rainDrops.length,
+      beads: beadN, pool: +poolSum.toFixed(2), pouring: pouringN, pours,
+      poem: poemShown, sound: soundOn, seed: SEED
+    });
+  }
+
+  // ---------- auto（验收/截图用） ----------
+  if (AUTO > 0){
+    let n = 0;
+    const timer = setInterval(() => {
+      if (n++ >= AUTO){ clearInterval(timer); return; }
+      initAudio();
+      rainLevel = Math.min(2, rainLevel + 0.9);
+      spawnRainAt(W * RR(0.12, 0.7), H * RR(0.25, 0.7), 6, 55);
+    }, FAST ? 350 : 1100);
+  }
+
+  // ---------- 启动 ----------
+  function resize(){
+    W = window.innerWidth; H = window.innerHeight;
+    cvs.width = W * dpr; cvs.height = H * dpr;
+    cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
+    buildLayout();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

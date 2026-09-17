@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>踏雪 · 寻梅</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:#e6e0d0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:"Songti SC","STSong","SimSun",serif;
+    color:#3a352c;
+    -webkit-user-select:none;user-select:none;
+    overflow:hidden;
+  }
+  header{
+    width:704px;display:flex;align-items:baseline;justify-content:space-between;
+    margin-bottom:14px;
+  }
+  h1{
+    font-family:"Kaiti SC","STKaiti","KaiTi",serif;
+    font-size:34px;font-weight:600;letter-spacing:12px;margin:0;color:#2c2820;
+  }
+  .sub{font-size:12px;letter-spacing:3px;color:#8a8172;}
+  .frame{
+    position:relative;width:704px;height:704px;
+    background:#f1ebdd;
+    box-shadow:0 1px 2px rgba(60,50,30,.18),0 12px 40px rgba(60,50,30,.22),inset 0 0 60px rgba(120,105,75,.10);
+    border:1px solid rgba(120,105,75,.25);
+  }
+  canvas#scene{position:absolute;left:0;top:0;width:704px;height:704px;display:block;touch-action:none;cursor:crosshair;}
+  .seal{
+    position:absolute;right:18px;bottom:16px;width:44px;height:44px;
+    background:#b4362a;color:#f3eee1;
+    font-family:"Kaiti SC","STKaiti","KaiTi",serif;font-size:19px;line-height:21px;
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    border-radius:5px;transform:rotate(-2deg);
+    box-shadow:0 1px 3px rgba(120,30,20,.35);
+    opacity:.4;transition:opacity 1.6s;
+    pointer-events:none;
+  }
+  .seal.done{opacity:.92;}
+  .poem{
+    position:absolute;right:88px;top:120px;
+    display:flex;flex-direction:row-reverse;gap:14px;
+    pointer-events:none;opacity:0;transition:opacity 3.2s;
+  }
+  .poem.show{opacity:.88;}
+  .poem span{
+    writing-mode:vertical-rl;
+    font-family:"Kaiti SC","STKaiti","KaiTi",serif;
+    font-size:21px;letter-spacing:9px;color:#4a4436;
+  }
+  footer{
+    width:704px;display:flex;justify-content:space-between;align-items:center;margin-top:12px;
+    font-size:12px;letter-spacing:2px;color:#8a8172;
+  }
+  #wind{width:150px;accent-color:#8a8172;vertical-align:middle;}
+  .fitem{display:flex;align-items:center;gap:8px;}
+  #snd{cursor:pointer;transition:color .5s;}
+  #snd:hover{color:#3a352c;}
+</style>
+</head>
+<body>
+<header>
+  <h1>踏雪寻梅</h1>
+  <div class="sub">TA XUE · XUN MEI</div>
+</header>
+<div class="frame">
+  <canvas id="scene" width="704" height="704"></canvas>
+  <div class="poem" id="poem">
+    <span>遥知不是雪</span>
+    <span>为有暗香来</span>
+  </div>
+  <div class="seal" id="seal">绒球</div>
+</div>
+<footer>
+  <div class="fitem">风 <input id="wind" type="range" min="-3" max="3" step="0.1" value="0.6"></div>
+  <div class="fitem" id="count">花信 · 待放</div>
+  <div class="fitem"><span id="snd">声 · 未启</span></div>
+</footer>
+<script>
+"use strict";
+/* ============================================================
+   踏雪 · 寻梅
+   一枝老梅，雪落无声。寻得花苞，点之即开。
+   ============================================================ */
+const W = 704, H = 704;
+const params = new URLSearchParams(location.search);
+const SEED = parseInt(params.get("seed") || "20260828", 10);
+const FAST = params.get("fast") ? 6 : 1;   // 测试加速
+
+/* ---------- 随机数 ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+const rnd = mulberry32(SEED);
+const R = (a,b)=>a+rnd()*(b-a);
+
+/* ---------- 画布 ---------- */
+const cv = document.getElementById("scene");
+const ctx = cv.getContext("2d");
+
+/* 纸底（含纤维与斑驳，离屏一次生成） */
+const paperCv = document.createElement("canvas"); paperCv.width=W; paperCv.height=H;
+(function makePaper(){
+  const p = paperCv.getContext("2d");
+  p.fillStyle = "#f1ebdd"; p.fillRect(0,0,W,H);
+  // 顶部微凉的夜色
+  const g = p.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,"rgba(168,178,196,0.16)");
+  g.addColorStop(0.45,"rgba(168,178,196,0.02)");
+  g.addColorStop(1,"rgba(168,178,196,0.0)");
+  p.fillStyle=g; p.fillRect(0,0,W,H);
+  // 纤维
+  p.strokeStyle="rgba(120,105,75,0.05)"; p.lineWidth=1;
+  for(let i=0;i<420;i++){
+    const x=R(0,W), y=R(0,H), a=R(0,Math.PI), l=R(4,22);
+    p.beginPath(); p.moveTo(x,y); p.lineTo(x+Math.cos(a)*l, y+Math.sin(a)*l*0.3); p.stroke();
+  }
+  // 斑驳
+  for(let i=0;i<900;i++){
+    p.fillStyle=`rgba(120,105,75,${R(0.015,0.05)})`;
+    p.beginPath(); p.arc(R(0,W),R(0,H),R(0.4,1.4),0,7); p.fill();
+  }
+})();
+
+/* ---------- 月 ---------- */
+const MOON = {x:495, y:138, r:44};
+function drawMoon(c){
+  const halo = c.createRadialGradient(MOON.x,MOON.y,MOON.r*0.4, MOON.x,MOON.y,MOON.r*3.2);
+  halo.addColorStop(0,"rgba(238,240,244,0.55)");
+  halo.addColorStop(0.45,"rgba(238,240,244,0.14)");
+  halo.addColorStop(1,"rgba(238,240,244,0)");
+  c.fillStyle=halo; c.fillRect(0,0,W,H);
+  c.fillStyle="rgba(244,244,240,0.85)";
+  c.beginPath(); c.arc(MOON.x,MOON.y,MOON.r,0,7); c.fill();
+  c.fillStyle="rgba(210,214,220,0.25)";
+  c.beginPath(); c.arc(MOON.x-12,MOON.y+8,7,0,7); c.fill();
+  c.beginPath(); c.arc(MOON.x+9,MOON.y-13,4.5,0,7); c.fill();
+}
+
+/* ---------- 梅枝生成 ---------- */
+/* 骨架：折线 + 宽度，供渲染与积雪遮罩共用 */
+const branches = [];   // {pts:[{x,y,w}], depth}
+const buds = [];       // {x,y,ang,bloomed,t0,scale}
+const MAX_BUDS = 9;
+const clampUp = a => { // 梅枝向上：限制生长方向在右-上-左上半圆，忌下垂
+  while(a >  Math.PI) a -= Math.PI*2;
+  while(a < -Math.PI) a += Math.PI*2;
+  if(a > -0.12 && a < 0.5*Math.PI) a = -0.12;
+  if(a >= 0.5*Math.PI && a <= Math.PI) a = -Math.PI + 0.12;
+  return a;
+};
+const clampTrunk = a => { // 主干保持斜势：-1.05 ~ -0.38 弧度
+  while(a >  Math.PI) a -= Math.PI*2;
+  while(a < -Math.PI) a += Math.PI*2;
+  return Math.max(-1.0, Math.min(-0.45, a));
+};
+
+function growBranch(x, y, ang, len, w, depth){
+  const segs = Math.max(3, Math.round(len/26));
+  const pts = [];
+  let cx=x, cy=y, ca=ang;
+  const drift = R(-0.14,0.14);
+  for(let i=0;i<=segs;i++){
+    pts.push({x:cx, y:cy, w:w*(1 - i/(segs+1)*0.55)});
+    const step = len/segs;
+    ca = depth===0 ? clampTrunk(ca + drift*0.3 + R(-0.18,0.18))
+                   : clampUp(ca + drift*0.35 + R(-0.22,0.22));
+    cx += Math.cos(ca)*step;
+    cy += Math.sin(ca)*step;
+  }
+  const br = {pts, depth};
+  branches.push(br);
+  // 子枝
+  if(depth < 3 && w > 1.6){
+    const n = depth===0 ? 2 : (rnd()<0.75 ? 2 : 1);
+    for(let k=0;k<n;k++){
+      const at = pts[Math.floor(R(segs*0.35, segs*0.9))];
+      const side = rnd()<0.5 ? 1 : -1;
+      const na = clampUp(ca + side*R(0.45,0.95));
+      growBranch(at.x, at.y, na, len*R(0.42,0.6), w*R(0.5,0.66), depth+1);
+    }
+  }
+  // 梢头出苞
+  if(depth>=1 && w<4.2){
+    const tip = pts[pts.length-1];
+    const mid = pts[Math.floor(pts.length*0.6)];
+    if(tip.x>40 && tip.x<W-60 && tip.y>50 && tip.y<H-90){
+      buds.push({x:tip.x, y:tip.y, ang:ca, bloomed:false, t0:0, phase:R(0,6.28)});
+      if(rnd()<0.5) buds.push({x:mid.x, y:mid.y, ang:ca+R(-0.6,0.6), bloomed:false, t0:0, phase:R(0,6.28)});
+    }
+  }
+  return br;
+}
+
+/* 构图：老干自左下画外斜出，横斜入画，简一枝 */
+growBranch(30, 600, -0.55, 470, 16, 0);
+
+/* 疏剪：花苞太多则按间距筛选保留 MAX_BUDS 枚 */
+(function pruneBuds(){
+  // 打乱后贪心取间距
+  for(let i=buds.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[buds[i],buds[j]]=[buds[j],buds[i]];}
+  const kept=[];
+  for(const b of buds){
+    if(kept.length>=MAX_BUDS) break;
+    if(kept.every(k=>Math.hypot(k.x-b.x,k.y-b.y)>58)) kept.push(b);
+  }
+  buds.length=0; buds.push(...kept);
+  // 保底：花苞不足时，从细枝中段补点
+  if(buds.length < 7){
+    const cands=[];
+    branches.forEach(br=>{
+      if(br.depth<1) return;
+      const pts=br.pts;
+      for(let i=Math.floor(pts.length*0.4); i<pts.length; i+=2){
+        if(pts[i].w<4.6) cands.push(pts[i]);
+      }
+    });
+    for(let i=cands.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[cands[i],cands[j]]=[cands[j],cands[i]];}
+    for(const p of cands){
+      if(buds.length>=8) break;
+      if(p.x<40||p.x>W-60||p.y<50||p.y>H-90) continue;
+      if(buds.every(k=>Math.hypot(k.x-p.x,k.y-p.y)>52))
+        buds.push({x:p.x, y:p.y, ang:R(-0.6,0.6), bloomed:false, t0:0, phase:R(0,6.28)});
+    }
+  }
+})();
+
+/* 枝干渲染：主笔 + 枯笔擦 + 节瘤 */
+function renderBranch(c, br, forMask){
+  const pts = br.pts;
+  c.lineCap="round"; c.lineJoin="round";
+  // 主笔
+  for(let i=0;i<pts.length-1;i++){
+    const p=pts[i], q=pts[i+1];
+    c.strokeStyle = forMask ? "#fff" : `rgba(38,32,26,${forMask?1:R(0.82,0.95)})`;
+    c.lineWidth = Math.max(0.8, p.w);
+    c.beginPath(); c.moveTo(p.x,p.y); c.lineTo(q.x,q.y); c.stroke();
+  }
+  if(forMask) return;
+  // 枯笔擦（飞白）
+  for(let pass=0;pass<2;pass++){
+    c.strokeStyle = pass===0 ? "rgba(90,78,62,0.35)" : "rgba(150,138,116,0.28)";
+    for(let i=0;i<pts.length-1;i++){
+      if(rnd()<0.4) continue;
+      const p=pts[i], q=pts[i+1];
+      const off = R(-1,1)*p.w*0.28;
+      c.lineWidth = Math.max(0.5, p.w*R(0.2,0.4));
+      c.beginPath(); c.moveTo(p.x+off,p.y+off*0.4); c.lineTo(q.x+off,q.y+off*0.4); c.stroke();
+    }
+  }
+  // 节瘤
+  for(let i=2;i<pts.length-2;i+=3){
+    if(rnd()<0.5) continue;
+    const p=pts[i];
+    c.fillStyle="rgba(30,25,20,0.8)";
+    c.beginPath(); c.ellipse(p.x,p.y,p.w*0.55,p.w*0.34,R(0,3.14),0,7); c.fill();
+  }
+}
+
+/* 积雪遮罩（枝干 + 地面） */
+const maskCv = document.createElement("canvas"); maskCv.width=W; maskCv.height=H;
+const groundY = x => H - 46 + Math.sin(x/260+1.2)*14 + Math.sin(x/97)*5;
+(function buildMask(){
+  const m = maskCv.getContext("2d");
+  branches.forEach(br=>renderBranch(m, br, true));
+  m.fillStyle="#fff";
+  m.beginPath(); m.moveTo(0,H);
+  for(let x=0;x<=W;x+=8) m.lineTo(x, groundY(x));
+  m.lineTo(W,H); m.closePath(); m.fill();
+})();
+const maskData = maskCv.getContext("2d").getImageData(0,0,W,H).data;
+const maskAt = (x,y)=>{
+  x|=0; y|=0;
+  if(x<0||x>=W||y<0||y>=H) return 0;
+  return maskData[(y*W+x)*4+3] > 60 ? 1 : 0;
+};
+
+/* 积雪层（动态累积） */
+const snowCv = document.createElement("canvas"); snowCv.width=W; snowCv.height=H;
+const snowCtx = snowCv.getContext("2d");
+let stuckCount = 0;
+function stickSnow(x, y, r){
+  snowCtx.fillStyle = `rgba(252,253,255,${R(0.75,0.95)})`;
+  snowCtx.beginPath();
+  snowCtx.ellipse(x, y-1, r*R(1.4,2.2), r*R(0.9,1.4), 0, 0, 7);
+  snowCtx.fill();
+  stuckCount++;
+}
+
+/* ---------- 梅 ---------- */
+const petalColors = ["#c0503f","#c65a48","#ba4a3a","#cd6552"];
+function drawBloom(c, b, now){
+  const p = b.bloomed ? Math.min(1,(now-b.t0)/1300) : 0;
+  const ease = p<1 ? (1-Math.pow(1-p,3)) : 1;
+  const sway = Math.sin(now/1100 + b.phase) * wind * (b.bloomed?1.6:0.6);
+  const x = b.x + sway, y = b.y + Math.cos(now/1300+b.phase)*wind*0.4;
+  c.save(); c.translate(x,y); c.rotate(b.ang*0.3 + Math.sin(now/1500+b.phase)*0.02);
+  if(!b.bloomed){
+    // 花苞：赭石小萼 + 暗红苞尖
+    c.fillStyle="#5d4a38";
+    c.beginPath(); c.arc(0,1.6,3.4,0,7); c.fill();
+    c.fillStyle="#8e3226";
+    c.beginPath(); c.arc(0,-0.6,2.5,0,7); c.fill();
+  }else{
+    const s = ease * R(0.96,1.04);
+    // 五瓣
+    for(let k=0;k<5;k++){
+      const a = k/5*Math.PI*2 - Math.PI/2;
+      c.save(); c.rotate(a);
+      const L = 17.5*s, Wp = 12*s;
+      const g = c.createRadialGradient(0,0,1, L*0.42,0, L*0.75);
+      g.addColorStop(0,"#f0d3cc");
+      g.addColorStop(0.55,petalColors[k%4]);
+      g.addColorStop(1,"#a83f30");
+      c.fillStyle=g;
+      c.globalAlpha = 0.96*ease + 0.04;
+      c.beginPath();
+      c.moveTo(0,0);
+      c.bezierCurveTo(L*0.32,-Wp*0.62, L*0.86,-Wp*0.5, L,0);
+      c.bezierCurveTo(L*0.86,Wp*0.5, L*0.32,Wp*0.62, 0,0);
+      c.fill();
+      c.restore();
+    }
+    // 蕊
+    c.globalAlpha = Math.max(0, ease-0.25)/0.75;
+    c.strokeStyle="rgba(246,232,196,0.9)"; c.lineWidth=0.8;
+    for(let k=0;k<9;k++){
+      const a = k/9*Math.PI*2 + 0.2;
+      const l = 7.5*s;
+      c.beginPath(); c.moveTo(0,0); c.lineTo(Math.cos(a)*l, Math.sin(a)*l); c.stroke();
+      c.fillStyle="#e6c56e";
+      c.beginPath(); c.arc(Math.cos(a)*l, Math.sin(a)*l, 1.1, 0, 7); c.fill();
+    }
+    c.fillStyle="#7a5a3a";
+    c.beginPath(); c.arc(0,0,1.8*s,0,7); c.fill();
+    c.globalAlpha=1;
+  }
+  c.restore();
+}
+
+/* ---------- 雪 ---------- */
+const flakes = [];
+const FLAKE_N = 300;
+function spawnFlake(anyY){
+  const r = R(0.7, 2.6);
+  flakes.push({
+    x: R(-20, W+20),
+    y: anyY ? R(-H, -10) : R(-30, -6),
+    r,
+    vy: R(0.35, 0.75) * (0.6 + r/2.6),
+    ph: R(0, 6.28),
+    fq: R(0.6, 1.4),
+    depth: r/2.6
+  });
+}
+for(let i=0;i<FLAKE_N;i++) spawnFlake(true);
+
+/* ---------- 风声 ---------- */
+let actx=null, windGain=null, windFilter=null, soundOn=false;
+function initAudio(){
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+  const len = actx.sampleRate*2;
+  const buf = actx.createBuffer(1, len, actx.sampleRate);
+  const d = buf.getChannelData(0);
+  let last=0;
+  for(let i=0;i<len;i++){ // 棕噪
+    const w = Math.random()*2-1;
+    last = (last + 0.02*w)/1.02;
+    d[i] = last*3.2;
+  }
+  const src = actx.createBufferSource(); src.buffer=buf; src.loop=true;
+  windFilter = actx.createBiquadFilter(); windFilter.type="bandpass"; windFilter.frequency.value=380; windFilter.Q.value=0.6;
+  windGain = actx.createGain(); windGain.gain.value=0;
+  src.connect(windFilter); windFilter.connect(windGain); windGain.connect(actx.destination);
+  src.start();
+}
+const PENTA = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
+function chime(){
+  if(!soundOn || !actx) return;
+  const f = PENTA[Math.floor(Math.random()*PENTA.length)];
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type="sine"; o.frequency.value=f;
+  g.gain.setValueAtTime(0.0001, actx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.12, actx.currentTime+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+1.8);
+  o.connect(g); g.connect(actx.destination);
+  o.start(); o.stop(actx.currentTime+2);
+}
+document.getElementById("snd").addEventListener("click", e=>{
+  e.stopPropagation();
+  if(!actx) initAudio();
+  if(actx.state==="suspended") actx.resume();
+  soundOn=!soundOn;
+  document.getElementById("snd").textContent = soundOn ? "声 · 风" : "声 · 未启";
+});
+
+/* ---------- 交互 ---------- */
+let wind = 0.6;
+document.getElementById("wind").addEventListener("input", e=>{ wind = parseFloat(e.target.value); });
+cv.addEventListener("pointermove", e=>{
+  // 鼠标轻推：横向位置微调瞬时风
+  const r = cv.getBoundingClientRect();
+  mousePush = ((e.clientX-r.left)/r.width - 0.5) * 0.8;
+});
+let mousePush = 0;
+function tryBloom(px, py){
+  let hit=null, hd=1e9;
+  for(const b of buds){
+    if(b.bloomed) continue;
+    const d = Math.hypot(b.x-px, b.y-py);
+    if(d<26 && d<hd){ hit=b; hd=d; }
+  }
+  if(hit){
+    hit.bloomed=true; hit.t0=performance.now();
+    chime();
+    updateCount();
+  }
+  return !!hit;
+}
+cv.addEventListener("pointerdown", e=>{
+  if(actx && actx.state==="suspended") actx.resume();
+  const r = cv.getBoundingClientRect();
+  tryBloom(e.clientX-r.left, e.clientY-r.top);
+});
+function updateCount(){
+  const n = buds.filter(b=>b.bloomed).length;
+  document.getElementById("count").textContent =
+    n===0 ? "花信 · 待放" : (n===buds.length ? "花信 · 全开" : `花信 · ${n} / ${buds.length}`);
+  if(n===buds.length && buds.length>0){
+    document.getElementById("poem").classList.add("show");
+    document.getElementById("seal").classList.add("done");
+  }
+}
+
+/* ---------- 落瓣（全开后的余韵） ---------- */
+const fallPetals = [];
+let lastPetal = 0;
+
+/* ---------- 主循环 ---------- */
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(50, now-last)/16.7; last=now;
+  const gust = wind + Math.sin(now/2600)*0.5 + mousePush;
+  // 背景
+  ctx.clearRect(0,0,W,H);
+  ctx.drawImage(paperCv,0,0);
+  drawMoon(ctx);
+  // 地面初雪（底衬，让积雪层叠加其上）
+  ctx.fillStyle="rgba(250,251,253,0.55)";
+  ctx.beginPath(); ctx.moveTo(0,H);
+  for(let x=0;x<=W;x+=8) ctx.lineTo(x, groundY(x)+4);
+  ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+  // 枝干
+  branches.forEach(br=>renderBranch(ctx, br, false));
+  // 积雪层
+  ctx.drawImage(snowCv,0,0);
+  // 梅
+  buds.forEach(b=>drawBloom(ctx, b, now));
+  // 落瓣
+  if(buds.length && buds.every(b=>b.bloomed) && now-lastPetal>6500){
+    lastPetal = now;
+    const b = buds[Math.floor(rnd()*buds.length)];
+    fallPetals.push({x:b.x, y:b.y, vx:R(0.1,0.4), vy:R(0.25,0.5), rot:R(0,6.28), vr:R(-0.02,0.02), life:1});
+  }
+  for(let i=fallPetals.length-1;i>=0;i--){
+    const p = fallPetals[i];
+    p.x += (p.vx + gust*0.5)*dt; p.y += p.vy*dt; p.rot += p.vr*dt; p.life -= 0.0016*dt;
+    if(p.life<=0 || p.y>H-30){ fallPetals.splice(i,1); continue; }
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+    ctx.globalAlpha = Math.min(1,p.life*1.5)*0.85;
+    ctx.fillStyle="#c0503f";
+    ctx.beginPath(); ctx.ellipse(0,0,6,3.6,0,0,7); ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+  // 降雪
+  ctx.fillStyle="#fdfdff";
+  const spawnBudget = (FLAKE_N - flakes.length);
+  for(let i=0;i<Math.min(spawnBudget, 3*FAST);i++) spawnFlake(false);
+  for(let i=flakes.length-1;i>=0;i--){
+    const f = flakes[i];
+    f.ph += 0.02*f.fq*dt;
+    f.x += (Math.sin(f.ph)*0.5 + gust*(0.4+f.depth*0.6))*dt;
+    f.y += f.vy*(1+Math.abs(gust)*0.12)*dt*FAST;
+    if(f.x<-24) f.x = W+20; else if(f.x>W+24) f.x = -20;
+    const gy = f.y + f.r;
+    // 碰撞：枝头/地面
+    if(gy>=2 && gy<H-2 && maskAt(f.x, gy)){
+      const aboveEmpty = !maskAt(f.x, gy-3);
+      if(aboveEmpty || rnd()<0.25){
+        stickSnow(f.x, gy, f.r);
+        flakes.splice(i,1);
+        continue;
+      }
+    }
+    if(f.y > H+8){ flakes.splice(i,1); continue; }
+    ctx.globalAlpha = 0.5 + f.depth*0.5;
+    ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // 风声随势
+  if(actx && windGain){
+    const target = soundOn ? Math.min(0.14, 0.02 + Math.abs(gust)*0.05) : 0;
+    windGain.gain.setTargetAtTime(target, actx.currentTime, 0.4);
+    windFilter.frequency.setTargetAtTime(320 + Math.abs(gust)*90 + Math.sin(now/900)*40, actx.currentTime, 0.3);
+  }
+  requestAnimationFrame(frame);
+}
+updateCount();
+requestAnimationFrame(frame);
+
+/* ---------- 调试钩子（自动化验收用，不影响观赏） ---------- */
+window.__buds = buds;
+window.__stats = ()=>({flakes:flakes.length, stuck:stuckCount, bloomed:buds.filter(b=>b.bloomed).length, total:buds.length, branches:branches.length});
+window.__bloom = i=>{ const b=buds[i]; if(b&&!b.bloomed){b.bloomed=true;b.t0=performance.now();updateCount();} };
+window.__bloomAt = (x,y)=>tryBloom(x,y);
+</script>
+</body>
+</html>

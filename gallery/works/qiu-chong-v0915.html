@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>秋虫 · Qiu Chong</title>
+<!-- uses: lib/audio-lib.js v1.1 架构（master 总线/声像规范；鸣唱为作品内联 buffer 合成声部） -->
+<!-- 系列第十三件：阶前夜草。系列首件夜景/生物/声像定位。蟋蟀脉冲鸣唱合成 + 对答状态机 + 萤光 + 月露 -->
+<meta name="color-scheme" content="dark">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #14181e;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; position: fixed; top: 0; left: 0; }
+  #scene { z-index: 1; }
+  #state { position: fixed; bottom: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; z-index: -1; }
+
+  .ui { position: fixed; pointer-events: none; user-select: none; z-index: 10; }
+  .title {
+    top: 26px; left: 30px;
+    font-size: 17px;
+    letter-spacing: 10px;
+    color: #c9cdcf;
+    opacity: 0;
+    animation: fadeIn 3s ease 1s forwards;
+  }
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #7e868c;
+    margin-top: 6px;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  .hint {
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 6px;
+    white-space: nowrap;
+    color: #9aa0a4;
+    opacity: 0;
+    animation: hintFade 10s ease 2.5s forwards;
+  }
+  @media (max-width: 480px) {
+    .hint { font-size: 11px; letter-spacing: 3px; bottom: 26px; }
+  }
+  @keyframes hintFade {
+    0% { opacity: 0; }
+    12% { opacity: 0.55; }
+    70% { opacity: 0.55; }
+    100% { opacity: 0; }
+  }
+
+  .seal {
+    position: fixed;
+    bottom: 26px; right: 30px;
+    z-index: 10;
+    pointer-events: none;
+    width: 38px; height: 38px;
+    background: rgba(176, 58, 42, 0.85);
+    color: #e8e2d6;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    transform: rotate(-4deg);
+    opacity: 0;
+    transition: opacity 2.5s ease;
+  }
+  .seal.show { opacity: 0.85; }
+
+  .btn {
+    position: fixed;
+    top: 22px;
+    z-index: 20;
+    pointer-events: auto;
+    background: rgba(200, 205, 208, 0.08);
+    border: 1px solid #565e66;
+    color: #b8bec2;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 2s ease 2s forwards;
+    transition: all 0.4s ease;
+  }
+  .btn:hover {
+    border-color: #9098a0;
+    color: #e2e6e8;
+    background: rgba(200, 205, 208, 0.16);
+  }
+  #btnClear { right: 26px; }
+  #btnSound { right: 86px; }
+
+  /* 竖排诗：芦花验证过的 row-reverse + 逐字 span */
+  #poem {
+    position: fixed; left: 8%; top: 12%; z-index: 9;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-start;
+    gap: 22px;
+    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: clamp(19px, 3.2vh, 25px);
+    color: rgba(214, 219, 220, 0.92);
+    opacity: 0; transition: opacity 5s ease;
+    pointer-events: none;
+  }
+  #poem.show { opacity: 0.8; }
+  #poem .line, #poem .attrib {
+    width: 1.05em;
+    text-align: center;
+    flex: none;
+  }
+  #poem .line > span, #poem .attrib > span {
+    display: block;
+    height: 1.4em;
+    line-height: 1.4;
+  }
+  #poem .attrib {
+    font-size: 12px; letter-spacing: 2px;
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div class="ui title">秋 虫<div class="subtitle">qiu chong · crickets in the autumn night</div></div>
+<button class="btn" id="btnSound">♪</button>
+<button class="btn" id="btnClear">再 来</button>
+<div class="ui hint">轻点草间 · 虫会停一停</div>
+<div id="poem"><div class="line"><span>促</span><span>织</span><span>甚</span><span>微</span><span>细</span></div><div class="line"><span>哀</span><span>音</span><span>何</span><span>动</span><span>人</span></div><div class="attrib"><span>唐</span><span>·</span><span>杜</span><span>甫</span><span>《</span><span>促</span><span>织</span><span>》</span></div></div>
+<div class="seal" id="seal">绒球</div>
+<div id="state"></div>
+
+<script>
+(function () {
+  'use strict';
+  /* ============================ 基础 ============================ */
+  const params = new URLSearchParams(location.search);
+  const FAST = params.has('fast');
+  const SEED = parseInt(params.get('seed') || '7', 10);
+  const TM = FAST ? 3.0 : 1;                 // 计时压缩（fast）
+  const AUTO_T = FAST ? 6.0 : 36;            // 无交互多久入「满织」
+
+  function mulberry32(a) {
+    return function () {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const rnd = mulberry32(SEED);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const TAU = Math.PI * 2;
+
+  const cv = document.getElementById('scene');
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.floor(W * DPR);
+    cv.height = Math.floor(H * DPR);
+    cv.style.width = W + 'px';
+    cv.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* ============================ 音频 ============================ */
+  let AC = null, master = null, ambientGain = null;
+  let soundOn = true;
+  const chirpBufNorm = [];   // 3 种正常句（不同句长）
+  const chirpBufTrial = [];  // 试唱句（短、弱由增益控制）
+  let dropBuf = null;
+
+  function makeChirpBuffer(carrier, pulseHz, pulses, halfTail, dur) {
+    const sr = AC.sampleRate;
+    const len = Math.floor(sr * dur);
+    const buf = AC.createBuffer(1, len, sr);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const t = i / sr;
+      // 脉冲门：近似方波的软门（基频 + 二谐），脉冲有快起快落包络
+      const ph = t * pulseHz;
+      const seg = ph - Math.floor(ph);
+      let gate = seg < 0.52 ? 1 : 0;
+      // 每脉冲包络（翅膀闭合撞击感）
+      const pe = Math.exp(-seg * 7.5);
+      gate *= 0.35 + 0.65 * pe;
+      // 载波：主频 + 轻 FM 抖动（活物感），加一个弱五度泛音
+      const warble = 1 + 0.012 * Math.sin(2 * Math.PI * 11.3 * t);
+      const v = Math.sin(2 * Math.PI * carrier * warble * t)
+              + 0.22 * Math.sin(2 * Math.PI * carrier * 1.51 * t);
+      // 整句包络：起 25ms，句尾半速脉冲+收
+      let env = 1;
+      const atk = 0.025;
+      if (t < atk) env = t / atk;
+      const tailStart = dur - (halfTail ? 0.16 : 0.09);
+      if (t > tailStart) env *= Math.pow(1 - (t - tailStart) / (dur - tailStart), 1.4);
+      d[i] = 0.62 * gate * v * env;
+    }
+    return buf;
+  }
+
+  function makeDropBuffer() {
+    const sr = AC.sampleRate, dur = 1.4;
+    const buf = AC.createBuffer(1, Math.floor(sr * dur), sr);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) {
+      const t = i / sr;
+      // 露滴：高频小 sine 快降 + 极轻金属泛音尾巴
+      const f = 1500 * Math.exp(-t * 26) + 680;
+      const s = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 9.5);
+      const ring = Math.sin(2 * Math.PI * 2080 * t) * Math.exp(-t * 4.2) * 0.12;
+      d[i] = (s * 0.5 + ring) * 0.5;
+    }
+    return buf;
+  }
+
+  function initAudio() {
+    if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain();
+    master.gain.value = 0.85;
+    const comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -20; comp.ratio.value = 4;
+    master.connect(comp); comp.connect(AC.destination);
+    // 夜气：棕噪极低铺底
+    const sr = AC.sampleRate, n = sr * 4;
+    const ab = AC.createBuffer(1, n, sr);
+    const ad = ab.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < n; i++) {
+      const w = Math.random() * 2 - 1;
+      last = (last + 0.02 * w) / 1.02;
+      ad[i] = last * 3.2;
+    }
+    const asrc = AC.createBufferSource();
+    asrc.buffer = ab; asrc.loop = true;
+    const af = AC.createBiquadFilter();
+    af.type = 'lowpass'; af.frequency.value = 220;
+    ambientGain = AC.createGain();
+    ambientGain.gain.value = soundOn ? 0.05 : 0;
+    asrc.connect(af); af.connect(ambientGain); ambientGain.connect(master);
+    asrc.start();
+    // 鸣唱句库：三个音高个体差由 playbackRate 微调
+    chirpBufNorm.length = 0; chirpBufTrial.length = 0;
+    chirpBufNorm.push(makeChirpBuffer(4350, 29, 9, true, 0.46));
+    chirpBufNorm.push(makeChirpBuffer(4150, 27, 12, true, 0.58));
+    chirpBufNorm.push(makeChirpBuffer(4600, 31, 7, false, 0.34));
+    chirpBufTrial.push(makeChirpBuffer(4350, 27, 5, false, 0.26));
+    chirpBufTrial.push(makeChirpBuffer(4150, 26, 6, false, 0.30));
+    dropBuf = makeDropBuffer();
+  }
+
+  /* ============================ 场景生成 ============================ */
+  const GROUND = () => H * 0.74;
+  const MOON = { x: () => W * 0.76, y: () => H * 0.16, r: () => Math.min(W, H) * 0.058 };
+
+  // 阶石面颗粒（仅在 resize 后首次生成时保持稳定；用确定性序列防闪烁）
+  let stonePts = [];
+  function buildStonePts() {
+    stonePts = [];
+    let s = SEED ^ 0x9e3779b9;
+    const sr = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+    for (let i = 0; i < 26; i++) {
+      stonePts.push({
+        x: W * (0.01 + sr() * 0.24),
+        y: GROUND() + H * (0.012 + sr() * 0.20),
+        a: 0.04 + sr() * 0.07
+      });
+    }
+  }
+  buildStonePts();
+
+  // 草丛：x 中心，宽，基高，深度（1近 0远），色相种子
+  const clumps = [];
+  function buildClumps() {
+    clumps.length = 0;
+    const n = 4 + Math.floor(rnd() * 2);   // 4~5 丛，留空地
+    for (let i = 0; i < n; i++) {
+      const depth = lerp(0.25, 1.0, i / Math.max(1, n - 1)) * (0.9 + rnd() * 0.2);
+      const blades = [];
+      // 草丛避开左下阶石（x<0.27W 的近地区域留给卧石）
+      const cx = lerp(W * 0.30, W * 0.96, (i + 0.5 + (rnd() - 0.5) * 0.3) / n);
+      const cw = lerp(W * 0.14, W * 0.28, depth);
+      const baseH = lerp(H * 0.06, H * 0.28, clamp(depth, 0, 1));
+      const bn = Math.floor(lerp(12, 30, clamp(depth, 0, 1)));
+      const lean = (rnd() - 0.5) * 0.55;
+      for (let j = 0; j < bn; j++) {
+        blades.push({
+          off: (rnd() + rnd() - 1) * cw,
+          h: baseH * (0.5 + rnd() * 0.85),   // 丛内也拉高差
+          lean: lean * 0.6 + (rnd() - 0.5) * 0.5,
+          bend: 0.04 + rnd() * 0.1,
+          w: lerp(0.7, 1.7, clamp(depth, 0, 1)) * (0.7 + rnd() * 0.6),
+          ph: rnd() * TAU,
+          tw: 0
+        });
+      }
+      clumps.push({ cx, cw, depth: clamp(depth, 0, 1), blades, lean, tw: 0 });
+    }
+    clumps.sort((a, b) => a.depth - b.depth);
+  }
+
+  // 蟋蟀（藏于丛中，不画形）；保证 ≥4 只
+  const crickets = [];
+  function buildCrickets() {
+    crickets.length = 0;
+    let skipped = 0;
+    clumps.forEach((c, idx) => {
+      if (rnd() < 0.18 && clumps.length - skipped > 4) { skipped++; return; }
+      const pan = clamp((c.cx / W - 0.5) * 2, -0.92, 0.92);
+      const near = c.depth;
+      const ck = {
+        id: idx,
+        clump: c,
+        x: c.cx + (rnd() - 0.5) * c.cw * 0.5,
+        y: GROUND() - H * 0.015,
+        pan,
+        near,
+        carrier: lerp(4050, 4700, rnd()),
+        rate: 0.85 + rnd() * 0.4,
+        state: 'sing',
+        nextT: (FAST ? 0.3 : 1.5) + rnd() * (FAST ? 1.2 : 3.5),
+        hushUntil: 0,
+        glow: 0,
+        glowT: 0,
+        filt: null, gain: null, panner: null
+      };
+      if (AC) makeCricketChain(ck);
+      crickets.push(ck);
+    });
+  }
+
+  function makeCricketChain(ck) {
+    const g = AC.createGain();
+    g.gain.value = 0;
+    const f = AC.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.value = lerp(2600, 6200, ck.near);  // 远的闷
+    f.Q.value = 0.7;
+    const p = AC.createStereoPanner ? AC.createStereoPanner() : null;
+    if (p) p.pan.value = ck.pan;
+    g.connect(f);
+    if (p) { f.connect(p); p.connect(master); } else f.connect(master);
+    ck.gain = g; ck.filt = f; ck.panner = p;
+  }
+
+  // 萤
+  const flies = [];
+  function buildFlies() {
+    flies.length = 0;
+    const n = FAST ? 3 : 4 + Math.floor(rnd() * 2);
+    for (let i = 0; i < n; i++) {
+      flies.push({
+        x: rnd() * W, y: GROUND() - rnd() * H * 0.34,
+        vx: 0, vy: 0,
+        fx: 0, fy: 0, fr: 0,
+        ph: rnd() * TAU,
+        br: 0
+      });
+    }
+  }
+
+  // 露（草尖冷点，预生成）
+  const dews = [];
+  function buildDews() {
+    dews.length = 0;
+    clumps.forEach(c => {
+      if (rnd() < 0.4) return;
+      const b = c.blades[Math.floor(rnd() * c.blades.length)];
+      dews.push({ c, b, ph: rnd() * TAU, r: lerp(0.8, 1.6, c.depth), fired: false });
+    });
+  }
+
+  // 夜云（遮月）
+  const clouds = [];
+  function buildClouds() {
+    clouds.length = 0;
+    clouds.push({ x: -0.2, y: 0.14, w: 0.5, sp: 0.006 + rnd() * 0.006, a: 0.5 + rnd() * 0.2 });
+    clouds.push({ x: 0.9, y: 0.22, w: 0.38, sp: 0.004 + rnd() * 0.005, a: 0.35 });
+  }
+
+  /* ============================ 鸣唱行为 ============================ */
+  const stat = { chirps: 0, replies: 0, trials: 0, hushes: 0, events: [] };
+
+  function playChirp(ck, trial) {
+    // 行为统计无条件：状态机独立于音频（静音/headless 也要有对答）
+    stat.chirps++;
+    if (trial) stat.trials++;
+    else if (ck.state === 'reply') stat.replies++;
+    ck.lastKind = trial ? 'trial' : ck.state;
+    if (stat.events.length < 240) {
+      stat.events.push({ t: +simT.toFixed(2), id: ck.id, pan: +ck.pan.toFixed(2),
+        k: trial ? 'trial' : (ck.state === 'reply' ? 'reply' : 'sing') });
+    }
+    // 视觉：草尖轻抖（唯一虫在的线索）
+    ck.glowT = trial ? 0.5 : 0.8;
+    if (ck.clump) ck.clump.tw = trial ? 0.35 : 0.55;
+    if (!AC || !soundOn || !ck.gain) return;   // 声音只是行为的输出层
+    const lib = trial ? chirpBufTrial : chirpBufNorm;
+    const src = AC.createBufferSource();
+    src.buffer = lib[Math.floor(rnd() * lib.length)];
+    src.playbackRate.value = ck.rate * (trial ? 0.96 : 1);
+    const peak = (trial ? 0.10 : lerp(0.05, 0.20, ck.near)) * (ck.state === 'reply' ? 0.85 : 1);
+    const t0 = AC.currentTime;
+    ck.gain.gain.cancelScheduledValues(t0);
+    ck.gain.gain.setValueAtTime(ck.gain.gain.value, t0);
+    ck.gain.gain.linearRampToValueAtTime(peak, t0 + 0.03);
+    ck.gain.gain.setValueAtTime(peak, t0 + 0.3);
+    ck.gain.gain.linearRampToValueAtTime(0.0001, t0 + 0.55);
+    src.connect(ck.gain);
+    src.start(t0);
+  }
+
+  function scheduleCrickets(t, dt) {
+    crickets.forEach(ck => {
+      if (ck.state === 'hush') {
+        if (t >= ck.hushUntil) {
+          // 最近的惊扰虫先试唱，其余直接回常态
+          if (ck.wasNearest) {
+            ck.state = 'reply';
+            ck.nextT = t + 0.7 + rnd() * 0.7;
+            ck.trialOnce = true;
+          } else {
+            ck.state = 'sing';
+            ck.nextT = t + 0.5 + rnd() * 1.6;
+          }
+        }
+      } else if (t >= ck.nextT) {
+        const trial = !!ck.trialOnce;
+        const wasReply = ck.state === 'reply';
+        ck.trialOnce = false;
+        playChirp(ck, trial);
+        if (wasReply) ck.state = 'sing';
+        // 下一句
+        const dense = settled ? 0.62 : 1;
+        ck.nextT = t + (trial ? 1.6 + rnd() * 1.8
+                              : (2.0 + rnd() * 2.6) * dense / ck.rate / TM);
+        // 对答激发：pan 邻近的虫更可能接唱
+        if (!trial) {
+          crickets.forEach(o => {
+            if (o === ck || o.state === 'hush') return;
+            const dpan = Math.abs(o.pan - ck.pan);
+            const p = (0.78 - dpan * 0.42) * (settled ? 0.95 : 0.70);
+            if (rnd() < p && o.nextT > t + 0.3) {
+              o.state = 'reply';
+              o.nextT = t + 0.28 + rnd() * 0.55;
+            }
+          });
+        }
+      }
+      // 辉光衰减（鸣唱瞬间的微光）
+      ck.glowT = Math.max(0, ck.glowT - dt);
+    });
+  }
+
+  function disturb(x, y) {
+    let nearest = null, nd = 1e9;
+    let hit = 0;
+    crickets.forEach(ck => {
+      const d = Math.hypot(ck.x - x, ck.y - y);
+      const R = W * 0.24;
+      if (d < R) {
+        hit++;
+        ck.state = 'hush';
+        ck.hushUntil = simT + (FAST ? 0.9 + rnd() * 0.7 : 3.2 + rnd() * 3.4);
+        ck.wasNearest = false;
+        if (d < nd) { nd = d; nearest = ck; }
+      }
+    });
+    if (hit) stat.hushes += hit;
+    if (nearest) {
+      nearest.wasNearest = true;
+      // 萤光松散聚拢
+      flies.forEach(f => {
+        const a = Math.atan2(f.y - y, f.x - x) + (rnd() - 0.5) * 1.2;
+        const pull = 26 + rnd() * 30;
+        f.vx += Math.cos(a) * -pull + (x - f.x) * 0.12;
+        f.vy += Math.sin(a) * -pull * 0.4 - 6;
+      });
+    }
+    lastInteract = simT;
+  }
+
+  /* ============================ 绘制 ============================ */
+  function drawSky(cover) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#1b2129');
+    g.addColorStop(0.55, '#171c23');
+    g.addColorStop(1, '#11151b');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    // 月光带：右上斜压
+    const mg = ctx.createRadialGradient(MOON.x(), MOON.y(), 10, MOON.x(), MOON.y(), Math.max(W, H) * 0.75);
+    mg.addColorStop(0, `rgba(196,205,214,${0.10 * (1 - cover)})`);
+    mg.addColorStop(0.4, `rgba(150,165,180,${0.05 * (1 - cover)})`);
+    mg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = mg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawMoon(cover) {
+    const x = MOON.x(), y = MOON.y(), r = MOON.r();
+    const ha = 0.5 * (1 - cover);
+    const halo = ctx.createRadialGradient(x, y, r * 0.4, x, y, r * 5.5);
+    halo.addColorStop(0, `rgba(214,222,228,${0.30 * ha})`);
+    halo.addColorStop(1, 'rgba(214,222,228,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(x, y, r * 5.5, 0, TAU); ctx.fill();
+    ctx.save();
+    ctx.globalAlpha = 0.92 * (1 - cover * 0.75);
+    const mg = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, r);
+    mg.addColorStop(0, '#f2f0e6');
+    mg.addColorStop(0.8, '#d9dccf');
+    mg.addColorStop(1, '#b9c0bd');
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    // 月中淡影（桂）
+    ctx.globalAlpha = 0.10 * (1 - cover * 0.75);
+    ctx.fillStyle = '#8d968f';
+    ctx.beginPath(); ctx.arc(x + r * 0.22, y - r * 0.1, r * 0.2, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(x - r * 0.15, y + r * 0.25, r * 0.14, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  function cloudCover(t) {
+    let c = 0;
+    clouds.forEach(cl => {
+      const cx = ((cl.x + t * cl.sp) % 1.6 + 1.6) % 1.6 - 0.3;
+      const d = Math.abs(cx - MOON.x() / W);
+      if (d < cl.w) c += Math.max(0, 1 - d / cl.w) * cl.a;
+    });
+    return clamp(c, 0, 0.8);
+  }
+
+  function drawClouds(t, cover) {
+    // 云只做“遮月”值，画面用 cover 统一压暗（与 vignette 合并）
+    // 保留极淡云形暗示位置（极软雾）
+    clouds.forEach(cl => {
+      const cx = ((cl.x + t * cl.sp) % 1.6 + 1.6) % 1.6 - 0.3;
+      const px = cx * W, py = cl.y * H;
+      const r = cl.w * W * 0.5;
+      const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+      g.addColorStop(0, `rgba(45,52,62,${0.22 * cl.a})`);
+      g.addColorStop(1, 'rgba(45,52,62,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(px - r, py - r, r * 2, r * 2);
+    });
+  }
+
+  function drawGround(cover) {
+    ctx.save();
+    // 远岸：极淡横向墨带，区分地平线
+    ctx.fillStyle = 'rgba(18,23,30,0.82)';
+    ctx.beginPath();
+    ctx.moveTo(0, GROUND() - H * 0.035);
+    for (let x = 0; x <= W; x += W / 14) {
+      ctx.lineTo(x, GROUND() - H * 0.035 + Math.sin(x * 0.011) * H * 0.008 - 4);
+    }
+    ctx.lineTo(W, H); ctx.lineTo(0, H);
+    ctx.closePath(); ctx.fill();
+    // 阶石一角（左下，承接露滴）：低矮石芽，顶面起伏、右缘圆弧没入地面，
+    // 不勾完整轮廓、不画直斜边（v1 梯形像贴上去的几何色块，v2 圆角厚板仍板）
+    const gy = GROUND();
+    const sg = ctx.createLinearGradient(0, gy - H * 0.01, 0, H);
+    sg.addColorStop(0, 'rgba(31,40,50,0.5)');
+    sg.addColorStop(0.5, 'rgba(20,26,34,0.72)');
+    sg.addColorStop(1, 'rgba(12,16,22,0.95)');
+    ctx.fillStyle = sg;
+    ctx.beginPath();
+    ctx.moveTo(-2, gy + H * 0.02);
+    ctx.bezierCurveTo(W * 0.05, gy + H * 0.004, W * 0.09, gy - H * 0.008, W * 0.15, gy - H * 0.004);
+    ctx.bezierCurveTo(W * 0.20, gy + H * 0.0, W * 0.235, gy + H * 0.012, W * 0.255, gy + H * 0.035);
+    ctx.bezierCurveTo(W * 0.275, gy + H * 0.06, W * 0.25, H * 0.92, W * 0.21, H + 2);
+    ctx.lineTo(-2, H + 2);
+    ctx.closePath(); ctx.fill();
+    // 月照石脊：只在顶面凸起处扫一线短墨，断续不围合
+    ctx.strokeStyle = 'rgba(125,142,155,0.085)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(W * 0.05, gy + H * 0.005);
+    ctx.quadraticCurveTo(W * 0.105, gy - H * 0.008, W * 0.16, gy - H * 0.003);
+    ctx.stroke();
+    // 石面颗粒（固定随机，不闪）
+    stonePts.forEach(p => {
+      ctx.fillStyle = `rgba(150,165,175,${p.a})`;
+      ctx.fillRect(p.x, p.y, 1.2, 1.2);
+    });
+    ctx.restore();
+  }
+
+  function bladeTip(c, b, sway) {
+    const bx = c.cx + b.off;
+    const by = GROUND();
+    const h = b.h;
+    const lean = b.lean + sway + c.tw * 0.12;
+    const tx = bx + Math.sin(lean) * h * 0.72;
+    const ty = by - Math.cos(lean) * h + h * b.bend;
+    return { bx, by, tx, ty, c: Math.cos(lean), h };
+  }
+
+  function drawClumps(t, cover) {
+    const moonLit = 1 - cover * 0.6;
+    clumps.forEach(c => {
+      const swayAmp = 0.025;
+      const sway = Math.sin(t * 0.7 + c.lean * 4) * swayAmp;
+      c.tw = Math.max(0, c.tw - 0.016);
+      const depth = c.depth;
+      // 近景墨蓝 20,30,38；远景更淡融夜
+      const baseR = lerp(22, 14, depth);
+      const baseG = lerp(34, 22, depth);
+      const baseB = lerp(44, 30, depth);
+      const alpha = lerp(0.65, 0.95, depth);
+      c.blades.forEach(b => {
+        const swayB = sway + Math.sin(t * 0.9 + b.ph) * swayAmp * 0.5;
+        const { bx, by, tx, ty } = bladeTip(c, b, swayB);
+        const cx1 = lerp(bx, tx, 0.35) - b.h * 0.08;
+        const cy1 = lerp(by, ty, 0.4);
+        const cx2 = lerp(bx, tx, 0.75) + b.h * 0.05;
+        const cy2 = lerp(by, ty, 0.7);
+        // 主叶：略粗、略亮
+        ctx.strokeStyle = `rgba(${baseR + 8},${baseG + 10},${baseB + 12},${alpha})`;
+        ctx.lineWidth = b.w;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.bezierCurveTo(cx1, cy1, cx2, cy2, tx, ty);
+        ctx.stroke();
+        // 月光冷边：叶右缘提一线
+        ctx.strokeStyle = `rgba(155,175,190,${lerp(0.06, 0.25, depth) * moonLit})`;
+        ctx.lineWidth = Math.max(0.5, b.w * 0.4);
+        ctx.beginPath();
+        ctx.moveTo(bx + 1.0, by);
+        ctx.bezierCurveTo(cx1 + 1.0, cy1, cx2 + 1.0, cy2, tx + 1.0, ty);
+        ctx.stroke();
+      });
+    });
+  }
+
+  function drawDews(t, cover) {
+    const glint = 1 - cover * 0.5;
+    dews.forEach(d => {
+      const sway = Math.sin(t * 0.7 + d.c.lean * 4 + d.ph) * 0.022;
+      const { tx, ty } = bladeTip(d.c, d.b, sway);
+      const tw = 0.5 + 0.5 * Math.sin(t * 1.7 + d.ph);
+      ctx.fillStyle = `rgba(200,214,222,${(0.25 + 0.45 * tw) * glint * d.c.depth})`;
+      ctx.beginPath();
+      ctx.arc(tx, ty, d.r, 0, TAU);
+      ctx.fill();
+    });
+  }
+
+  function drawFlies(t, dt) {
+    flies.forEach(f => {
+      // 布朗漂移 + 吸引
+      f.vx += (rnd() - 0.5) * 26 * dt + f.fx * dt;
+      f.vy += (rnd() - 0.5) * 22 * dt + f.fy * dt;
+      f.vx *= 0.965; f.vy *= 0.965;
+      f.x += f.vx * dt * 2.4; f.y += f.vy * dt * 2.4;
+      f.fx *= 0.94; f.fy = f.fy * 0.94 - 0;
+      f.x = clamp(f.x, 8, W - 8);
+      f.y = clamp(f.y, H * 0.3, GROUND() + 10);
+      // 明灭呼吸
+      const target = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.9 + f.ph * 2)) * (0.6 + 0.4 * Math.sin(t * 0.31 + f.ph));
+      f.br = lerp(f.br, clamp(target, 0.05, 1), dt * 2.2);
+      const r = 7 + f.br * 5;
+      const g = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r * 3.2);
+      g.addColorStop(0, `rgba(238,214,150,${0.85 * f.br})`);
+      g.addColorStop(0.25, `rgba(214,186,110,${0.4 * f.br})`);
+      g.addColorStop(1, 'rgba(214,186,110,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(f.x, f.y, r * 3.2, 0, TAU); ctx.fill();
+      ctx.fillStyle = `rgba(252,244,214,${0.9 * f.br})`;
+      ctx.beginPath(); ctx.arc(f.x, f.y, r * 0.32, 0, TAU); ctx.fill();
+    });
+  }
+
+  function drawCricketGlows() {
+    // 鸣唱时草根部一点极淡暖光（几乎不可读，仅给画中人一个方向）
+    crickets.forEach(ck => {
+      if (ck.glowT <= 0) return;
+      const a = 0.10 * ck.glowT * ck.near;
+      const g = ctx.createRadialGradient(ck.x, ck.y, 0, ck.x, ck.y, 26);
+      g.addColorStop(0, `rgba(220,200,150,${a})`);
+      g.addColorStop(1, 'rgba(220,200,150,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(ck.x, ck.y, 26, 0, TAU); ctx.fill();
+    });
+  }
+
+  function drawVignette(cover) {
+    const g = ctx.createRadialGradient(W / 2, H * 0.45, H * 0.3, W / 2, H * 0.5, Math.max(W, H) * 0.8);
+    g.addColorStop(0, `rgba(4,7,10,${cover * 0.12})`);       // 云覆盖时整体压暗
+    g.addColorStop(0.6, 'rgba(4,7,10,0)');
+    g.addColorStop(1, `rgba(4,7,10,${0.55 + cover * 0.12})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  /* ============================ 主循环 / 状态 ============================ */
+  let simT = 0, last = performance.now();
+  let lastInteract = -100;
+  let settled = false, poemShown = false, dropFired = false;
+  let drop = null, lastRipple = null;
+
+  function mirror() {
+    const el = document.getElementById('state');
+    el.textContent = JSON.stringify({
+      t: +simT.toFixed(2),
+      nC: crickets.length,
+      nF: flies.length,
+      hushed: crickets.filter(c => c.state === 'hush').length,
+      singing: crickets.filter(c => c.state !== 'hush').length,
+      settled, poemShown, dropFired,
+      audio: !!AC,
+      cover: +cloudCover(simT).toFixed(2),
+      chirps: stat.chirps, replies: stat.replies, trials: stat.trials, hushes: stat.hushes,
+      pans: crickets.map(c => +c.pan.toFixed(2))
+    });
+  }
+
+  function frame(now) {
+    // dt 双侧夹：上界防卡顿大步长；下界=0 防首帧时间戳回退（headless/虚拟时钟偶发 now<last，
+    // 曾致负 dt→br 外推为负→createRadialGradient r1<0 崩帧，seed=123 必现）
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+    last = now;
+    simT += dt;
+    const t = simT;
+
+    scheduleCrickets(t, dt);   // 行为独立于音频
+
+    // 满织：无交互一段时间
+    if (!settled && t - lastInteract > AUTO_T / TM) {
+      settled = true;
+    }
+    if (settled && !poemShown && t > (FAST ? 6 : 12)) {
+      poemShown = true;
+      document.getElementById('poem').classList.add('show');
+      document.getElementById('seal').classList.add('show');
+    }
+    // 露滴：诗显后一颗
+    if (poemShown && !dropFired) {
+      dropFired = true;
+      const d0 = dews[Math.floor(rnd() * dews.length)] || dews[0];
+      if (d0) {
+        const tip = bladeTip(d0.c, d0.b, 0);
+        drop = { x: tip.tx, y: tip.ty, vy: 0 };
+        if (AC && soundOn && dropBuf) {
+          const s = AC.createBufferSource();
+          s.buffer = dropBuf;
+          const g = AC.createGain();
+          g.gain.value = 0.25;
+          const p = AC.createStereoPanner ? AC.createStereoPanner() : null;
+          if (p) p.pan.value = d0.c.cx / W * 2 - 1;
+          s.connect(g);
+          if (p) { g.connect(p); p.connect(master); } else g.connect(master);
+          s.start(AC.currentTime + 0.9);
+        }
+      }
+    }
+    if (drop) {
+      drop.vy += 420 * dt;
+      drop.y += drop.vy * dt;
+      if (drop.y > GROUND()) {
+        // 落地小涟漪
+        lastRipple = { x: drop.x, r: 2, a: 0.45 };
+        drop = null;
+      }
+    }
+
+    const cover = cloudCover(t);
+    drawSky(cover);
+    drawMoon(cover);
+    drawClouds(t, cover);
+    drawGround(cover);
+    drawCricketGlows();
+    drawClumps(t, cover);
+    drawDews(t, cover);
+    drawFlies(t, dt);
+    // 露滴本体与涟漪
+    if (drop) {
+      ctx.fillStyle = 'rgba(200,214,222,0.8)';
+      ctx.beginPath(); ctx.arc(drop.x, drop.y, 1.8, 0, TAU); ctx.fill();
+    }
+    if (lastRipple) {
+      lastRipple.r += 26 * dt; lastRipple.a -= 0.5 * dt;
+      if (lastRipple.a > 0) {
+        ctx.strokeStyle = `rgba(170,190,200,${lastRipple.a})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.ellipse(lastRipple.x, GROUND() + H * 0.01, lastRipple.r, lastRipple.r * 0.3, 0, 0, TAU); ctx.stroke();
+      } else lastRipple = null;
+    }
+    drawVignette(cover);
+    mirror();
+    requestAnimationFrame(frame);
+  }
+  window.addEventListener('error', e => {
+    document.getElementById('state').textContent = 'JSERR:' + (e.message || e.error) + ' @' + (e.lineno || '');
+  });
+
+  /* ============================ 交互 ============================ */
+  function pointer(e) {
+    const r = cv.getBoundingClientRect();
+    const pt = e.touches ? e.touches[0] : e;
+    return { x: pt.clientX - r.left, y: pt.clientY - r.top };
+  }
+  let dragging = false, lastDrag = 0;
+  cv.addEventListener('pointerdown', e => {
+    initAudio();
+    const p = pointer(e);
+    disturb(p.x, p.y);
+    dragging = true;
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const nowP = performance.now();
+    if (nowP - lastDrag < 120) return;
+    lastDrag = nowP;
+    const p = pointer(e);
+    disturb(p.x, p.y);
+  });
+  window.addEventListener('pointerup', () => { dragging = false; });
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    initAudio();
+    rebuild();
+  });
+  document.getElementById('btnSound').addEventListener('click', () => {
+    initAudio();
+    soundOn = !soundOn;
+    document.getElementById('btnSound').textContent = soundOn ? '♪' : '×';
+    if (ambientGain) ambientGain.gain.linearRampToValueAtTime(soundOn ? 0.05 : 0, AC.currentTime + 0.4);
+    crickets.forEach(ck => { if (!soundOn && ck.gain) ck.gain.gain.value = 0; });
+  });
+
+  function rebuild() {
+    buildClumps();
+    buildCrickets();
+    buildFlies();
+    buildDews();
+    stat.chirps = 0; stat.replies = 0; stat.trials = 0; stat.hushes = 0; stat.events.length = 0;
+    simT = 0; lastInteract = -100; settled = false;
+    poemShown = false; dropFired = false; drop = null; lastRipple = null;
+    document.getElementById('poem').classList.remove('show');
+    document.getElementById('seal').classList.remove('show');
+  }
+
+  /* ============================ 启动 ============================ */
+  buildClumps();
+  buildFlies();
+  buildDews();
+  buildClouds();
+  // 音频链延迟到首次手势；虫对象在 initAudio 后补链
+  buildCrickets();
+  document.addEventListener('pointerdown', function once() {
+    initAudio();
+    crickets.forEach(ck => { if (!ck.gain) makeCricketChain(ck); });
+  }, { once: true });
+
+  requestAnimationFrame(frame);
+
+  // 暴露给 harness
+  window.__qc = {
+    disturb, rebuild,
+    initAudio() { initAudio(); crickets.forEach(ck => { if (!ck.gain) makeCricketChain(ck); }); },
+    stat,
+    get state() {
+      return {
+        t: simT, crickets, flies, settled, poemShown,
+        cloud: cloudCover(simT)
+      };
+    },
+    diag() {
+      return {
+        audioState: AC.state, sr: AC.sampleRate,
+        nC: crickets.length,
+        chained: crickets.filter(c => c.gain && c.filt).length,
+        panners: crickets.filter(c => c.panner).length,
+        pans: crickets.map(c => +c.pan.toFixed(2)),
+        carriers: crickets.map(c => Math.round(c.carrier)),
+        bufNorm: chirpBufNorm.length, bufTrial: chirpBufTrial.length,
+        bufLens: chirpBufNorm.map(b => +b.duration.toFixed(2)),
+        drop: !!dropBuf
+      };
+    }
+  };
+})();
+</script>
+</body>
+</html>

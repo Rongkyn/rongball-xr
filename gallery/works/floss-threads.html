@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>绒丝 · Floss Threads</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  background:#0d0b14;
+  font-family:'Noto Serif SC','Songti SC','STSong','Georgia',serif;
+  user-select:none;-webkit-user-select:none;touch-action:none;
+  cursor:crosshair;
+}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
+
+.title-overlay{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:20;pointer-events:none;
+  transition:opacity 1.5s ease;
+}
+.title-overlay h1{
+  font-size:42px;color:#c8b89a;letter-spacing:18px;font-weight:300;
+  text-shadow:0 0 30px rgba(200,184,154,0.15);
+  margin-bottom:10px;
+}
+.title-overlay .en{
+  font-size:11px;color:rgba(200,184,154,0.35);letter-spacing:6px;
+  font-family:'Georgia',serif;font-style:italic;
+}
+.title-overlay .hint{
+  margin-top:44px;font-size:12px;color:rgba(200,184,154,0.3);
+  letter-spacing:3px;animation:pulse 3s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:0.2}50%{opacity:0.6}}
+
+.title-bar{
+  position:fixed;top:20px;left:0;right:0;text-align:center;z-index:10;
+  pointer-events:none;opacity:0;transition:opacity 1.2s ease 0.8s;
+}
+.title-bar h1{
+  font-size:16px;color:rgba(200,184,154,0.5);letter-spacing:8px;font-weight:300;
+}
+.title-bar .sub{
+  font-size:10px;color:rgba(200,184,154,0.25);margin-top:3px;letter-spacing:4px;
+}
+
+.controls{
+  position:fixed;bottom:24px;left:0;right:0;display:flex;justify-content:center;
+  gap:16px;z-index:10;pointer-events:auto;
+  opacity:0;transition:opacity 1.2s ease 1.2s;
+}
+.ctrl-btn{
+  background:rgba(200,184,154,0.04);border:1px solid rgba(200,184,154,0.15);
+  color:rgba(200,184,154,0.5);font-size:11px;letter-spacing:2px;
+  padding:7px 18px;border-radius:1px;cursor:pointer;
+  font-family:inherit;transition:all .3s;
+}
+.ctrl-btn:hover{background:rgba(200,184,154,0.08);border-color:rgba(200,184,154,0.35);color:rgba(200,184,154,0.8)}
+.ctrl-btn.active{background:rgba(200,184,154,0.1);border-color:rgba(200,184,154,0.4);color:#c8b89a}
+
+.seal{
+  position:fixed;bottom:20px;right:24px;z-index:10;
+  width:40px;height:40px;opacity:0;transition:opacity 1.5s ease 2s;
+  pointer-events:none;
+}
+.seal svg{width:100%;height:100%}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div class="title-overlay" id="overlay">
+  <h1>绒 丝</h1>
+  <div class="en">Floss Threads</div>
+  <div class="hint">拨动丝线 · 倾听共振</div>
+</div>
+
+<div class="title-bar">
+  <h1>绒 丝</h1>
+  <div class="sub">FLOSS THREADS</div>
+</div>
+
+<div class="controls">
+  <button class="ctrl-btn" id="btnMode">拨弦模式</button>
+  <button class="ctrl-btn" id="btnResonance">共鸣: 中</button>
+  <button class="ctrl-btn" id="btnReset">重置</button>
+</div>
+
+<div class="seal" id="seal">
+  <svg viewBox="0 0 100 100">
+    <circle cx="50" cy="50" r="44" fill="none" stroke="#a05040" stroke-width="2.5" opacity="0.6"/>
+    <path d="M30,50 Q35,30 50,35 Q65,30 70,50 Q65,70 50,65 Q35,70 30,50 Z" fill="none" stroke="#a05040" stroke-width="1.5" opacity="0.5"/>
+    <circle cx="42" cy="48" r="2.5" fill="#a05040" opacity="0.6"/>
+    <circle cx="58" cy="48" r="2.5" fill="#a05040" opacity="0.6"/>
+  </svg>
+</div>
+
+<script>
+'use strict';
+
+// ========== Canvas Setup ==========
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+var W, H, DPR;
+
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  bgGrad = null;
+}
+window.addEventListener('resize', function(){
+  resize();
+  buildWeb();
+});
+resize();
+
+// ========== Audio Engine (Karplus-Strong) ==========
+var audioCtx = null;
+var masterGain = null;
+var convolver = null;
+
+function initAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.5;
+  masterGain.connect(audioCtx.destination);
+
+  var irLen = Math.floor(audioCtx.sampleRate * 2.5);
+  var ir = audioCtx.createBuffer(2, irLen, audioCtx.sampleRate);
+  for(var ch=0; ch<2; ch++){
+    var d = ir.getChannelData(ch);
+    for(var i=0; i<irLen; i++){
+      d[i] = (Math.random()*2-1) * Math.pow(1 - i/irLen, 2.8);
+    }
+  }
+  convolver = audioCtx.createConvolver();
+  convolver.buffer = ir;
+  var wetGain = audioCtx.createGain();
+  wetGain.gain.value = 0.2;
+  convolver.connect(wetGain);
+  wetGain.connect(masterGain);
+}
+
+// Pentatonic scale (C pentatonic across 2 octaves)
+var PENTATONIC = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00];
+
+function pluckString(freq, velocity){
+  if(!audioCtx) return;
+  var sr = audioCtx.sampleRate;
+  var N = Math.floor(sr / freq);
+  if(N < 4) return;
+
+  var dur = Math.max(1.5, 6 - freq/200);
+  var bufLen = Math.min(N * 12, Math.floor(sr * dur));
+  var buf = audioCtx.createBuffer(1, bufLen, sr);
+  var d = buf.getChannelData(0);
+
+  var damping = 0.497;
+
+  for(var i=0; i<N; i++){
+    d[i] = (Math.random()*2-1) * velocity;
+  }
+  for(var i=N; i<bufLen; i++){
+    var next = (i-N+1 < bufLen) ? d[i-N+1] : 0;
+    d[i] = damping * (d[i-N] + next) * 0.5;
+  }
+
+  var src = audioCtx.createBufferSource();
+  src.buffer = buf;
+
+  var gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+
+  var lp = audioCtx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 3500 + velocity * 1500;
+
+  src.connect(lp);
+  lp.connect(gain);
+  gain.connect(masterGain);
+  gain.connect(convolver);
+  src.start();
+}
+
+// ========== String ==========
+function String2D(n1, n2, freq, color){
+  this.n1 = n1;
+  this.n2 = n2;
+  this.freq = freq;
+  this.color = color;
+  this.energy = 0;
+  this.segments = 20;
+  this.points = [];
+  this.phase = Math.random() * Math.PI * 2;
+  for(var i=0; i<=this.segments; i++){
+    var t = i / this.segments;
+    this.points.push({
+      x: n1.x + (n2.x-n1.x)*t,
+      y: n1.y + (n2.y-n1.y)*t,
+      ox: n1.x + (n2.x-n1.x)*t,
+      oy: n1.y + (n2.y-n1.y)*t,
+      vx: 0, vy: 0
+    });
+  }
+}
+
+String2D.prototype.pluck = function(amount){
+  this.energy = Math.min(1, amount);
+  var dir = Math.random() > 0.5 ? 1 : -1;
+  for(var i=1; i<this.segments; i++){
+    var t = i / this.segments;
+    var env = Math.sin(t * Math.PI);
+    this.points[i].vy += dir * amount * 10 * env;
+  }
+  pluckString(this.freq, amount * 0.7 + 0.2);
+};
+
+String2D.prototype.update = function(dt){
+  // Anchor endpoints
+  this.points[0].x = this.n1.x;
+  this.points[0].y = this.n1.y;
+  this.points[this.segments].x = this.n2.x;
+  this.points[this.segments].y = this.n2.y;
+
+  var tension = 0.3;
+  var damping = 0.94;
+  var restStrength = 0.025;
+
+  for(var i=1; i<this.segments; i++){
+    var p = this.points[i];
+    var left = this.points[i-1];
+    var right = this.points[i+1];
+
+    var ax = (left.x + right.x) * 0.5 - p.x;
+    var ay = (left.y + right.y) * 0.5 - p.y;
+
+    p.vx += ax * tension + (p.ox - p.x) * restStrength;
+    p.vy += ay * tension + (p.oy - p.y) * restStrength;
+    p.vx *= damping;
+    p.vy *= damping;
+    p.x += p.vx;
+    p.y += p.vy;
+  }
+
+  this.energy *= 0.98;
+  if(this.energy < 0.003) this.energy = 0;
+};
+
+String2D.prototype.excite = function(amount){
+  if(this.energy > 0.25) return;
+  this.energy = Math.max(this.energy, amount * 0.5);
+  for(var i=1; i<this.segments; i++){
+    var t = i / this.segments;
+    var env = Math.sin(t * Math.PI);
+    this.points[i].vy += (Math.random()-0.5) * amount * 4 * env;
+  }
+  pluckString(this.freq, amount * 0.25);
+};
+
+String2D.prototype.distToPoint = function(px, py){
+  var minD = Infinity;
+  for(var i=0; i<this.segments; i++){
+    var a = this.points[i];
+    var b = this.points[i+1];
+    var dx = b.x-a.x, dy = b.y-a.y;
+    var len2 = dx*dx+dy*dy;
+    if(len2 < 0.001) continue;
+    var t = ((px-a.x)*dx + (py-a.y)*dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    var cx = a.x+dx*t, cy = a.y+dy*t;
+    var d = Math.hypot(px-cx, py-cy);
+    if(d < minD) minD = d;
+  }
+  return minD;
+};
+
+String2D.prototype.draw = function(ctx, time){
+  var baseAlpha = 0.4 + this.energy * 0.5;
+  var w = 1.3 + this.energy * 3.5;
+
+  // Ambient sway - gentle breathing, middle sways most
+  var sway = Math.sin(time * 0.0004 + this.phase) * 1.2;
+  var pts = [];
+  for(var i=0; i<=this.segments; i++){
+    var p = this.points[i];
+    var t = i / this.segments;
+    var env = Math.sin(t * Math.PI);
+    pts.push({
+      x: p.x + sway * env,
+      y: p.y + sway * 0.4 * env
+    });
+  }
+
+  // Glow
+  if(this.energy > 0.02){
+    ctx.save();
+    ctx.strokeStyle = this.color;
+    ctx.globalAlpha = this.energy * 0.25;
+    ctx.lineWidth = w + 14;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for(var i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Main yarn line
+  ctx.save();
+  ctx.strokeStyle = this.color;
+  ctx.globalAlpha = baseAlpha;
+  ctx.lineWidth = w;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for(var i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+
+  // Highlight core (fiber sheen)
+  ctx.globalAlpha = baseAlpha * 0.35;
+  ctx.lineWidth = w * 0.3;
+  ctx.strokeStyle = this.energy > 0.05 ? '#f5e6d0' : 'rgba(240,225,200,0.6)';
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for(var i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+  ctx.restore();
+};
+
+// ========== Web / Network ==========
+var strings = [];
+var nodes = [];
+var mode = 'pluck';
+var resonanceLevel = 1;
+var draggedNode = null;
+var mouseDown = false;
+var lastMouse = {x:0, y:0};
+var started = false;
+
+var YARN_COLORS = [
+  '#c8a882', '#a08060', '#c4956a', '#9b8b75', '#b8956a', '#d4b896'
+];
+
+function buildWeb(){
+  strings = [];
+  nodes = [];
+
+  var cx = W / 2;
+  var cy = H / 2;
+  var maxDim = Math.min(W, H);
+
+  // Create organic node distribution using Poisson-like placement
+  var nodePositions = [];
+
+  // Inner cluster nodes (free-moving) - scattered in an ellipse
+  var innerCount = 14;
+  for(var i=0; i<innerCount; i++){
+    var angle = (i / innerCount) * Math.PI * 2 + Math.random() * 0.5;
+    var radius = maxDim * (0.08 + Math.random() * 0.14);
+    var jx = (Math.random()-0.5) * maxDim * 0.06;
+    var jy = (Math.random()-0.5) * maxDim * 0.06;
+    nodePositions.push({
+      x: cx + Math.cos(angle) * radius + jx,
+      y: cy + Math.sin(angle) * radius * 0.85 + jy,
+      fixed: false
+    });
+  }
+
+  // Outer ring nodes (free-moving, further out)
+  var outerCount = 10;
+  for(var i=0; i<outerCount; i++){
+    var angle = (i / outerCount) * Math.PI * 2 + Math.random() * 0.3;
+    var radius = maxDim * (0.18 + Math.random() * 0.08);
+    nodePositions.push({
+      x: cx + Math.cos(angle) * radius,
+      y: cy + Math.sin(angle) * radius * 0.85,
+      fixed: false
+    });
+  }
+
+  // Anchor nodes at edges (fixed) - evenly distributed
+  var anchorCount = 8;
+  for(var i=0; i<anchorCount; i++){
+    var angle = (i / anchorCount) * Math.PI * 2 + 0.2;
+    var r = maxDim * 0.42;
+    var ax = cx + Math.cos(angle) * r;
+    var ay = cy + Math.sin(angle) * r * 0.88;
+    // Clamp to screen with margin
+    var margin = 40;
+    ax = Math.max(margin, Math.min(W-margin, ax));
+    ay = Math.max(margin, Math.min(H-margin, ay));
+    nodePositions.push({x: ax, y: ay, fixed: true});
+  }
+
+  // Create node objects
+  for(var i=0; i<nodePositions.length; i++){
+    var np = nodePositions[i];
+    nodes.push({x: np.x, y: np.y, ox: np.x, oy: np.y, fixed: np.fixed, vx:0, vy:0});
+  }
+
+  // Connect nearby nodes with strings
+  var connectDist = maxDim * 0.2;
+  var usedPairs = {};
+
+  for(var i=0; i<nodes.length; i++){
+    var dists = [];
+    for(var j=0; j<nodes.length; j++){
+      if(i === j) continue;
+      var d = Math.hypot(nodes[i].x-nodes[j].x, nodes[i].y-nodes[j].y);
+      if(d < connectDist){
+        dists.push({j: j, d: d});
+      }
+    }
+    dists.sort(function(a,b){ return a.d - b.d; });
+
+    var maxConn = nodes[i].fixed ? 2 : 3;
+    for(var k=0; k<Math.min(maxConn, dists.length); k++){
+      var j = dists[k].j;
+      var key = Math.min(i,j) + '-' + Math.max(i,j);
+      if(usedPairs[key]) continue;
+      usedPairs[key] = true;
+
+      var dist = dists[k].d;
+      var normalized = dist / connectDist;
+      var freqIdx = Math.floor((1 - normalized) * (PENTATONIC.length - 1));
+      freqIdx = Math.max(0, Math.min(PENTATONIC.length-1, freqIdx));
+      var freq = PENTATONIC[freqIdx];
+      var color = YARN_COLORS[Math.floor(Math.random() * YARN_COLORS.length)];
+
+      strings.push(new String2D(nodes[i], nodes[j], freq, color));
+    }
+  }
+
+  // Ensure each anchor connects to at least one free node
+  for(var i=0; i<nodes.length; i++){
+    if(!nodes[i].fixed) continue;
+    var hasConn = false;
+    for(var s=0; s<strings.length; s++){
+      if(strings[s].n1 === nodes[i] || strings[s].n2 === nodes[i]){
+        hasConn = true; break;
+      }
+    }
+    if(!hasConn){
+      var nearest = -1, minD = Infinity;
+      for(var j=0; j<nodes.length; j++){
+        if(nodes[j].fixed) continue;
+        var d = Math.hypot(nodes[i].x-nodes[j].x, nodes[i].y-nodes[j].y);
+        if(d < minD){ minD = d; nearest = j; }
+      }
+      if(nearest >= 0){
+        var freq = PENTATONIC[Math.floor(Math.random()*5)];
+        var color = YARN_COLORS[Math.floor(Math.random() * YARN_COLORS.length)];
+        strings.push(new String2D(nodes[i], nodes[nearest], freq, color));
+      }
+    }
+  }
+}
+
+buildWeb();
+
+// ========== Interaction ==========
+function getNearestString(x, y){
+  var nearest = null, minD = 35;
+  for(var i=0; i<strings.length; i++){
+    var d = strings[i].distToPoint(x, y);
+    if(d < minD){ minD = d; nearest = strings[i]; }
+  }
+  return nearest;
+}
+
+function getNearestNode(x, y){
+  var nearest = null, minD = 30;
+  for(var i=0; i<nodes.length; i++){
+    if(nodes[i].fixed) continue;
+    var d = Math.hypot(nodes[i].x-x, nodes[i].y-y);
+    if(d < minD){ minD = d; nearest = nodes[i]; }
+  }
+  return nearest;
+}
+
+function triggerResonance(sourceString, amount){
+  if(resonanceLevel === 0) return;
+  var decay = resonanceLevel === 1 ? 0.2 : 0.35;
+
+  for(var i=0; i<strings.length; i++){
+    var s = strings[i];
+    if(s === sourceString) continue;
+    var ratio = Math.max(s.freq, sourceString.freq) / Math.min(s.freq, sourceString.freq);
+    var isHarmonic =
+      Math.abs(ratio - 2) < 0.15 ||
+      Math.abs(ratio - 1.5) < 0.1 ||
+      Math.abs(ratio - 1.333) < 0.08 ||
+      Math.abs(ratio - 1.25) < 0.06;
+    if(isHarmonic){
+      s.excite(amount * decay);
+    }
+  }
+}
+
+function hideOverlay(){
+  if(started) return;
+  started = true;
+  var overlay = document.getElementById('overlay');
+  if(overlay){
+    overlay.style.opacity = '0';
+    setTimeout(function(){ overlay.style.display = 'none'; }, 1500);
+  }
+  document.querySelector('.title-bar').style.opacity = '1';
+  document.querySelector('.controls').style.opacity = '1';
+  document.getElementById('seal').style.opacity = '0.7';
+}
+
+function handlePointerDown(e){
+  e.preventDefault();
+  initAudio();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  hideOverlay();
+
+  var rect = canvas.getBoundingClientRect();
+  var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+  var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+
+  mouseDown = true;
+  lastMouse = {x:x, y:y};
+
+  if(mode === 'pluck'){
+    var s = getNearestString(x, y);
+    if(s){
+      s.pluck(0.85);
+      triggerResonance(s, 0.7);
+    }
+  } else {
+    draggedNode = getNearestNode(x, y);
+  }
+}
+
+function handlePointerMove(e){
+  if(!mouseDown) return;
+  e.preventDefault();
+  var rect = canvas.getBoundingClientRect();
+  var x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+  var y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+
+  if(mode === 'pluck'){
+    var s = getNearestString(x, y);
+    var dx = x - lastMouse.x, dy = y - lastMouse.y;
+    if(s && Math.hypot(dx,dy) > 25){
+      s.pluck(0.5 + Math.random()*0.3);
+      triggerResonance(s, 0.4);
+      lastMouse = {x:x, y:y};
+    }
+  } else if(draggedNode){
+    draggedNode.x = x;
+    draggedNode.y = y;
+  }
+}
+
+function handlePointerUp(){
+  if(draggedNode){
+    for(var i=0; i<strings.length; i++){
+      var s = strings[i];
+      if(s.n1 === draggedNode || s.n2 === draggedNode){
+        var dx = draggedNode.x - draggedNode.ox;
+        var dy = draggedNode.y - draggedNode.oy;
+        var dist = Math.hypot(dx, dy);
+        if(dist > 8){
+          var amt = Math.min(1, dist/60);
+          s.pluck(amt);
+          triggerResonance(s, amt*0.6);
+        }
+      }
+    }
+    // Snap node back
+    draggedNode.x = draggedNode.ox;
+    draggedNode.y = draggedNode.oy;
+    draggedNode = null;
+  }
+  mouseDown = false;
+}
+
+canvas.addEventListener('mousedown', handlePointerDown);
+canvas.addEventListener('mousemove', handlePointerMove);
+canvas.addEventListener('mouseup', handlePointerUp);
+canvas.addEventListener('mouseleave', handlePointerUp);
+canvas.addEventListener('touchstart', handlePointerDown, {passive:false});
+canvas.addEventListener('touchmove', handlePointerMove, {passive:false});
+canvas.addEventListener('touchend', handlePointerUp, {passive:false});
+
+// ========== UI ==========
+var btnMode = document.getElementById('btnMode');
+var btnResonance = document.getElementById('btnResonance');
+var btnReset = document.getElementById('btnReset');
+
+btnMode.addEventListener('click', function(){
+  mode = mode === 'pluck' ? 'drag' : 'pluck';
+  btnMode.textContent = mode === 'pluck' ? '拨弦模式' : '拉扯模式';
+  btnMode.classList.toggle('active', mode === 'drag');
+});
+
+var resLabels = ['共鸣: 关', '共鸣: 中', '共鸣: 高'];
+btnResonance.addEventListener('click', function(){
+  resonanceLevel = (resonanceLevel + 1) % 3;
+  btnResonance.textContent = resLabels[resonanceLevel];
+  btnResonance.classList.toggle('active', resonanceLevel > 0);
+});
+
+btnReset.addEventListener('click', function(){
+  buildWeb();
+});
+
+// ========== Render Loop ==========
+var lastTime = performance.now();
+var bgGrad = null;
+
+function render(time){
+  requestAnimationFrame(render);
+  var dt = Math.min(33, time - lastTime);
+  lastTime = time;
+
+  if(!bgGrad){
+    bgGrad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.7);
+    bgGrad.addColorStop(0, '#151018');
+    bgGrad.addColorStop(1, '#080610');
+  }
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Dust motes
+  var t = time * 0.00008;
+  ctx.fillStyle = 'rgba(200,184,154,0.025)';
+  for(var i=0; i<40; i++){
+    var px = ((Math.sin(t + i*1.7)*0.5+0.5) * W);
+    var py = ((Math.cos(t*0.7 + i*2.3)*0.5+0.5) * H);
+    var r = 0.8 + Math.sin(t*2+i)*0.4;
+    ctx.beginPath();
+    ctx.arc(px, py, r, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Update node physics first (spring back to rest position)
+  var nodeDamp = 0.88;
+  var nodeSpring = 0.06;
+  for(var ni=0; ni<nodes.length; ni++){
+    var nd = nodes[ni];
+    if(nd === draggedNode) continue;
+    if(nd.fixed){ nd.x = nd.ox; nd.y = nd.oy; continue; }
+    nd.vx += (nd.ox - nd.x) * nodeSpring;
+    nd.vy += (nd.oy - nd.y) * nodeSpring;
+    nd.vx *= nodeDamp;
+    nd.vy *= nodeDamp;
+    nd.x += nd.vx;
+    nd.y += nd.vy;
+  }
+
+  // Distance constraints: keep string endpoints at rest length (relaxation)
+  for(var iter=0; iter<3; iter++){
+    for(var si=0; si<strings.length; si++){
+      var s = strings[si];
+      var a = s.n1, b = s.n2;
+      if(a === draggedNode || b === draggedNode) continue;
+      var dx = b.x - a.x;
+      var dy = b.y - a.y;
+      var dist = Math.hypot(dx, dy) || 0.001;
+      var restDx = b.ox - a.ox;
+      var restDy = b.oy - a.oy;
+      var restDist = Math.hypot(restDx, restDy) || 0.001;
+      var diff = (dist - restDist) / dist;
+      var aFixed = a.fixed || a === draggedNode;
+      var bFixed = b.fixed || b === draggedNode;
+      var factor = aFixed || bFixed ? 0.5 : 0.25;
+      var offX = dx * diff * factor;
+      var offY = dy * diff * factor;
+      if(!aFixed){ a.x += offX; a.y += offY; }
+      if(!bFixed){ b.x -= offX; b.y -= offY; }
+    }
+  }
+
+  // Update string physics
+  for(var i=0; i<strings.length; i++){
+    strings[i].update(dt);
+  }
+
+  // Draw strings
+  for(var i=0; i<strings.length; i++){
+    strings[i].draw(ctx, time);
+  }
+
+  // Draw anchor dots
+  for(var i=0; i<nodes.length; i++){
+    var n = nodes[i];
+    if(n.fixed){
+      ctx.fillStyle = 'rgba(200,184,154,0.25)';
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 2, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  // Dragged node indicator
+  if(draggedNode){
+    ctx.strokeStyle = 'rgba(200,184,154,0.3)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.moveTo(draggedNode.ox, draggedNode.oy);
+    ctx.lineTo(draggedNode.x, draggedNode.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

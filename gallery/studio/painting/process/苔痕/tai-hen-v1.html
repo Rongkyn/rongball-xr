@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>苔痕 · Tai Hen</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #5c6660;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; position: fixed; top: 0; left: 0; }
+  #rd { z-index: 1; }
+
+  .ui {
+    position: fixed;
+    pointer-events: none;
+    user-select: none;
+    z-index: 10;
+  }
+  .title {
+    top: 26px; left: 30px;
+    font-size: 17px;
+    letter-spacing: 10px;
+    color: #cdd4ca;
+    opacity: 0;
+    animation: fadeIn 3s ease 1s forwards;
+  }
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #98a29a;
+    margin-top: 7px;
+  }
+  @keyframes fadeIn { to { opacity: 0.75; } }
+
+  .hint {
+    bottom: 58px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 5px;
+    color: #b9c1b6;
+    white-space: nowrap;
+    opacity: 0;
+    animation: hintFade 12s ease 1s forwards;
+  }
+  @keyframes hintFade {
+    0% { opacity: 0; }
+    12% { opacity: 0.65; }
+    70% { opacity: 0.65; }
+    100% { opacity: 0; }
+  }
+  .seal {
+    bottom: 24px; right: 28px;
+    font-size: 11px;
+    letter-spacing: 5px;
+    color: #c05a48;
+    opacity: 0;
+    transition: opacity 2.5s ease;
+  }
+  .seal.show { opacity: 0.85; }
+
+  .btn {
+    position: fixed;
+    top: 22px; right: 26px;
+    z-index: 20;
+    pointer-events: auto;
+    background: rgba(92,102,96,0.35);
+    border: 1px solid #a8b0a4;
+    color: #d8ddd4;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 2s ease 2s forwards;
+    transition: all 0.4s ease;
+  }
+  .btn:hover {
+    border-color: #d8ddd4;
+    color: #f2f4ee;
+    background: rgba(160,170,160,0.25);
+  }
+
+  /* 题诗：双列竖排，右起 */
+  .poem {
+    position: fixed;
+    top: 16%;
+    right: 9%;
+    z-index: 9;
+    pointer-events: none;
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 14px;
+    opacity: 0;
+    transition: opacity 4s ease;
+  }
+  .poem.show { opacity: 0.82; }
+  .poem .col {
+    writing-mode: vertical-rl;
+    font-size: 21px;
+    letter-spacing: 12px;
+    color: #e8e6da;
+    text-shadow: 0 1px 6px rgba(30,40,32,0.55);
+  }
+  .poem .src {
+    writing-mode: vertical-rl;
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: #c6cec2;
+    align-self: flex-end;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+<canvas id="rd"></canvas>
+
+<div class="ui title">
+  苔 痕
+  <div class="subtitle">tai hen · moss along the water</div>
+</div>
+<div class="ui hint">轻 点 青 石 · 苔 沿 水 痕 生</div>
+<div class="ui seal" id="seal">绒 球</div>
+<button class="btn" id="btnClear">再 来</button>
+
+<div class="poem" id="poem">
+  <div class="col">苔痕上阶绿</div>
+  <div class="col">草色入帘青</div>
+  <div class="src">刘禹锡 · 陋室铭</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const rd = document.getElementById('rd');
+  const ctx = rd.getContext('2d', { alpha: false });
+
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  let W, H;
+  const SCALE = 3;
+  let gw, gh;
+
+  let A, B, nA, nB;      // Gray-Scott 双场
+  let Wtr;                // 水分场（雨水，独立扩散蒸发）
+  let carpet;             // 苔被场：活过的苔留苔，落苔不悔
+  let age;                // 苔龄（模拟步）：-1 无苔
+  let dormant;            // v16：旧苔痕格=1（开场旧苔，年久定住，不蔓延、不老去）
+  let grain;              // 石面颗粒
+  let crack;              // 裂缝暗线强度 0..1
+  let evapMod;            // 蒸发调制（缝处保水 0.7）
+  let frame = 0;
+  let wetSeason = 0.0;    // 湿润季：洒水后为1，全局指数衰减；水干季尽，苔定住
+  let imgData, offCanvas, offCtx;
+
+  // Gray-Scott（墨散验证过的苔痕预设 f=0.058/k=0.065）
+  const DA = 1.0, DB = 0.5;
+  const FEED = 0.058, KILL = 0.065;
+  const DT = 1.0;
+  const STEPS_PER_FRAME = 4;
+
+  // 水分
+  const DW = 0.22;         // 水扩散（要跟得上GS波前，苔才蔓延得出去）
+  const EVAP = 0.00028;    // 每步基础蒸发率（v2降：水盘活得够久）
+  const WET_HOLD = 0.55;   // 苔垫自持水量目标（湿润季内，v7提：湿晕要出得去）
+  const REGROW = 0.04;     // 苔垫回潮速率（每步朝eq逼近，v7提）
+  const WET_DECAY = 0.000045; // 湿润季衰减（约3200模拟步≈80s，水干季尽，v8延）
+  const SPREAD = 0.66;      // 苔垫营养蔓延概率（湿季湿邻格，每模拟步）
+  // GS 水门控：湿才长（v2放宽：稀湿区也能缓慢长）
+  function gate(w){
+    if (w < 0.015) return 0;
+    if (w > 0.18) return 1;
+    const t = (w - 0.015) / 0.165;
+    return t * t * (3 - 2 * t);
+  }
+
+  // 苔被沉积
+  const CARPET_MAX = 1.5;
+  const DEP = 0.026;       // 每步沉积率（v3提：苔要长得看得见，追上湿润窗口）
+  const TONE_K = 2.8;
+  const AGE_MATURE = 2600; // 嫩→苔绿（v8延：嫩黄绿活气留久些）
+  const AGE_OLD = 9000;    // 苔绿→深翠
+
+  // ---- 确定性噪声 ----
+  function hash2(x, y){
+    let h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+    return h - Math.floor(h);
+  }
+  function vnoise(x, y){
+    const xi = Math.floor(x), yi = Math.floor(y);
+    const xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf);
+    const v = yf * yf * (3 - 2 * yf);
+    const a = hash2(xi, yi), b = hash2(xi + 1, yi);
+    const c = hash2(xi, yi + 1), d = hash2(xi + 1, yi + 1);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  }
+  // 裂缝（v9重做）：极稀疏的细线性裂纹。用低频noise场的"零穿越线"定位，
+  // 只在很窄的带内给值，渲染成1-2px暗线而非整块染暗。
+  function crackAt(x, y){
+    const f1 = vnoise(x * 0.032 + 13.7, y * 0.032 + 7.3) - 0.5;
+    const f2 = vnoise(x * 0.070 - 5.1, y * 0.070 + 9.4) - 0.5;
+    const d1 = Math.abs(f1);
+    const d2 = Math.abs(f2);
+    let c = 0;
+    if (d1 < 0.011) c = Math.max(c, 1 - d1 / 0.011);
+    if (d2 < 0.009) c = Math.max(c, 1 - d2 / 0.009) * 0.7;
+    // 稀疏门控：只有第三层noise高值处才显示，避免满屏裂（v9b拉高门限）
+    const gateN = vnoise(x * 0.02 + 3.3, y * 0.02 + 8.8);
+    if (gateN < 0.70) c = 0;
+    return c > 0 ? c * 0.42 : 0;
+  }
+
+  function initArrays(){
+    const n = gw * gh;
+    A = new Float32Array(n);  B = new Float32Array(n);
+    nA = new Float32Array(n); nB = new Float32Array(n);
+    Wtr = new Float32Array(n);
+    carpet = new Float32Array(n);
+    age = new Float32Array(n); age.fill(-1);
+    dormant = new Uint8Array(n);   // v16：旧苔痕标记（年月的苔，定住不扩张）
+    wetSeason = 0.0;   // 开场无雨，只有旧苔痕
+    grain = new Float32Array(n);
+    crack = new Float32Array(n);
+    evapMod = new Float32Array(n);
+    A.fill(1.0); nA.fill(1.0);
+
+    for (let y = 0; y < gh; y++){
+      for (let x = 0; x < gw; x++){
+        const i = y * gw + x;
+        const hi = vnoise(x * 0.33, y * 0.33);
+        const speck = hash2(x * 1.7, y * 1.3);
+        grain[i] = 0.94 + 0.06 * hi + 0.03 * (speck - 0.5);   // v9：石面干净，细颗粒
+        const ck = crackAt(x, y);
+        crack[i] = ck;
+        evapMod[i] = ck > 0.15 ? 0.62 : 1.0;   // 石缝保水
+      }
+    }
+    seedOldMoss();
+  }
+
+  // 开场：几处旧苔痕（经年的苔，嫩苔绿→苔绿），像石头本来就有年月
+  function seedOldMoss(){
+    dormantPatch(gw * 0.24, gh * 0.40, 9, 0.92, 0.65);
+    dormantPatch(gw * 0.72, gh * 0.66, 6, 0.80, 0.70);
+    dormantPatch(gw * 0.55, gh * 0.24, 4.5, 0.70, 0.75);
+  }
+  function dormantPatch(cx, cy, r, dens, fill){
+    cx = Math.floor(cx); cy = Math.floor(cy);
+    const R = Math.ceil(r + 2);
+    for (let dy = -R; dy <= R; dy++){
+      for (let dx = -R; dx <= R; dx++){
+        const d2 = dx * dx + dy * dy;
+        if (d2 > (r + 1.2) * (r + 1.2)) continue;
+        const px = cx + dx, py = cy + dy;
+        if (px < 1 || px >= gw-1 || py < 1 || py >= gh-1) continue;
+        const i = py * gw + px;
+        const jitter = 0.70 + 0.30 * hash2(px * 3.1, py * 3.7);
+        const fall = Math.max(0, 1 - Math.sqrt(d2) / (r + 1.2));
+        // 内部连续成簇（fill底），边缘概率错落破圆
+        const inCore = d2 < (r * fill) * (r * fill);
+        const probEdge = dens * fall * jitter;
+        if (inCore || hash2(px * 7.7, py * 5.3) < probEdge){
+          carpet[i] = CARPET_MAX * (inCore ? (0.55 + 0.35 * fall) : fall * 0.8);
+          age[i] = AGE_MATURE + (AGE_OLD - AGE_MATURE) * (0.4 + 0.4 * hash2(px, py)); // 苔绿偏老
+          dormant[i] = 1;   // v16：旧苔定住，不参与蔓延、不继续老化
+        }
+      }
+    }
+  }
+
+  function resize(){
+    W = window.innerWidth; H = window.innerHeight;
+    rd.width = W * dpr; rd.height = H * dpr;
+    rd.style.width = W + 'px'; rd.style.height = H + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    gw = Math.max(20, Math.floor(W / SCALE));
+    gh = Math.max(20, Math.floor(H / SCALE));
+    initArrays();
+    imgData = ctx.createImageData(gw, gh);
+    offCanvas = document.createElement('canvas');
+    offCanvas.width = gw; offCanvas.height = gh;
+    offCtx = offCanvas.getContext('2d');
+  }
+
+  // 洒水 + 苔种
+  function waterAt(cx, cy, big){
+    cx = Math.floor(cx); cy = Math.floor(cy);
+    wetSeason = 1.0;   // 洒水开启湿润季
+    const rW = big ? 12 : 9;
+    const rS = big ? 4.0 : 3.0;
+    for (let dy = -rW; dy <= rW; dy++){
+      for (let dx = -rW; dx <= rW; dx++){
+        const d2 = dx * dx + dy * dy;
+        if (d2 > rW * rW) continue;
+        const px = cx + dx, py = cy + dy;
+        if (px < 1 || px >= gw-1 || py < 1 || py >= gh-1) continue;
+        const i = py * gw + px;
+        const fall = 1 - Math.sqrt(d2) / (rW + 1);
+        Wtr[i] = Math.min(1.2, Wtr[i] + fall * fall * 1.15);
+        // 苔种：用noise打碎的不规则团（破正圆），而非实心圆
+        const seedNoise = 0.5 + 0.5 * vnoise(px * 0.55 + cx * 0.1, py * 0.55 + cy * 0.1);
+        const edgeR = rS * (0.75 + 0.5 * seedNoise);
+        const inS = Math.sqrt(d2) <= edgeR;
+        const ragged = Math.sqrt(d2) <= edgeR + 2 && Math.random() < 0.35 * seedNoise;
+        if (inS || ragged){
+          B[i] = Math.min(1, B[i] + 0.85);
+          A[i] = Math.max(0, A[i] - 0.85);
+          if (age[i] < 0) age[i] = 0;
+        }
+        // 散落孢子点：水盘内稀疏散点，萌发成外围碎苔（破圆、自然）
+        if (Math.sqrt(d2) > rS && Math.sqrt(d2) < rW * 0.9 && hash2(px * 13.3, py * 9.7) < 0.035){
+          B[i] = Math.min(1, B[i] + 0.6);
+          A[i] = Math.max(0, A[i] - 0.6);
+          if (age[i] < 0) age[i] = 0;
+        }
+      }
+    }
+  }
+
+  function step(){
+    const g = gw, h = gh;
+    // —— 1. 水分（v5：苔垫自持湿润模型） ——
+    // 苔藓像活物维持自身小气候：湿润季内，苔垫格始终持有基础水汽（regrow），
+    // 水汽向外扩散出1-2格湿晕；B前沿爬进湿晕→沉积新苔→新苔又持水→湿晕外推=自蔓延。
+    // 湿季指数衰减，水干季尽则晕消退、苔定住。
+    wetSeason *= (1 - WET_DECAY);
+    for (let y = 1; y < h - 1; y++){
+      const row = y * g;
+      for (let x = 1; x < g - 1; x++){
+        const i = row + x;
+        const c = carpet[i];
+        let w = Wtr[i];
+        if (c > 0.05){
+          // 苔垫格：湿润季内缓慢回潮至基础持水量；缝处保水更高
+          const eq = WET_HOLD * wetSeason * (0.85 + 0.35 * Math.min(1, c)) * (crack[i] > 0.15 ? 1.25 : 1.0);
+          if (w < eq) w += (eq - w) * REGROW;
+          else w *= (1 - EVAP * 0.5);   // 苔垫蒸发很慢
+        } else {
+          // 裸石格：蒸发（v7降，让苔垫湿晕能向外扩3-5格）
+          w *= (1 - EVAP * 1.4 * evapMod[i]);
+        }
+        // 扩散：水沿邻格流（高斯-赛德尔逐格，含苔垫向外的湿润晕）
+        if (w > 0.0004){
+          const lap = (Wtr[i-1] + Wtr[i+1] + Wtr[i-g] + Wtr[i+g]) * 0.25 - w;
+          w += DW * lap;
+        }
+        Wtr[i] = w > 0 ? (w > 1.2 ? 1.2 : w) : 0;
+      }
+    }
+    // —— 2. GS 反应（水门控） ——
+    for (let y = 1; y < h - 1; y++){
+      const row = y * g, rowUp = row - g, rowDn = row + g;
+      for (let x = 1; x < g - 1; x++){
+        const i = row + x;
+        const a = A[i], b = B[i];
+        const gw_ = gate(Wtr[i]);
+        const lapA = (A[i-1] + A[i+1] + A[rowUp+x] + A[rowDn+x]) * 0.2
+                   + (A[rowUp+x-1] + A[rowUp+x+1] + A[rowDn+x-1] + A[rowDn+x+1]) * 0.05
+                   - a;
+        const lapB = (B[i-1] + B[i+1] + B[rowUp+x] + B[rowDn+x]) * 0.2
+                   + (B[rowUp+x-1] + B[rowUp+x+1] + B[rowDn+x-1] + B[rowDn+x+1]) * 0.05
+                   - b;
+        const abb = a * b * b * gw_;
+        const f = FEED * gw_;
+        let na = a + (DA * lapA - abb + f * (1 - a)) * DT;
+        let nb = b + (DB * lapB + abb - (KILL + f) * b) * DT;
+        nA[i] = na < 0 ? 0 : na > 1 ? 1 : na;
+        nB[i] = nb < 0 ? 0 : nb > 1 ? 1 : nb;
+      }
+    }
+    // 边界吸收
+    for (let x = 0; x < g; x++){ nA[x] = 1; nB[x] = 0; nA[(h-1)*g+x] = 1; nB[(h-1)*g+x] = 0; }
+    for (let y = 0; y < h; y++){ nA[y*g] = 1; nB[y*g] = 0; nA[y*g+g-1] = 1; nB[y*g+g-1] = 0; }
+    let t = A; A = nA; nA = t;
+    t = B; B = nB; nB = t;
+
+    // —— 2.5 苔垫营养蔓延（v7）：湿季里苔沿邻格渗透，湿处密、干处稀——
+    // 群落扩张由"湿润季×局部湿度"概率驱动（不硬卡邻格湿阈值，避免湿晕被蒸发卡死）；
+    // 水场Wtr只负责视觉湿润与B场裂片纹理。概率渗透→边缘自然不规则。
+    if (wetSeason > 0.03){
+      for (let y = 1; y < h - 1; y++){
+        const row = y * g;
+        for (let x = 1; x < g - 1; x++){
+          const i = row + x;
+          if (carpet[i] > 0.2) continue;
+          const cN = carpet[i-g], cS = carpet[i+g], cW = carpet[i-1], cE = carpet[i+1];
+          let mx = 0, srcI = -1;
+          if (cN > mx){ mx = cN; srcI = i-g; }
+          if (cS > mx){ mx = cS; srcI = i+g; }
+          if (cW > mx){ mx = cW; srcI = i-1; }
+          if (cE > mx){ mx = cE; srcI = i+1; }
+          // v16：旧苔痕是石头的年月，定在原处不扩张——只有新苔（dormant=0）才能蔓延
+          if (mx > 0.3 && dormant[srcI] === 0){
+            // 局部湿度项：苔垫自身持水(0.35底) + 本格自由水加成
+            const damp = 0.35 + 0.65 * Math.min(1, Wtr[i] * 2.2);
+            // v14：用低频连续噪声做"成片区"调制——某些方向成片可长、某些方向成片不长，
+            // 形成柔和不规则缘（而非逐格hash的星芒毛刺）
+            const patch = vnoise(x * 0.16 + 5.2, y * 0.16 + 2.8);
+            const dirGate = patch > 0.34 ? 1.0 : (patch > 0.22 ? 0.45 : 0.05);
+            const p = SPREAD * damp * wetSeason * (mx / CARPET_MAX) * dirGate;
+            if (Math.random() < p){
+              // 新苔略薄于源苔 + 片区noise调制→边缘是淡苔晕，柔和碎斑
+              const nc = Math.min(CARPET_MAX, mx * (0.62 + 0.28 * patch));
+              carpet[i] = Math.max(carpet[i], nc);
+              if (age[i] < 0) age[i] = srcAge >= 0 ? srcAge : 0;
+              // 新生苔激活B，让活边缘有亮黄绿裂片
+              B[i] = Math.max(B[i], 0.5);
+              A[i] = Math.min(A[i], 0.5);
+            }
+          }
+        }
+      }
+    }
+
+    // —— 3. 苔被沉积 + 苔龄 ——
+    for (let y = 1; y < h - 1; y++){
+      const row = y * g;
+      for (let x = 1; x < g - 1; x++){
+        const i = row + x;
+        const b = B[i];
+        if (b > 0.05 && Wtr[i] > 0.01){
+          if (age[i] < 0){
+            // 苔龄从邻格传播
+            let m = -1;
+            const c = [age[i-1], age[i+1], age[i-g], age[i+g]];
+            for (let q = 0; q < 4; q++){ if (c[q] >= 0 && (m < 0 || c[q] < m)) m = c[q]; }
+            age[i] = m >= 0 ? m : 0;
+          }
+          const gw_ = gate(Wtr[i]);
+          const rate = b * DEP * (0.25 + 0.75 * gw_);
+          carpet[i] += rate * (1 - carpet[i] / CARPET_MAX);
+        }
+        if (carpet[i] > 0.25 && age[i] >= 0 && age[i] < 9999){
+          age[i] += 1;
+        }
+      }
+    }
+  }
+
+  // 色板（v10b：苔饱和提、石偏冷灰，拉开冷暖对比）
+  const STONE = [108, 116, 112];
+  const CRACK_C = [70, 77, 74];
+  const YOUNG = [168, 196, 88];    // 嫩黄绿（更鲜）
+  const MATURE = [86, 138, 64];    // 苔绿（更饱和）
+  const OLD = [34, 60, 40];        // 深翠
+  const LIVING = [198, 220, 108];  // 活锋亮黄绿
+
+  function lerp(a, b, t){ return a + (b - a) * t; }
+  function mossColor(af){
+    // af: 0 嫩 → 0.5 壮 → 1 老
+    if (af < 0.5){
+      const t = af / 0.5;
+      return [lerp(YOUNG[0], MATURE[0], t), lerp(YOUNG[1], MATURE[1], t), lerp(YOUNG[2], MATURE[2], t)];
+    }
+    const t = (af - 0.5) / 0.5;
+    return [lerp(MATURE[0], OLD[0], t), lerp(MATURE[1], OLD[1], t), lerp(MATURE[2], OLD[2], t)];
+  }
+
+  let coverShown = false;
+  function render(){
+    const data = imgData.data;
+    const n = gw * gh;
+    let cover = 0;
+    for (let i = 0; i < n; i++){
+      const j = i * 4;
+      let r = STONE[0] * grain[i], gC = STONE[1] * grain[i], bC = STONE[2] * grain[i];
+
+      // 裂缝暗线
+      const ck = crack[i];
+      if (ck > 0){
+        const cm = Math.min(1, ck * 1.2);
+        r = lerp(r, CRACK_C[0], cm * 0.7);
+        gC = lerp(gC, CRACK_C[1], cm * 0.7);
+        bC = lerp(bC, CRACK_C[2], cm * 0.7);
+      }
+
+      // 湿：石色加深微偏冷
+      const w = Wtr[i];
+      if (w > 0.01){
+        const wt = Math.min(1, w * 1.4);
+        const ws = wt * wt * (3 - 2 * wt);
+        r = lerp(r, r * 0.62, ws * 0.85);
+        gC = lerp(gC, gC * 0.66, ws * 0.85);
+        bC = lerp(bC, bC * 0.74, ws * 0.85);
+      }
+
+      // 苔
+      const cm_ = carpet[i];
+      if (cm_ > 0.02){
+        let a = 1 - Math.exp(-TONE_K * cm_ / CARPET_MAX);
+        a = Math.pow(a, 1.25);
+        const af = age[i] < 0 ? 0 : Math.min(1, age[i] / AGE_OLD);
+        const mc = mossColor(af);
+        // 湿苔更深
+        let mr = mc[0], mg = mc[1], mb = mc[2];
+        if (w > 0.02){
+          const ws = Math.min(1, w);
+          mr *= (1 - 0.25 * ws); mg *= (1 - 0.22 * ws); mb *= (1 - 0.20 * ws);
+        }
+        r = lerp(r, mr, a);
+        gC = lerp(gC, mg, a);
+        bC = lerp(bC, mb, a);
+        // 活锋：B活跃且湿 → 亮黄绿（地图衣荧光缘）
+        const bv = B[i];
+        if (bv > 0.08 && w > 0.04){
+          const live = Math.min(1, (bv - 0.08) / 0.3) * Math.min(1, w * 2);
+          r = lerp(r, LIVING[0], live * 0.55);
+          gC = lerp(gC, LIVING[1], live * 0.55);
+          bC = lerp(bC, LIVING[2], live * 0.55);
+        }
+        cover += Math.min(1, cm_ / CARPET_MAX);
+      }
+
+      data[j] = r; data[j+1] = gC; data[j+2] = bC; data[j+3] = 255;
+    }
+    offCtx.putImageData(imgData, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(offCanvas, 0, 0, W, H);
+
+    // 覆盖度 → 题诗
+    const coverRatio = cover / n;
+    if (!coverShown && coverRatio > 0.08){
+      coverShown = true;
+      document.getElementById('poem').classList.add('show');
+      document.getElementById('seal').classList.add('show');
+    }
+  }
+
+  // 交互
+  let lastAdd = 0;
+  rd.addEventListener('pointerdown', function(e){
+    e.preventDefault();
+    waterAt(e.clientX / SCALE, e.clientY / SCALE, true);
+    lastAdd = Date.now();
+  });
+  rd.addEventListener('pointermove', function(e){
+    if (e.buttons === 0) return;
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastAdd < 70) return;
+    lastAdd = now;
+    waterAt(e.clientX / SCALE, e.clientY / SCALE, false);
+  });
+  document.getElementById('btnClear').addEventListener('click', function(){
+    frame = 0; coverShown = false;
+    document.getElementById('poem').classList.remove('show');
+    document.getElementById('seal').classList.remove('show');
+    initArrays();
+  });
+
+  function loop(){
+    for (let s = 0; s < STEPS_PER_FRAME; s++) step();
+    render();
+    frame += STEPS_PER_FRAME;
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize', resize);
+  resize();
+  loop();
+})();
+</script>
+</body>
+</html>

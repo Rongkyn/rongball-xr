@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>桂雨 · Gui Yu</title>
+<!-- uses: lib/audio-lib.js v1.1 架构（master 总线/压缩/加法铃音 BELL_PARTIALS 同源；本作为单文件内联实现） -->
+<!-- 系列第十四件：月下庭院老桂。点树摇枝落金桂雨、点天阵风撕花、点地碎金涟漪，静置浮王建《十五夜望月》。秋分·中秋应景作 -->
+<meta name="color-scheme" content="dark">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #0e131c;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; position: fixed; top: 0; left: 0; }
+  #scene { z-index: 1; }
+  #state { position: fixed; bottom: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; z-index: -1; }
+
+  .ui { position: fixed; pointer-events: none; user-select: none; z-index: 10; }
+  .title {
+    top: 26px; left: 30px;
+    font-size: 17px;
+    letter-spacing: 10px;
+    color: #c9cdcf;
+    opacity: 0;
+    animation: fadeIn 3s ease 1s forwards;
+  }
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #7e868c;
+    margin-top: 6px;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  .hint {
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 6px;
+    white-space: nowrap;
+    color: #9aa0a4;
+    opacity: 0;
+    animation: hintFade 10s ease 2.5s forwards;
+  }
+  @media (max-width: 480px) {
+    .hint { font-size: 11px; letter-spacing: 3px; bottom: 26px; }
+    #poem { right: 6%; top: 21%; font-size: 17px; }
+  }
+  @keyframes hintFade {
+    0% { opacity: 0; }
+    12% { opacity: 0.55; }
+    70% { opacity: 0.55; }
+    100% { opacity: 0; }
+  }
+
+  .seal {
+    position: fixed;
+    bottom: 26px; right: 30px;
+    z-index: 10;
+    pointer-events: none;
+    width: 38px; height: 38px;
+    background: rgba(176, 58, 42, 0.85);
+    color: #e8e2d6;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    transform: rotate(-4deg);
+    opacity: 0;
+    transition: opacity 2.5s ease;
+  }
+  .seal.show { opacity: 0.85; }
+
+  .btn {
+    position: fixed;
+    top: 22px;
+    z-index: 20;
+    pointer-events: auto;
+    background: rgba(200, 205, 208, 0.08);
+    border: 1px solid #565e66;
+    color: #b8bec2;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 2s ease 2s forwards;
+    transition: all 0.4s ease;
+  }
+  .btn:hover {
+    border-color: #9098a0;
+    color: #e2e6e8;
+    background: rgba(200, 205, 208, 0.16);
+  }
+  #btnClear { right: 26px; }
+  #btnSound { right: 86px; }
+
+  /* 竖排诗：月在右上、树在左，诗落右侧天空月下（row-reverse + 逐字 span，系列既有版式） */
+  #poem {
+    position: fixed; right: 8%; top: 26%; z-index: 9;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-start;
+    gap: 20px;
+    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: clamp(18px, 3.0vh, 24px);
+    color: rgba(214, 219, 220, 0.92);
+    opacity: 0; transition: opacity 5s ease;
+    pointer-events: none;
+  }
+  #poem.show { opacity: 0.72; }
+  #poem .line, #poem .attrib {
+    width: 1.05em;
+    text-align: center;
+    flex: none;
+  }
+  #poem .line > span, #poem .attrib > span {
+    display: block;
+    height: 1.4em;
+    line-height: 1.4;
+  }
+  #poem .attrib {
+    font-size: 11px; letter-spacing: 2px;
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div class="ui title">桂 雨<div class="subtitle">gui yu · cassia rain in the moonlit courtyard</div></div>
+<button class="btn" id="btnSound">♪</button>
+<button class="btn" id="btnClear">再 来</button>
+<div class="ui hint">轻点桂树 · 摇一场桂花雨；点点天上 · 风会把花吹落</div>
+<div id="poem"><div class="line"><span>中</span><span>庭</span><span>地</span><span>白</span><span>树</span><span>栖</span><span>鸦</span></div><div class="line"><span>冷</span><span>露</span><span>无</span><span>声</span><span>湿</span><span>桂</span><span>花</span></div><div class="attrib"><span>唐</span><span>·</span><span>王</span><span>建</span><span>十</span><span>五</span><span>夜</span><span>望</span><span>月</span></div></div>
+<div class="seal" id="seal">绒球</div>
+<div id="state"></div>
+
+<script>
+(function () {
+  'use strict';
+  /* ============================ 基础 ============================ */
+  const params = new URLSearchParams(location.search);
+  const FAST = params.has('fast');
+  const SEED = parseInt(params.get('seed') || '7', 10);
+  const TM = FAST ? 3.0 : 1;                  // 计时压缩（fast）
+  const AUTO_T = FAST ? 6.0 : 36;             // 无交互多久入「静」
+  const GUST_DUR = FAST ? 1.5 : 3.4;          // 阵风时长
+  const SHAKE_DUR = 2.4;                      // 摇枝振荡衰减时长（真实时钟）
+  const MAX_PETALS = 460;
+
+  function mulberry32(a) {
+    return function () {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const TAU = Math.PI * 2;
+  const h1 = n => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+
+  const cv = document.getElementById('scene');
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.floor(W * DPR);
+    cv.height = Math.floor(H * DPR);
+    cv.style.width = W + 'px';
+    cv.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    buildGround();
+  }
+  window.addEventListener('resize', resize);
+
+  /* ============================ 音频 ============================ */
+  let AC = null, master = null, ambientGain = null, windGain = null, noiseBuf = null;
+  let soundOn = true;
+  const BELL_PARTIALS = [
+    [0.50, 0.30, 6.5],
+    [1.00, 1.00, 4.2],
+    [1.19, 0.28, 3.0],
+    [2.76, 0.38, 1.3],
+    [5.40, 0.16, 0.55]
+  ];
+  const PENTA = [523.25, 587.33, 659.25, 783.99, 880.0]; // 宫商角徵羽
+
+  function initAudio() {
+    if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain();
+    master.gain.value = 0.85;
+    const comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -20; comp.ratio.value = 4;
+    master.connect(comp); comp.connect(AC.destination);
+
+    const sr = AC.sampleRate, n = sr * 4;
+    // 棕噪（夜气铺底）
+    const nb = AC.createBuffer(1, n, sr);
+    const nd = nb.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < n; i++) {
+      const w = Math.random() * 2 - 1;
+      last = (last + 0.02 * w) / 1.02;
+      nd[i] = last * 3.0;
+    }
+    const asrc = AC.createBufferSource();
+    asrc.buffer = nb; asrc.loop = true;
+    const af = AC.createBiquadFilter();
+    af.type = 'lowpass'; af.frequency.value = 200;
+    ambientGain = AC.createGain();
+    ambientGain.gain.value = soundOn ? 0.045 : 0;
+    asrc.connect(af); af.connect(ambientGain); ambientGain.connect(master);
+    asrc.start();
+    // 白噪 buffer（风 + 簌簌颗粒共用）
+    noiseBuf = AC.createBuffer(1, n, sr);
+    const wd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < n; i++) wd[i] = Math.random() * 2 - 1;
+    const wsrc = AC.createBufferSource();
+    wsrc.buffer = noiseBuf; wsrc.loop = true;
+    const wf = AC.createBiquadFilter();
+    wf.type = 'bandpass'; wf.frequency.value = 480; wf.Q.value = 0.6;
+    windGain = AC.createGain();
+    windGain.gain.value = 0;
+    wsrc.connect(wf); wf.connect(windGain); windGain.connect(master);
+    wsrc.start();
+  }
+
+  // 簌簌花落：一批高通短噪声颗粒（细小花粒摩擦，区别于长风声）
+  function playRustle(power, pan) {
+    if (!AC || !soundOn || !noiseBuf) return;
+    const t0 = AC.currentTime;
+    const grains = Math.round(12 + power * 16);
+    for (let i = 0; i < grains; i++) {
+      const s = AC.createBufferSource();
+      s.buffer = noiseBuf;
+      s.playbackRate.value = 0.8 + Math.random() * 0.7;
+      const f = AC.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 1900 + Math.random() * 3400;
+      f.Q.value = 0.9;
+      const g = AC.createGain();
+      const start = t0 + Math.random() * 0.55;
+      const dur = 0.045 + Math.random() * 0.07;
+      const amp = 0.012 + Math.random() * 0.02 * power;
+      g.gain.setValueAtTime(0.0001, start);
+      g.gain.exponentialRampToValueAtTime(amp, start + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      s.connect(f);
+      let out = master;
+      if (AC.createStereoPanner) {
+        const p = AC.createStereoPanner();
+        p.pan.value = clamp(pan + (Math.random() - 0.5) * 0.5, -0.9, 0.9);
+        f.connect(g); g.connect(p); p.connect(master);
+      } else { f.connect(g); g.connect(master); }
+      s.start(start, Math.random() * 3.2, dur + 0.05);
+      s.stop(start + dur + 0.1);
+    }
+    // 摇枝闷响：低频短 thunk
+    const o = AC.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(150, t0);
+    o.frequency.exponentialRampToValueAtTime(72, t0 + 0.16);
+    const og = AC.createGain();
+    og.gain.setValueAtTime(0.0001, t0);
+    og.gain.exponentialRampToValueAtTime(0.10 * power, t0 + 0.018);
+    og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+    o.connect(og); og.connect(master);
+    o.start(t0); o.stop(t0 + 0.26);
+  }
+
+  function playBell(pan) {
+    if (!AC || !soundOn) return;
+    const freq = PENTA[Math.floor(Math.random() * PENTA.length)];
+    const vel = 0.35 + Math.random() * 0.2;
+    const t0 = AC.currentTime;
+    let out = master;
+    if (AC.createStereoPanner) {
+      const panner = AC.createStereoPanner();
+      panner.pan.value = clamp(pan, -0.8, 0.8);
+      panner.connect(master);
+      out = panner;
+    }
+    const amp = Math.min(0.10 + vel * 0.35, 0.5);
+    for (let i = 0; i < BELL_PARTIALS.length; i++) {
+      const ratio = BELL_PARTIALS[i][0], pa = BELL_PARTIALS[i][1], dec = BELL_PARTIALS[i][2];
+      const osc = AC.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq * ratio;
+      const g = AC.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * pa), t0 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dec);
+      osc.connect(g); g.connect(out);
+      osc.start(t0); osc.stop(t0 + dec + 0.1);
+    }
+  }
+
+  function playWind() {
+    if (!AC || !soundOn || !windGain) return;
+    const t0 = AC.currentTime;
+    windGain.gain.cancelScheduledValues(t0);
+    windGain.gain.setValueAtTime(windGain.gain.value, t0);
+    windGain.gain.linearRampToValueAtTime(0.10, t0 + 0.35);
+    windGain.gain.linearRampToValueAtTime(0.06, t0 + GUST_DUR * 0.55);
+    windGain.gain.exponentialRampToValueAtTime(0.0001, t0 + GUST_DUR);
+  }
+
+  // 露滴点地：高频 sine 快降短音（月波水滴缩短）
+  function playDrop(pan) {
+    if (!AC || !soundOn) return;
+    const t0 = AC.currentTime;
+    const o = AC.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(1180, t0);
+    o.frequency.exponentialRampToValueAtTime(520, t0 + 0.16);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.14, t0 + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.24);
+    o.connect(g);
+    let out = master;
+    if (AC.createStereoPanner) {
+      const p = AC.createStereoPanner();
+      p.pan.value = clamp(pan, -0.8, 0.8);
+      g.connect(p); p.connect(master);
+    } else g.connect(master);
+    o.start(t0); o.stop(t0 + 0.28);
+  }
+
+  /* ============================ 场景几何（归一化坐标） ============================ */
+  const WALL_TOP = () => H * 0.575;    // 粉墙顶（瓦檐下口）
+  const WALL_BOT = () => H * 0.745;    // 墙基 = 庭院起点
+  const MOON = { x: () => W * 0.735, y: () => H * 0.165, r: () => Math.min(W, H) * 0.072 };
+
+  // 树冠三个「花叶中心」：不对称半球，老桂左倾
+  const HUBS = [
+    { x: 0.315, y: 0.285, rx: 0.215, ry: 0.150, leaf: 1.00 },
+    { x: 0.540, y: 0.235, rx: 0.135, ry: 0.108, leaf: 0.82 },
+    { x: 0.165, y: 0.405, rx: 0.108, ry: 0.092, leaf: 0.70 }
+  ];
+  // 枝干折线节点（归一化），主干自左下斜上、在 0.40H 分桠
+  const TRUNK = [
+    { x: 0.085, y: 1.000, w: 0.060 },
+    { x: 0.118, y: 0.860, w: 0.050 },
+    { x: 0.150, y: 0.700, w: 0.041 },
+    { x: 0.185, y: 0.555, w: 0.033 },
+    { x: 0.225, y: 0.430, w: 0.025 }
+  ];
+  const LIMBS = [
+    [ { x: 0.225, y: 0.430, w: 0.022 }, { x: 0.235, y: 0.360, w: 0.016 }, { x: 0.268, y: 0.300, w: 0.011 }, { x: 0.315, y: 0.278, w: 0.006 } ],
+    [ { x: 0.205, y: 0.500, w: 0.018 }, { x: 0.330, y: 0.400, w: 0.013 }, { x: 0.455, y: 0.300, w: 0.009 }, { x: 0.540, y: 0.240, w: 0.005 } ],
+    [ { x: 0.150, y: 0.640, w: 0.015 }, { x: 0.110, y: 0.540, w: 0.010 }, { x: 0.150, y: 0.450, w: 0.006 }, { x: 0.175, y: 0.408, w: 0.004 } ]
+  ];
+
+  let sceneRng = null;
+  let stars = [], clusters = [], leaves = [];
+  let buildCount = 0;
+  let totalFlowers = 0;
+
+  function inHub(nx, ny, inflate) {
+    for (const h of HUBS) {
+      const dx = (nx - h.x) / (h.rx * inflate), dy = (ny - h.ry) / (h.ry * inflate);
+      if (dx * dx + dy * dy <= 1) return h;
+    }
+    return null;
+  }
+
+  function buildScene() {
+    sceneRng = mulberry32(SEED + buildCount * 7919);
+    const r = sceneRng;
+    // 星河（极淡）
+    stars = [];
+    const nStar = Math.floor(W * H / 22000) + 34;
+    for (let i = 0; i < nStar; i++) {
+      stars.push({ x: r() * W, y: r() * H * 0.5, s: 0.4 + r() * 0.8, ph: r() * TAU, tw: 0.5 + r() * 1.3 });
+    }
+    // 叶点：按 hub 高斯散布（固定每点随机源，帧间不闪）
+    leaves = [];
+    HUBS.forEach((h, hi) => {
+      const nLeaf = Math.round(150 * h.leaf * clamp(W / 1280, 0.62, 1.05));
+      for (let i = 0; i < nLeaf; i++) {
+        const ang = r() * TAU, rad = Math.pow(r(), 0.55);
+        leaves.push({
+          hx: h.x + Math.cos(ang) * h.rx * rad,
+          hy: h.y + Math.sin(ang) * h.ry * rad,
+          len: 0.010 + r() * 0.010,
+          rot: r() * TAU,
+          a: 0.30 + r() * 0.42,
+          dep: r(),                 // 冠内深度：前亮后暗
+          ph: r() * TAU,
+          hub: hi
+        });
+      }
+    });
+    // 花簇：冠内聚成错落小点，非均匀铺
+    clusters = [];
+    totalFlowers = 0;
+    const nCl = 26;
+    for (let i = 0; i < nCl; i++) {
+      const h = HUBS[Math.floor(r() * HUBS.length)];
+      const ang = r() * TAU, rad = Math.pow(r(), 0.7) * 0.92;
+      const cx = h.x + Math.cos(ang) * h.rx * rad;
+      const cy = h.y + Math.sin(ang) * h.ry * rad;
+      const load = 24 + Math.floor(r() * 22);
+      totalFlowers += load;
+      clusters.push({
+        x: cx, y: cy,
+        rr: 0.012 + r() * 0.014,
+        load, maxLoad: load,
+        seed: r() * 1000,
+        hub: HUBS.indexOf(h)
+      });
+    }
+    buildGround();
+    buildCount++;
+  }
+
+  /* ============================ 地面碎金沉积（固定网格，度量绘制同源） ============================ */
+  let gCols = 0, gRows = 0, gDep = null;
+  function buildGround() {
+    gCols = Math.max(80, Math.round(W / 9));
+    gRows = 14;
+    gDep = new Float32Array(gCols * gRows);
+  }
+  function depositGold(px, spread) {
+    const top = WALL_BOT();
+    const depth = H - top;
+    const c0 = clamp(Math.round(px / W * gCols), 1, gCols - 2);
+    // 近墙基密、向观众方向指数变疏
+    const rr = Math.random();
+    const row = clamp(Math.floor(-Math.log(1 - rr * 0.92) * 2.2), 0, gRows - 1);
+    for (let dc = -1; dc <= 1; dc++) {
+      for (let dr = -1; dr <= 1; dr++) {
+        const c = c0 + dc, r2 = row + dr;
+        if (c < 0 || c >= gCols || r2 < 0 || r2 >= gRows) continue;
+        const k = (dc === 0 && dr === 0) ? 1 : 0.32;
+        const idx = r2 * gCols + c;
+        gDep[idx] = clamp(gDep[idx] + spread * k, 0, 1);
+      }
+    }
+  }
+  function groundGold() {
+    let s = 0;
+    for (let i = 0; i < gDep.length; i++) s += gDep[i];
+    return s;
+  }
+
+  /* ============================ 动态状态 ============================ */
+  const petals = [];           // {x,y,vx,vy,start,size,rot,vr,ph,lying,lieT}
+  const ripples = [];          // 地面金色碎点涟漪 {x,y,born,r0,maxR,seed}
+  const RIP_LIFE = FAST ? 1.5 : 2.6;
+  const stat = { rustles: 0, thunks: 0, bells: 0, gusts: 0, drops: 0, spawned: 0, windSpawn: 0, events: [] };
+  let shakes = [];             // 摇枝事件 {x,y,R,power,phase,t0Real}（体感，跟真实时钟）
+  let gusts = [];              // 阵风 {t0Real}
+  let simT = 0, last = performance.now();
+  let lastInteract = -100;
+  let settled = false, poemShown = false;
+  let currentShake = 0;
+
+  function gustEnv(g) {
+    const age = (performance.now() - g.t0Real) / 1000;
+    if (age < 0 || age > GUST_DUR) return 0;
+    const rise = clamp(age / 0.45, 0, 1);
+    const fall = clamp(1 - (age - 0.45) / (GUST_DUR - 0.45), 0, 1);
+    return Math.sin(rise * Math.PI / 2) * fall;
+  }
+  function gustLevel() {
+    let v = 0;
+    gusts.forEach(g => { v = Math.max(v, gustEnv(g)); });
+    return v;
+  }
+
+  // 冠内点的摇枝位移（归一化 W 比例）：事件距离衰减 × 阻尼正弦 × 起振包络；+ 阵风
+  function bendAt(nx, ny) {
+    const now = performance.now();
+    let v = 0;
+    for (const e of shakes) {
+      const age = (now - e.t0Real) / 1000;
+      if (age < 0 || age > SHAKE_DUR) continue;
+      const d = Math.hypot(nx - e.x, ny - e.y);
+      const reach = e.R * 1.55;
+      if (d > reach) continue;
+      const dist = Math.exp(-d / e.R);
+      const onset = 1 - Math.exp(-age * 20);
+      const ring = Math.sin(age * 8.6 + e.phase) * 0.62 + Math.sin(age * 13.5 + e.phase * 2) * 0.25;
+      v += e.power * dist * onset * Math.exp(-age * 1.45) * ring;
+    }
+    // 阵风：全冠同向慢摆
+    v += gustLevel() * 0.9 * Math.sin(simT * 2.0 + ny * 3) * 0.5;
+    return v;
+  }
+
+  /* ============================ 绘制：天 / 月 / 墙 / 地 ============================ */
+  function drawSky() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#1b2532');
+    g.addColorStop(0.5, '#141c28');
+    g.addColorStop(1, '#0d131c');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const mx = MOON.x(), my = MOON.y();
+    const mg = ctx.createRadialGradient(mx, my, 10, mx, my, Math.max(0.5, Math.max(W, H) * 0.65));
+    mg.addColorStop(0, 'rgba(196,208,220,0.09)');
+    mg.addColorStop(0.4, 'rgba(150,168,186,0.04)');
+    mg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = mg;
+    ctx.fillRect(0, 0, W, H);
+  }
+  function drawStars() {
+    stars.forEach(s => {
+      const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(simT * s.tw + s.ph));
+      ctx.fillStyle = `rgba(216,224,232,${0.22 * tw})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, TAU); ctx.fill();
+    });
+  }
+  function drawMoon() {
+    const x = MOON.x(), y = MOON.y(), r = MOON.r();
+    const haloR = Math.max(0.5, r * 5.0);
+    const halo = ctx.createRadialGradient(x, y, r * 0.4, x, y, haloR);
+    halo.addColorStop(0, 'rgba(220,228,234,0.26)');
+    halo.addColorStop(0.5, 'rgba(190,205,216,0.09)');
+    halo.addColorStop(1, 'rgba(214,224,232,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(x, y, haloR, 0, TAU); ctx.fill();
+    const mr = Math.max(0.5, r);
+    const mg = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, mr);
+    mg.addColorStop(0, '#f4f1e2');
+    mg.addColorStop(0.78, '#e0e1cf');
+    mg.addColorStop(1, '#c4c9bb');
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    // 桂影
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = '#8d968f';
+    ctx.beginPath(); ctx.arc(x + r * 0.22, y - r * 0.08, Math.max(0.5, r * 0.21), 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(x - r * 0.16, y + r * 0.26, Math.max(0.5, r * 0.13), 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawWall() {
+    const top = WALL_TOP(), bot = WALL_BOT();
+    // 粉墙：夜月下的暖灰白，上亮下暗，边缘虚
+    const wg = ctx.createLinearGradient(0, top - 6, 0, bot + 4);
+    wg.addColorStop(0, 'rgba(176,170,154,0.92)');
+    wg.addColorStop(0.55, 'rgba(150,146,134,0.86)');
+    wg.addColorStop(1, 'rgba(108,108,100,0.80)');
+    ctx.fillStyle = wg;
+    ctx.fillRect(0, top, W, bot - top);
+    // 墙面细碎斑驳（哈希稳定，非每帧噪）
+    ctx.fillStyle = 'rgba(60,58,52,0.05)';
+    for (let i = 0; i < 90; i++) {
+      const x = h1(i * 3.7) * W, y = top + h1(i * 9.1) * (bot - top);
+      ctx.fillRect(x, y, 2 + h1(i) * 4, 1 + h1(i * 2) * 2);
+    }
+    // 右侧月洞门：夜色圆拱开在墙上
+    const gx = W * 0.885, gy = bot, gr = W * 0.105;
+    ctx.fillStyle = '#0d1420';
+    ctx.beginPath();
+    ctx.arc(gx, gy, gr, Math.PI, TAU);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(60,56,48,0.7)';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(gx, gy, gr, Math.PI, TAU); ctx.stroke();
+    // 瓦檐压顶：两条横向瓦脊 + 竖向瓦当排线（带断口，非黑直尺）
+    ctx.fillStyle = 'rgba(26,28,32,0.95)';
+    ctx.fillRect(0, top - H * 0.022, W, H * 0.022);
+    ctx.fillStyle = 'rgba(36,38,42,0.9)';
+    ctx.fillRect(0, top - 3, W, 5);
+    ctx.strokeStyle = 'rgba(12,14,18,0.85)';
+    ctx.lineWidth = 1;
+    const tileW = Math.max(20, W / 42);
+    for (let x = 0, i = 0; x < W; x += tileW, i++) {
+      if (h1(i * 1.3) < 0.12) continue;           // 断口
+      const y0 = top - H * 0.022;
+      ctx.beginPath();
+      ctx.moveTo(x + tileW * (0.3 + h1(i) * 0.4), y0);
+      ctx.lineTo(x + tileW * (0.3 + h1(i) * 0.4), y0 + H * 0.020);
+      ctx.stroke();
+    }
+  }
+
+  function drawGround() {
+    const bot = WALL_BOT();
+    const g = ctx.createLinearGradient(0, bot, 0, H);
+    g.addColorStop(0, '#1a2028');
+    g.addColorStop(0.5, '#141a21');
+    g.addColorStop(1, '#0c1118');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, bot, W, H - bot);
+    // 砖缝横线：近疏远密一点，极淡，带断口
+    ctx.strokeStyle = 'rgba(120,134,148,0.05)';
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 4; i++) {
+      const y = bot + (H - bot) * i / 5;
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 26) {
+        if (h1(i * 31 + x) < 0.18) { ctx.moveTo(x + 12, y); continue; }
+        const yy = y + (h1(x * 0.3 + i) - 0.5) * 1.4;
+        if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function drawGold() {
+    // 积金：每格 1~2 个哈希碎点，亮度随沉积量，暖金
+    const top = WALL_BOT(), depth = H - top;
+    const cw = W / gCols, ch = depth / gRows;
+    ctx.lineCap = 'round';
+    for (let r2 = 0; r2 < gRows; r2++) {
+      for (let c = 0; c < gCols; c++) {
+        const dep = gDep[r2 * gCols + c];
+        if (dep < 0.03) continue;
+        const n = dep > 0.55 ? 2 : 1;
+        for (let k = 0; k < n; k++) {
+          const jx = (h1(c * 7.1 + r2 * 13.7 + k * 3.3) - 0.5) * cw * 0.8;
+          const jy = (h1(c * 3.3 + r2 * 9.9 + k * 7.7) - 0.5) * ch * 0.7;
+          const x = (c + 0.5) * cw + jx, y = top + (r2 + 0.5) * ch + jy;
+          const a = clamp(0.10 + dep * 0.55, 0, 0.62) * (k ? 0.7 : 1);
+          const sz = 1.1 + dep * 1.5 + h1(c + r2 * 5 + k) * 0.7;
+          ctx.fillStyle = `rgba(232,184,75,${a})`;
+          ctx.beginPath(); ctx.arc(x, y, sz, 0, TAU); ctx.fill();
+        }
+      }
+    }
+  }
+
+  /* ============================ 老桂树 ============================ */
+  // 枝干节点受 bendAt 影响的实际像素位置（梢柔根刚：随高度增益）
+  function jointPx(jt) {
+    const depth = clamp((1 - jt.y) / 0.8, 0, 1);
+    const sway = bendAt(jt.x, jt.y) * W * (0.010 + 0.030 * Math.pow(depth, 1.7));
+    return { x: jt.x * W + sway, y: jt.y * H + sway * 0.35 };
+  }
+  function strokeBranch(nodes) {
+    // 压感分段折线：根粗梢细，深墨，偶带月照冷边
+    for (let i = 0; i < nodes.length - 1; i++) {
+      const a = jointPx(nodes[i]), b = jointPx(nodes[i + 1]);
+      const w = lerp(nodes[i].w, nodes[i + 1].w, 0.5) * W;
+      ctx.strokeStyle = `rgba(10,15,14,${0.92 - i * 0.03})`;
+      ctx.lineWidth = Math.max(1, w);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      // 微弯：控制点带稳定哈希侧移
+      const mx = (a.x + b.x) / 2 + (h1(i * 3.1 + nodes.length) - 0.5) * w * 1.4;
+      const my = (a.y + b.y) / 2;
+      ctx.quadraticCurveTo(mx, my, b.x, b.y);
+      ctx.stroke();
+      if (i % 2 === 1) {
+        ctx.strokeStyle = 'rgba(128,146,160,0.08)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y - w * 0.3); ctx.lineTo(b.x, b.y - w * 0.3); ctx.stroke();
+      }
+    }
+  }
+
+  function drawTree() {
+    // 枝在后
+    strokeBranch(TRUNK);
+    LIMBS.forEach(l => strokeBranch(l));
+    // 根脚两块淡墨卧石
+    const bx = 0.085 * W, by = WALL_BOT() + (H - WALL_BOT()) * 0.16;
+    ctx.fillStyle = 'rgba(16,22,26,0.8)';
+    ctx.beginPath(); ctx.ellipse(bx, by, W * 0.05, H * 0.022, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(bx + W * 0.055, by + H * 0.012, W * 0.03, H * 0.014, 0, 0, TAU); ctx.fill();
+  }
+
+  function drawCanopy() {
+    const gust = gustLevel();
+    // 叶：两层（后暗前亮），小点短笔成团
+    leaves.forEach(lf => {
+      const bend = bendAt(lf.hx, lf.hy) * W * (0.020 + 0.045 * lf.dep);
+      const flutter = Math.sin(simT * (1.2 + lf.ph) + lf.ph) * (1.2 + gust * 3.0);
+      const x = lf.hx * W + bend + flutter;
+      const y = lf.hy * H + bend * 0.35;
+      const dark = lf.dep < 0.45;
+      const alpha = dark ? lf.a * 0.75 : lf.a;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(lf.rot + bend * 0.01);
+      ctx.fillStyle = dark ? `rgba(10,20,16,${alpha})` : `rgba(22,38,28,${alpha})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, Math.max(0.6, lf.len * W * 0.5), Math.max(0.5, lf.len * W * 0.22), 0, 0, TAU);
+      ctx.fill();
+      ctx.restore();
+    });
+    // 花：4 瓣十字小金星，数量随剩余负载
+    clusters.forEach((cl, ci) => {
+      const bend = bendAt(cl.x, cl.y) * W * 0.052;
+      const flutter = Math.sin(simT * 1.5 + cl.seed) * (1 + gust * 2.4);
+      const cxp = cl.x * W + bend + flutter;
+      const cyp = cl.y * H + bend * 0.35;
+      const frac = cl.load / cl.maxLoad;
+      const n = Math.round(3 + frac * 13);
+      const rr = cl.rr * W;
+      for (let k = 0; k < n; k++) {
+        const r1 = h1(cl.seed + k * 3.1), r2 = h1(cl.seed * 2 + k * 7.7), r3 = h1(cl.seed + k * 13.3);
+        if (r3 > 0.35 + frac * 0.6) continue;
+        const ang = r1 * TAU, rad = Math.pow(r2, 0.6) * rr;
+        const x = cxp + Math.cos(ang) * rad, y = cyp + Math.sin(ang) * rad * 0.8;
+        const sz = 1.3 + r3 * 1.5;
+        const glow = 0.55 + frac * 0.35;
+        drawBlossom(x, y, sz, ang, glow * (0.75 + r1 * 0.25));
+      }
+    });
+  }
+
+  // 4 瓣十字小花（非圆点非金条）
+  function drawBlossom(x, y, sz, rot, alpha) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.fillStyle = `rgba(240,205,122,${clamp(alpha, 0, 0.95)})`;
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2;
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * sz * 0.72, Math.sin(a) * sz * 0.72,
+        Math.max(0.5, sz * 0.62), Math.max(0.4, sz * 0.34), a, 0, TAU);
+      ctx.fill();
+    }
+    ctx.fillStyle = `rgba(196,132,42,${clamp(alpha * 0.8, 0, 0.9)})`;
+    ctx.beginPath(); ctx.arc(0, 0, Math.max(0.4, sz * 0.28), 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  /* ============================ 落桂粒子 ============================ */
+  function spawnFromCluster(cl, count) {
+    const n = Math.min(count, cl.load, MAX_PETALS - petals.length);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, rad = Math.pow(Math.random(), 0.6) * cl.rr * W;
+      petals.push({
+        x: cl.x * W + Math.cos(a) * rad,
+        y: cl.y * H + Math.sin(a) * rad * 0.8,
+        vx: (Math.random() - 0.5) * 26,
+        vy: 18 + Math.random() * 30,
+        start: simT + Math.random() * 0.55,
+        size: 1.5 + Math.random() * 1.6,
+        rot: Math.random() * TAU,
+        vr: (Math.random() - 0.5) * 5,
+        ph: Math.random() * TAU,
+        fall: 0.85 + Math.random() * 0.5,
+        lying: false, lieT: 0
+      });
+      cl.load--;
+      stat.spawned++;
+    }
+  }
+
+  function updatePetals(dt) {
+    const top = WALL_BOT();
+    const gust = gustLevel();
+    for (let i = petals.length - 1; i >= 0; i--) {
+      const p = petals[i];
+      if (p.lying) {
+        p.lieT += dt;
+        if (p.lieT > 2.4) petals.splice(i, 1);
+        continue;
+      }
+      if (simT < p.start) continue;
+      p.vy += 150 * p.fall * dt;
+      p.vy = Math.min(p.vy, 230);
+      p.vx += gust * 70 * dt + Math.sin(simT * 3 + p.ph) * 14 * dt;
+      p.vx *= (1 - 0.5 * dt);
+      p.x += (p.vx + Math.sin(simT * 5 + p.ph) * 16) * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      // 落地：墙基以上落在线附近，其余落进庭院
+      if (p.y >= top) {
+        depositGold(p.x, 0.35 + Math.random() * 0.25);
+        p.lying = true; p.lieT = 0;
+        p.y = top + 2 + Math.random() * H * 0.02;
+      }
+      if (p.x < -20 || p.x > W + 20) { if (!p.lying) petals.splice(i, 1); }
+    }
+  }
+
+  function drawPetals() {
+    const top = WALL_BOT();
+    petals.forEach(p => {
+      if (simT < p.start) return;
+      if (p.lying) {
+        const a = clamp(1 - p.lieT / 2.4, 0, 1) * 0.5;
+        drawBlossom(p.x, p.y, p.size * 0.9, p.rot, a);
+        return;
+      }
+      // 空中：翻转感 → y 向压扁（花瓣翻面）
+      const squish = Math.abs(Math.sin(simT * 6 + p.ph));
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.scale(1, 0.35 + 0.65 * squish);
+      ctx.fillStyle = 'rgba(240,205,122,0.92)';
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2;
+        ctx.beginPath();
+        ctx.ellipse(Math.cos(a) * p.size * 0.72, Math.sin(a) * p.size * 0.72,
+          Math.max(0.5, p.size * 0.62), Math.max(0.4, p.size * 0.34), a, 0, TAU);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+  }
+
+  function drawGroundRipples() {
+    for (const rp of ripples) {
+      const age = simT - rp.born;
+      const life = 1 - clamp(age / RIP_LIFE, 0, 1);
+      if (life <= 0) continue;
+      const rr = Math.max(0.5, rp.r);
+      // 三截断弧的金色碎点环（非完整几何圈）
+      const segs = 3;
+      for (let s = 0; s < segs; s++) {
+        const sk = h1(rp.seed + s * 3.7);
+        if (sk < 0.2) continue;
+        const a0 = (s / segs) * TAU + sk * 0.6;
+        const a1 = a0 + TAU / segs * (0.5 + sk * 0.3);
+        const dots = 7;
+        for (let k = 0; k <= dots; k++) {
+          const a = lerp(a0, a1, k / dots);
+          const x = rp.x + Math.cos(a) * rr;
+          const y = rp.y + Math.sin(a) * rr * 0.32;
+          const a2 = 0.32 * life * (1 - k / dots * 0.4);
+          ctx.fillStyle = `rgba(232,196,110,${a2})`;
+          ctx.beginPath(); ctx.arc(x, y, Math.max(0.5, 1.4 * life), 0, TAU); ctx.fill();
+        }
+      }
+    }
+  }
+
+  function drawVignette() {
+    const g = ctx.createRadialGradient(W / 2, H * 0.42, H * 0.3, W / 2, H * 0.5, Math.max(0.5, Math.max(W, H) * 0.8));
+    g.addColorStop(0.6, 'rgba(3,6,9,0)');
+    g.addColorStop(1, 'rgba(3,6,9,0.5)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  /* ============================ 交互事件 ============================ */
+  function shakeTree(px, py, power) {
+    const nx = px / W, ny = py / H;
+    shakes.push({ x: nx, y: ny, R: 0.30, power, phase: Math.random() * TAU, t0Real: performance.now() });
+    if (shakes.length > 8) shakes.shift();
+    stat.rustles++; stat.thunks++;
+    playRustle(0.7 + power * 0.5, clamp((nx - 0.5) * 2, -0.9, 0.9));
+    // 花簇按距离峰值释放（事件时刻一次性算释放量）
+    let budget = 150;
+    clusters.forEach(cl => {
+      if (cl.load <= 0 || budget <= 0) return;
+      const d = Math.hypot(cl.x - nx, cl.y - ny);
+      const e = power * Math.exp(-d / 0.30);
+      const n = Math.round(e * cl.maxLoad * 0.42);
+      if (n > 0) { const take = Math.min(n, budget); spawnFromCluster(cl, take); budget -= take; }
+    });
+    if (stat.events.length < 240) stat.events.push({ t: +simT.toFixed(2), k: 'shake', x: Math.round(px) });
+    lastInteract = simT;
+  }
+
+  function tapSky(px) {
+    gusts.push({ t0Real: performance.now() });
+    if (gusts.length > 6) gusts.shift();
+    stat.gusts++; stat.bells++;
+    playWind();
+    playBell(clamp((px / W - 0.5) * 2, -0.9, 0.9));
+    // 风从全冠撕下一层花
+    let budget = 70;
+    clusters.forEach(cl => {
+      if (cl.load <= 0 || budget <= 0) return;
+      const n = Math.round(cl.load * (0.05 + h1(cl.seed + stat.gusts) * 0.10));
+      if (n > 0) { const take = Math.min(n, budget); spawnFromCluster(cl, take); budget -= take; stat.windSpawn += take; }
+    });
+    lastInteract = simT;
+  }
+
+  function tapGround(px, py) {
+    ripples.push({ x: px, y: py, born: simT, r: 4, maxR: W * 0.06, seed: Math.random() * 100 });
+    stat.drops++;
+    playDrop(clamp((px / W - 0.5) * 2, -0.9, 0.9));
+    lastInteract = simT;
+  }
+
+  /* ============================ 主循环 ============================ */
+  function mirror() {
+    let remain = 0;
+    clusters.forEach(cl => remain += cl.load);
+    document.getElementById('state').textContent = JSON.stringify({
+      t: +simT.toFixed(2),
+      nPetal: petals.length,
+      spawned: stat.spawned,
+      groundGold: +groundGold().toFixed(2),
+      shake: +currentShake.toFixed(3),
+      gust: +gustLevel().toFixed(2),
+      flowerRemain: remain,
+      flowerTotal: totalFlowers,
+      nCluster: clusters.length,
+      nStar: stars.length,
+      rustles: stat.rustles, bells: stat.bells, gusts: stat.gusts, drops: stat.drops,
+      windSpawn: stat.windSpawn,
+      settled, poemShown,
+      audio: !!AC,
+      wallTop: +WALL_TOP().toFixed(1), wallBot: +WALL_BOT().toFixed(1),
+      moon: { x: +MOON.x().toFixed(1), y: +MOON.y().toFixed(1), r: +MOON.r().toFixed(1) }
+    });
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+    last = now;
+    simT += dt;
+
+    gusts = gusts.filter(g => (performance.now() - g.t0Real) / 1000 < GUST_DUR);
+    shakes = shakes.filter(e => (performance.now() - e.t0Real) / 1000 < SHAKE_DUR);
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      if (simT - ripples[i].born > RIP_LIFE) ripples.splice(i, 1);
+    }
+    ripples.forEach(rp => {
+      const age = simT - rp.born;
+      const p = clamp(age / RIP_LIFE, 0, 1);
+      rp.r = 4 + (rp.maxR - 4) * (1 - Math.pow(1 - p, 2.0));
+    });
+    updatePetals(dt);
+
+    // 摇枝度量（与绘制共用 bendAt）
+    let sm = 0;
+    clusters.forEach(cl => { sm = Math.max(sm, Math.abs(bendAt(cl.x, cl.y))); });
+    currentShake = sm;
+
+    if (!settled && simT - lastInteract > AUTO_T / TM) settled = true;
+    if (settled && !poemShown && simT > (FAST ? 5.2 : 14)) {
+      poemShown = true;
+      document.getElementById('poem').classList.add('show');
+      document.getElementById('seal').classList.add('show');
+    }
+
+    drawSky();
+    drawStars();
+    drawMoon();
+    drawWall();
+    drawGround();
+    drawGold();
+    drawTree();
+    drawCanopy();
+    drawPetals();
+    drawGroundRipples();
+    drawVignette();
+    mirror();
+    requestAnimationFrame(frame);
+  }
+  window.addEventListener('error', e => {
+    document.getElementById('state').textContent = 'JSERR:' + (e.message || e.error) + ' @' + (e.lineno || '');
+  });
+
+  /* ============================ 指针路由 ============================ */
+  function pointer(e) {
+    const r = cv.getBoundingClientRect();
+    const pt = e.touches ? e.touches[0] : e;
+    return { x: pt.clientX - r.left, y: pt.clientY - r.top };
+  }
+  let dragging = false, lastDrag = 0;
+  function route(p, isDrag) {
+    if (p.y >= WALL_BOT()) {
+      if (!isDrag) tapGround(p.x, p.y);
+    } else if (p.y < WALL_TOP() && inHub(p.x / W, p.y / H, 1.15)) {
+      shakeTree(p.x, p.y, isDrag ? 0.65 : 1.0);
+    } else {
+      // 天空或墙面非冠区 → 风（拖动中不重复触风）
+      if (!isDrag) tapSky(p.x);
+    }
+  }
+  cv.addEventListener('pointerdown', e => {
+    initAudio();
+    const p = pointer(e);
+    route(p, false);
+    dragging = true;
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const nowP = performance.now();
+    if (nowP - lastDrag < 130) return;
+    lastDrag = nowP;
+    const p = pointer(e);
+    route(p, true);
+  });
+  window.addEventListener('pointerup', () => { dragging = false; });
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    initAudio();
+    rebuild();
+  });
+  document.getElementById('btnSound').addEventListener('click', () => {
+    initAudio();
+    soundOn = !soundOn;
+    document.getElementById('btnSound').textContent = soundOn ? '♪' : '×';
+    if (ambientGain) ambientGain.gain.linearRampToValueAtTime(soundOn ? 0.045 : 0, AC.currentTime + 0.4);
+    if (!soundOn && windGain) windGain.gain.value = 0;
+  });
+
+  function rebuild() {
+    buildScene();
+    petals.length = 0;
+    ripples.length = 0;
+    shakes = []; gusts = [];
+    stat.rustles = 0; stat.thunks = 0; stat.bells = 0; stat.gusts = 0;
+    stat.drops = 0; stat.spawned = 0; stat.windSpawn = 0; stat.events.length = 0;
+    simT = 0; last = performance.now(); lastInteract = -100;
+    settled = false; poemShown = false; currentShake = 0;
+    document.getElementById('poem').classList.remove('show');
+    document.getElementById('seal').classList.remove('show');
+  }
+
+  /* ============================ 启动 ============================ */
+  resize();
+  buildScene();
+  document.addEventListener('pointerdown', function once() { initAudio(); }, { once: true });
+  requestAnimationFrame(frame);
+
+  window.__gy = {
+    shakeTree: (nx, ny, power) => shakeTree(nx * W, ny * H, power || 1),
+    tapSky: (nx) => tapSky(nx * W),
+    tapGround: (nx, ny) => tapGround(nx * W, ny * H),
+    rebuild,
+    inHub: (nx, ny) => !!inHub(nx, ny, 1.15),
+    stat,
+    get state() {
+      let remain = 0;
+      clusters.forEach(cl => remain += cl.load);
+      return {
+        t: simT, petals, ripples, settled, poemShown,
+        shake: currentShake, gust: gustLevel(),
+        groundGold: groundGold(),
+        flowerRemain: remain, flowerTotal: totalFlowers,
+        nCluster: clusters.length,
+        wallTop: WALL_TOP(), wallBot: WALL_BOT(),
+        moon: { x: MOON.x(), y: MOON.y(), r: MOON.r() }
+      };
+    }
+  };
+})();
+</script>
+</body>
+</html>

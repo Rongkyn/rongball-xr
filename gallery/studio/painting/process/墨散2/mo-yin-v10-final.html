@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>墨洇 · Ink Bleed</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:#e8e2d2;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:"Songti SC","STSong","SimSun",serif;
+    color:#3a352c;
+    -webkit-user-select:none;user-select:none;
+    overflow:hidden;
+  }
+  header{
+    width:704px;display:flex;align-items:baseline;justify-content:space-between;
+    margin-bottom:14px;
+  }
+  h1{
+    font-family:"Kaiti SC","STKaiti","KaiTi",serif;
+    font-size:34px;font-weight:600;letter-spacing:14px;margin:0;color:#2c2820;
+  }
+  .sub{font-size:12px;letter-spacing:3px;color:#8a8172;}
+  .frame{
+    position:relative;width:704px;height:704px;
+    background:#f3eee1;
+    box-shadow:0 1px 2px rgba(60,50,30,.18),0 12px 40px rgba(60,50,30,.22),inset 0 0 60px rgba(120,105,75,.10);
+    border:1px solid rgba(120,105,75,.25);
+  }
+  canvas#paper,canvas#ink{position:absolute;left:0;top:0;width:704px;height:704px;display:block;}
+  canvas#ink{touch-action:none;cursor:crosshair;}
+  .seal{
+    position:absolute;right:18px;bottom:16px;width:44px;height:44px;
+    background:#b4362a;color:#f3eee1;
+    font-family:"Kaiti SC","STKaiti","KaiTi",serif;font-size:19px;line-height:21px;
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    border-radius:5px;transform:rotate(-2deg);
+    box-shadow:0 1px 3px rgba(120,30,20,.35);
+    opacity:.55;transition:opacity 1.2s;
+    pointer-events:none;
+  }
+  .seal.done{opacity:.92;}
+  footer{
+    width:704px;display:flex;justify-content:space-between;margin-top:12px;
+    font-size:12px;letter-spacing:2px;color:#8a8172;
+  }
+  #state{transition:color .8s;}
+</style>
+</head>
+<body>
+<header>
+  <h1>墨洇</h1>
+  <div class="sub">INK BLEED · 纯扩散毛细晕染</div>
+</header>
+<div class="frame">
+  <canvas id="paper"></canvas>
+  <canvas id="ink"></canvas>
+  <div class="seal" id="seal">绒<br>球</div>
+</div>
+<footer>
+  <div>点落一团墨 · 拖扫行笔 · 双击清纸</div>
+  <div id="state">研墨…</div>
+</footer>
+
+<script>
+'use strict';
+/* ================= 墨洇 · 纯扩散+毛细模型 =================
+   四场：W水 / P悬浮色素 / S沉积(落墨不悔) / F静态纸纤维
+   宽淡晕：D_w >> D_p_eff，水远墨稀
+   水痕线：湿锋处蒸发快→色素被"丢下"(tide line)
+   毛细挂墨：色素只在水足处迁移，水干即定
+========================================================= */
+const N = 320;                 // 模拟网格
+const STEPS = 8;               // 每帧模拟步
+const D_W = 0.38;              // 水扩散率
+const EVAP = 2.8e-5;           // 水蒸发/吸附衰减
+const D_P = 0.40;              // 水中色素最大扩散率
+const MOB_LO = 0.008, MOB_HI = 0.09;   // 色素迁移水量门槛区间
+const ADS = 0.0032;            // 基础吸附率
+const ADS_FRONT = 0.100;       // 湿锋吸附加成(水痕线)
+const ADS_DRY = 0.05;          // 水干急速挂墨
+const W_DRY = 0.012;
+const ADVEC = 0.5;             // 色素随水流平流(咖啡环机制→水痕线)
+const ADVEC_W = 0.45;          // 平流水量闸门：只在薄水(蒸发前沿)发力
+const TONE_K = 2.7;            // 色调 Beer-Lambert
+const FIB_ADS = 1.1;           // 纤维调制吸附强度
+const FIB_DW = 0.16;           // 纤维调制水扩散(轻微·纯扩散稳定)
+
+const W = new Float32Array(N*N);
+const P = new Float32Array(N*N);
+const S = new Float32Array(N*N);
+const F = new Float32Array(N*N);
+const F2 = new Float32Array(N*N);  // 高频帘纹丝（毛茬源）
+const LB = new Float32Array(N*N);   // 扩散缓冲
+
+/* ---------- 纸纤维场：值噪声3octave + 横向帘纹 ---------- */
+function hash2(x,y){
+  let h = (x*374761393 + y*668265263) | 0;
+  h = (h ^ (h>>>13)) | 0; h = Math.imul(h,1274126177);
+  return ((h ^ (h>>>16))>>>0) / 4294967295;
+}
+function vnoise(x,y){
+  const xi=Math.floor(x), yi=Math.floor(y);
+  const xf=x-xi, yf=y-yi;
+  const u=xf*xf*(3-2*xf), v=yf*yf*(3-2*yf);
+  const a=hash2(xi,yi), b=hash2(xi+1,yi), c=hash2(xi,yi+1), d=hash2(xi+1,yi+1);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;
+}
+(function buildFiber(){
+  for(let y=0;y<N;y++){
+    for(let x=0;x<N;x++){
+      // x压缩→横向拉伸的帘纹丝
+      const n = 0.55*vnoise(x*0.028, y*0.085)
+              + 0.30*vnoise(x*0.07,  y*0.21)
+              + 0.15*vnoise(x*0.16,  y*0.45);
+      F[y*N+x] = Math.min(1, Math.max(0, n));
+      // 高频横向纤维丝：y快变x慢变→横丝，波长约3-8 cells
+      const n2 = 0.62*vnoise(x*0.075, y*0.19) + 0.38*vnoise(x*0.16, y*0.50);
+      const f2 = Math.min(1, Math.max(0, (n2-0.30)*2.0));  // 锐化成纤维通道
+      F2[y*N+x] = f2;
+    }
+  }
+})();
+
+/* ---------- 扩散内核：9点 Laplacian(orth .2 / diag .05) ---------- */
+function lap9(src,dst){
+  for(let y=1;y<N-1;y++){
+    const r=y*N, ru=r-N, rd=r+N;
+    for(let x=1;x<N-1;x++){
+      const i=r+x;
+      dst[i] = 0.2*(src[i-1]+src[i+1]+src[ru+x]+src[rd+x])
+             + 0.05*(src[ru+x-1]+src[ru+x+1]+src[rd+x-1]+src[rd+x+1])
+             - src[i];
+    }
+  }
+}
+
+/* ---------- 单步模拟 ---------- */
+let totalWater = 0;
+function step(){
+  // 1. 水扩散（纤维轻微调制）+ 蒸发
+  lap9(W,LB);
+  let tw=0;
+  for(let i=N+1;i<N*N-N-1;i++){
+    const fw = 1 + FIB_DW*(F[i]-0.5) + 0.90*(F2[i]-0.5);  // 纯扩散稳定·纤维丝破圆出毛茬
+    let w = W[i] + D_W*LB[i]*fw;
+    w *= (1-EVAP*(0.55+0.9*F2[i]));   // 蒸发沿纤维通道差异→前锋破形出毛刺
+    if(w<1e-5) w=0;
+    W[i]=w; tw+=w;
+  }
+  totalWater = tw;
+
+  // 2. 色素迁移（毛细挂墨：水足才行）+ 沉积（锋线加成）
+  lap9(P,LB);
+  for(let y=1;y<N-1;y++){
+    const r=y*N;
+    for(let x=1;x<N-1;x++){
+      const i=r+x;
+      const w = W[i];
+      let p = P[i];
+      // 迁移率 ramp
+      let m = (w-MOB_LO)/(MOB_HI-MOB_LO);
+      if(m<0)m=0; else if(m>1)m=1;
+      if(m>0 && p>0){
+        p += D_P*m*(0.75+0.5*F2[i])*LB[i];   // 色素前锋随纤维通道破形
+        if(p<0)p=0;
+      }
+      // 锋线检测：水梯度 + 水量低位（tide line 物理）
+      const g = Math.abs(W[i+1]-W[i-1]) + Math.abs(W[i+N]-W[i-N]);
+      let tide = g*32; if(tide>1)tide=1;
+      const dwt=(w-0.05)/0.055; tide *= Math.max(0, 1-dwt*dwt);  // 窄带峰值在w≈0.05·钉线处
+      // 沉积（沿纤维丝挂墨）
+      let rate = ADS*(0.55+FIB_ADS*F[i])*(0.82+0.36*F2[i]) + ADS_FRONT*tide;
+      if(w<W_DRY) rate += ADS_DRY;
+      let dep = p*rate;
+      if(dep>p)dep=p;
+      if(dep>0){ S[i]+=dep; p-=dep; }
+      P[i]=p;
+    }
+  }
+
+  // 3. 平流：色素随水流向湿锋（咖啡环→水痕线的物理源）
+  for(let y=1;y<N-1;y++){
+    const r=y*N;
+    for(let x=1;x<N-1;x++){
+      const i=r+x;
+      // 右邻（水量闸门：厚水处无平流，防止抽空墨芯）
+      let j=i+1, dW=W[i]-W[j];
+      let gate=(ADVEC_W-0.5*(W[i]+W[j]))*2.2; if(gate<0)gate=0; else if(gate>1)gate=1;
+      if(gate>0){
+        if(dW>0){ let a=P[i]*ADVEC*dW*gate; const cap=P[i]*0.25; if(a>cap)a=cap; if(a>0){P[i]-=a;P[j]+=a;} }
+        else    { let a=P[j]*ADVEC*(-dW)*gate; const cap=P[j]*0.25; if(a>cap)a=cap; if(a>0){P[j]-=a;P[i]+=a;} }
+      }
+      // 下邻
+      j=i+N; dW=W[i]-W[j];
+      gate=(ADVEC_W-0.5*(W[i]+W[j]))*2.2; if(gate<0)gate=0; else if(gate>1)gate=1;
+      if(gate>0){
+        if(dW>0){ let a=P[i]*ADVEC*dW*gate; const cap=P[i]*0.25; if(a>cap)a=cap; if(a>0){P[i]-=a;P[j]+=a;} }
+        else    { let a=P[j]*ADVEC*(-dW)*gate; const cap=P[j]*0.25; if(a>cap)a=cap; if(a>0){P[j]-=a;P[i]+=a;} }
+      }
+    }
+  }
+}
+
+/* ---------- 落墨 ---------- */
+function drop(gx,gy,rad,wAmt,pAmt){
+  const x0=Math.max(1,Math.floor(gx-rad*2)), x1=Math.min(N-2,Math.ceil(gx+rad*2));
+  const y0=Math.max(1,Math.floor(gy-rad*2)), y1=Math.min(N-2,Math.ceil(gy+rad*2));
+  const r2=rad*rad;
+  for(let y=y0;y<=y1;y++){
+    for(let x=x0;x<=x1;x++){
+      const dx=x-gx, dy=y-gy, d2=dx*dx+dy*dy;
+      if(d2>r2*4)continue;
+      const fall=Math.exp(-d2/(2*r2*0.36));
+      const i=y*N+x;
+      W[i]+=wAmt*fall;
+      P[i]+=pAmt*0.70*fall;   // 七成悬浮待洇
+      S[i]+=pAmt*0.30*fall;   // 三成瞬时入纸·锚定焦芯
+    }
+  }
+}
+
+/* ---------- 渲染 ---------- */
+const inkCv = document.getElementById('ink');
+const ictx = inkCv.getContext('2d');
+inkCv.width=N; inkCv.height=N;
+const img = ictx.createImageData(N,N);
+const px = img.data;
+
+function render(){
+  for(let i=0;i<N*N;i++){
+    const s=S[i];
+    const t = 1-Math.exp(-TONE_K*s);       // 墨深 0..1
+    const w = W[i];
+    // 湿处纸色微沉（看见水锋先于墨）
+    let sheen = w>0.05 ? 0.05+0.05*Math.min(1,w*0.5) : 0;
+    const o=i*4;
+    if(t<0.004 && sheen<0.004){ px[o+3]=0; continue; }
+    // 淡墨暖灰，焦墨近黑
+    const tt=Math.sqrt(t);
+    const rI=92+(20-92)*tt, gI=88+(18-88)*tt, bI=79+(16-79)*tt;
+    // 与水光混合
+    const mixW = Math.min(1, t*5);
+    const rS=116,gS=114,bS=106;
+    const r= rS+(rI-rS)*mixW, g= gS+(gI-gS)*mixW, b= bS+(bI-bS)*mixW;
+    const a = Math.max(t*246, sheen*255);
+    px[o]=r; px[o+1]=g; px[o+2]=b; px[o+3]=a>255?255:a;
+  }
+  ictx.putImageData(img,0,0);
+}
+
+/* ---------- 宣纸底（一次性） ---------- */
+(function paper(){
+  const cv=document.getElementById('paper');
+  cv.width=704; cv.height=704;
+  const c=cv.getContext('2d');
+  c.fillStyle='#f3eee1'; c.fillRect(0,0,704,704);
+  // 细帘纹
+  c.globalAlpha=0.05;
+  for(let i=0;i<180;i++){
+    const y=Math.random()*704;
+    c.strokeStyle= i%3? '#d8d0ba' : '#e6dfcc';
+    c.lineWidth=0.6+Math.random()*0.8;
+    c.beginPath();
+    c.moveTo(0,y);
+    c.bezierCurveTo(200,y+ (Math.random()*6-3), 500,y+(Math.random()*6-3), 704,y+(Math.random()*4-2));
+    c.stroke();
+  }
+  // 纤维点
+  c.globalAlpha=0.06;
+  for(let i=0;i<2600;i++){
+    c.fillStyle = Math.random()<0.5?'#cfc6ad':'#e9e2cf';
+    c.fillRect(Math.random()*704, Math.random()*704, 1+Math.random()*2.2, 0.7);
+  }
+  c.globalAlpha=1;
+  // 四角微沉
+  const g=c.createRadialGradient(352,352,300,352,352,560);
+  g.addColorStop(0,'rgba(0,0,0,0)');
+  g.addColorStop(1,'rgba(110,95,60,0.10)');
+  c.fillStyle=g; c.fillRect(0,0,704,704);
+})();
+
+/* ---------- 主循环 ---------- */
+const stateEl=document.getElementById('state');
+const sealEl=document.getElementById('seal');
+let alive=true, idleFrames=0, dried=false;
+
+function frame(){
+  if(alive){
+    for(let k=0;k<STEPS;k++) step();
+    if(totalWater<0.4){
+      idleFrames++;
+      if(idleFrames>90 && !dried){
+        dried=true; alive=false;
+        stateEl.textContent='水尽墨定';
+        stateEl.style.color='#5c5244';
+        sealEl.classList.add('done');
+      }
+    } else {
+      idleFrames=0;
+      if(!dried){ stateEl.textContent='洇散中…'; stateEl.style.color='#8a8172'; }
+    }
+  }
+  render();
+  requestAnimationFrame(frame);
+}
+
+function revive(){
+  if(!alive){ alive=true; }
+  if(dried){ dried=false; sealEl.classList.remove('done'); }
+  idleFrames=0;
+}
+
+/* ---------- 交互 ---------- */
+function toGrid(e){
+  const r=inkCv.getBoundingClientRect();
+  return [ (e.clientX-r.left)/r.width*N, (e.clientY-r.top)/r.height*N ];
+}
+let drawing=false, lastP=null;
+inkCv.addEventListener('pointerdown', e=>{
+  e.preventDefault();
+  drawing=true; try{ inkCv.setPointerCapture(e.pointerId); }catch(_){} 
+  const [gx,gy]=toGrid(e);
+  drop(gx,gy,14,3.6,1.6);
+  lastP=[gx,gy]; revive();
+});
+inkCv.addEventListener('pointermove', e=>{
+  if(!drawing||!lastP)return;
+  const [gx,gy]=toGrid(e);
+  const dx=gx-lastP[0], dy=gy-lastP[1];
+  const dist=Math.hypot(dx,dy);
+  const n=Math.max(1,Math.floor(dist/2.2));
+  for(let k=1;k<=n;k++){
+    drop(lastP[0]+dx*k/n, lastP[1]+dy*k/n, 6.5, 2.0, 1.0);
+  }
+  lastP=[gx,gy]; revive();
+});
+addEventListener('pointerup', ()=>{ drawing=false; });
+inkCv.addEventListener('dblclick', ()=>{
+  W.fill(0);P.fill(0);S.fill(0);
+  revive(); stateEl.textContent='研墨…';
+});
+
+/* ---------- 开场一滴 ---------- */
+setTimeout(()=>{ drop(N*0.5, N*0.45, 16, 4.5, 1.8); revive(); }, 700);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -36,3 +36,11 @@ gallery/works/moyun_frames/
 gallery/works/spike_*.py
 gallery/works/take_screenshot.py
 gallery/works/v112_patch*.py
+
+# Scratch / local verification (2026-09-18 backfill)
+gallery/works/deploy_smoke/
+gallery/works/spike_shots/
+gallery/works/v12_p2_patch.py
+gallery/works/retest_bamboo.png
+gallery/works/v121_polish_test1.png
+_patches/

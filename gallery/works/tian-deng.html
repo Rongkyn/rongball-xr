@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#070a18">
+<title>天灯 · 祈愿</title>
+<!-- 字体非阻塞加载：preconnect 预连 + media swap 技巧，断网时本地字体兜底，不阻塞页面 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400&display=swap" media="print" onload="this.media='all'">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden;
+  background: #070a18;
+  font-family: 'Noto Serif SC', serif;
+}
+
+#c { position: fixed; inset: 0; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+
+#vig {
+  position: fixed; inset: 0; pointer-events: none; z-index: 2;
+  background: radial-gradient(ellipse at 50% 42%, transparent 52%, rgba(3,5,12,0.55) 100%);
+}
+
+/* 标题 */
+#title {
+  position: fixed; top: 26px; left: 32px; z-index: 10;
+  color: rgba(240,224,190,0.88);
+  pointer-events: none;
+  animation: fadeIn 2.4s ease both;
+}
+#title h1 {
+  font-family: 'Ma Shan Zheng', cursive;
+  font-size: 36px; font-weight: 400; letter-spacing: 10px;
+  text-shadow: 0 0 22px rgba(255,190,110,0.25);
+}
+#title .sub {
+  margin-top: 6px; font-size: 12px; letter-spacing: 6px;
+  color: rgba(240,224,190,0.45);
+  font-family: 'ZCOOL XiaoWei', serif;
+}
+
+/* 计数 */
+#counter {
+  position: fixed; left: 32px; bottom: 24px; z-index: 10;
+  font-size: 12px; letter-spacing: 3px;
+  color: rgba(240,224,190,0.5);
+  pointer-events: none;
+}
+
+/* 提示 */
+#hint {
+  position: fixed; left: 50%; bottom: 15%; z-index: 10;
+  transform: translateX(-50%);
+  font-size: 13px; letter-spacing: 4px;
+  color: rgba(245,225,185,0.6);
+  pointer-events: none;
+  transition: opacity 1.2s ease;
+  animation: breathe 3.2s ease-in-out infinite;
+}
+#hint.off { opacity: 0; animation: none; }
+
+/* 声音按钮 */
+#soundBtn {
+  position: fixed; top: 24px; right: 26px; z-index: 20;
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1px solid rgba(255,190,120,0.3);
+  background: rgba(16,20,38,0.5);
+  color: #f0d9ae; font-size: 15px; cursor: pointer;
+  transition: all 0.3s;
+}
+#soundBtn:hover { background: rgba(255,190,120,0.12); }
+
+/* 心愿面板 */
+#panel {
+  position: fixed; left: 50%; bottom: 11%; z-index: 30;
+  transform: translateX(-50%) translateY(14px);
+  width: min(350px, 88vw);
+  background: rgba(14,18,34,0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,190,120,0.2);
+  border-radius: 14px;
+  padding: 18px 20px 20px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+}
+#panel.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+#panel .p-title {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 15px; letter-spacing: 5px;
+  color: #f0d9ae; margin-bottom: 12px; text-align: center;
+}
+#panel .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+#panel .chip {
+  border: 1px solid rgba(255,190,120,0.35);
+  border-radius: 999px; padding: 4px 13px;
+  font-size: 13px; color: #f0d9ae; cursor: pointer;
+  transition: background 0.25s;
+  letter-spacing: 2px;
+  user-select: none;
+}
+#panel .chip:hover { background: rgba(255,190,120,0.14); }
+#wishInput {
+  width: 100%; margin-top: 14px;
+  background: transparent; border: none;
+  border-bottom: 1px solid rgba(255,190,120,0.3);
+  color: #ffe9c4; padding: 8px 2px;
+  font-family: inherit; font-size: 14px; letter-spacing: 2px;
+  outline: none; text-align: center;
+}
+#wishInput::placeholder { color: rgba(255,233,196,0.3); }
+#releaseBtn {
+  width: 100%; margin-top: 16px; padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,190,120,0.5);
+  background: linear-gradient(180deg, #3d2d1a, #2a2013);
+  color: #ffd9a0; font-family: inherit; font-size: 14px;
+  letter-spacing: 6px; cursor: pointer;
+  transition: filter 0.25s;
+}
+#releaseBtn:hover { filter: brightness(1.25); }
+
+/* 心愿气泡 */
+#tip {
+  position: fixed; z-index: 25;
+  background: rgba(14,18,34,0.88);
+  border: 1px solid rgba(255,190,120,0.28);
+  color: #ffe9c4; padding: 7px 14px; border-radius: 9px;
+  font-size: 13px; letter-spacing: 2px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.35s ease;
+  max-width: 62vw; text-align: center;
+  transform: translate(-50%, -130%);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+  white-space: pre-line;
+  line-height: 1.7;
+}
+
+/* 诗句与印章（vertical-rl 下块级子元素从右往左自然成列） */
+#poem {
+  position: fixed; right: 7%; top: 15%; z-index: 10;
+  writing-mode: vertical-rl;
+  font-family: 'Ma Shan Zheng', cursive;
+  font-size: clamp(20px, 3.4vh, 30px);
+  letter-spacing: 12px;
+  color: rgba(245,230,200,0.92);
+  text-shadow: 0 0 20px rgba(255,190,110,0.35);
+  opacity: 0; transition: opacity 4s ease;
+  pointer-events: none;
+}
+body.poem-on #poem { opacity: 1; }
+#poem span { display: block; }
+#poem .line1 { margin-left: 18px; }
+#poem .attrib {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 11px; letter-spacing: 4px;
+  color: rgba(245,230,200,0.45);
+  margin-left: 16px;
+  padding-top: 46px;
+}
+#seal {
+  writing-mode: horizontal-tb;
+  width: 36px; height: 36px;
+  background: #b43a2a; color: #fdf6ea;
+  font-family: 'Ma Shan Zheng', cursive;
+  font-size: 17px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 5px;
+  transform: rotate(-4deg);
+  margin-left: 22px;
+  margin-top: 235px;
+  box-shadow: 0 0 14px rgba(180,58,42,0.4);
+  letter-spacing: 0;
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.7; }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@media (max-width: 640px) {
+  #title h1 { font-size: 28px; letter-spacing: 7px; }
+  #poem { right: 5%; top: 12%; }
+}
+
+/* 星图按钮（声音键下方） */
+#mapBtn {
+  position: fixed; top: 74px; right: 26px; z-index: 20;
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 1px solid rgba(255,190,120,0.3);
+  background: rgba(16,20,38,0.5);
+  color: #f0d9ae; font-size: 16px; cursor: pointer;
+  transition: all 0.3s;
+  display: none;
+  align-items: center; justify-content: center;
+  line-height: 1;
+}
+#mapBtn.show { display: flex; }
+#mapBtn:hover { background: rgba(255,190,120,0.12); }
+#mapBtn .badge {
+  position: absolute; top: -5px; right: -5px;
+  min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 999px;
+  background: #b43a2a; color: #fdf6ea;
+  font-size: 10px; letter-spacing: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Noto Serif SC', serif;
+}
+
+/* 星图回放覆盖层 */
+#mapOverlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: rgba(5,8,20,0.86);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+#mapOverlay.open { opacity: 1; pointer-events: auto; }
+#mapBox {
+  width: min(560px, 92vw);
+  max-height: 90vh;
+  display: flex; flex-direction: column;
+  background: rgba(14,18,34,0.92);
+  border: 1px solid rgba(255,190,120,0.25);
+  border-radius: 16px;
+  padding: 22px 24px 20px;
+  box-shadow: 0 20px 70px rgba(0,0,0,0.6);
+  transform: translateY(16px) scale(0.98);
+  transition: transform 0.4s ease;
+}
+#mapOverlay.open #mapBox { transform: translateY(0) scale(1); }
+#mapBox .m-title {
+  font-family: 'Ma Shan Zheng', cursive;
+  font-size: 24px; letter-spacing: 8px;
+  color: #f0d9ae; text-align: center;
+}
+#mapBox .m-sub {
+  text-align: center; font-size: 12px; letter-spacing: 3px;
+  color: rgba(240,224,190,0.45);
+  margin: 7px 0 14px;
+  font-family: 'ZCOOL XiaoWei', serif;
+}
+#mapCanvas {
+  width: 100%; border-radius: 10px;
+  border: 1px solid rgba(255,190,120,0.15);
+  background: #070a18;
+  cursor: crosshair;
+  touch-action: none;
+}
+#mapTip {
+  position: fixed; z-index: 65;
+  background: rgba(14,18,34,0.95);
+  border: 1px solid rgba(255,190,120,0.3);
+  color: #ffe9c4; padding: 6px 13px; border-radius: 9px;
+  font-size: 13px; letter-spacing: 2px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease;
+  white-space: pre-line; line-height: 1.7;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  transform: translate(-50%, -110%);
+}
+#mapBox .m-actions {
+  display: flex; gap: 10px; margin-top: 15px;
+}
+#mapBox .m-btn {
+  flex: 1; padding: 9px 0;
+  border-radius: 9px; cursor: pointer;
+  font-family: 'Noto Serif SC', serif;
+  font-weight: 400;
+  font-size: 14px; letter-spacing: 3px;
+  background: transparent;
+  transition: all 0.25s;
+}
+#mapBox .m-btn.primary {
+  border: 1px solid rgba(255,190,120,0.55);
+  color: #ffe9c4;
+  background: linear-gradient(180deg, rgba(61,45,26,0.7), rgba(42,32,19,0.7));
+}
+#mapBox .m-btn.primary:hover { background: rgba(255,190,120,0.16); }
+#mapBox .m-btn.ghost {
+  border: 1px solid rgba(255,190,120,0.28);
+  color: rgba(240,224,190,0.75);
+}
+#mapBox .m-btn.ghost:hover { background: rgba(255,190,120,0.08); }
+#mapBox .m-btn.danger {
+  border: 1px solid rgba(200,90,70,0.4);
+  color: rgba(240,170,150,0.8);
+}
+#mapBox .m-btn.danger:hover { background: rgba(180,58,42,0.18); }
+#mapBox .m-foot {
+  margin-top: 11px; text-align: center;
+  font-size: 11px; letter-spacing: 2px;
+  color: rgba(240,224,190,0.35);
+  line-height: 1.8;
+}
+
+/* 二次确认弹窗 */
+#confirmOverlay {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(3,5,12,0.6);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#confirmOverlay.open { opacity: 1; pointer-events: auto; }
+#confirmBox {
+  width: min(320px, 86vw);
+  background: rgba(20,16,28,0.96);
+  border: 1px solid rgba(200,90,70,0.4);
+  border-radius: 14px;
+  padding: 24px 22px 20px;
+  text-align: center;
+  box-shadow: 0 16px 60px rgba(0,0,0,0.6);
+}
+#confirmBox .c-title {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 17px; letter-spacing: 4px;
+  color: #f0d0c0; margin-bottom: 12px;
+}
+#confirmBox .c-text {
+  font-size: 13px; letter-spacing: 1.5px;
+  color: rgba(240,224,190,0.6);
+  line-height: 1.9; margin-bottom: 18px;
+}
+#confirmBox .c-actions { display: flex; gap: 10px; }
+#confirmBox .c-btn {
+  flex: 1; padding: 9px 0; border-radius: 9px; cursor: pointer;
+  font-family: 'Noto Serif SC', serif;
+  font-size: 14px; letter-spacing: 3px;
+  background: transparent;
+}
+#confirmBox .c-btn.yes {
+  border: 1px solid rgba(200,90,70,0.6); color: #f0b8a8;
+}
+#confirmBox .c-btn.yes:hover { background: rgba(180,58,42,0.22); }
+#confirmBox .c-btn.no {
+  border: 1px solid rgba(255,190,120,0.3); color: rgba(240,224,190,0.8);
+}
+#confirmBox .c-btn.no:hover { background: rgba(255,190,120,0.08); }
+
+@media (max-width: 640px) {
+  #mapBox { padding: 18px 16px 16px; }
+  #mapBox .m-title { font-size: 21px; letter-spacing: 6px; }
+  #mapBox .m-btn { font-size: 14px; letter-spacing: 2px; padding: 10px 0; }
+  #confirmBox .c-btn { font-size: 14px; letter-spacing: 2px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div id="vig"></div>
+
+<div id="title">
+  <h1>天 灯</h1>
+  <div class="sub">祈 愿 · 灯 灯 相 续</div>
+</div>
+
+<div id="counter">已放 0 盏</div>
+<div id="hint">点一点灯，写下心愿 · 长按放双灯</div>
+<button id="soundBtn" title="声音开关">♪</button>
+
+<div id="panel">
+  <div class="p-title">写 下 心 愿</div>
+  <div class="chips">
+    <span class="chip" data-w="毕业快乐">毕业快乐</span>
+    <span class="chip" data-w="旅途平安">旅途平安</span>
+    <span class="chip" data-w="前程似锦">前程似锦</span>
+    <span class="chip" data-w="得偿所愿">得偿所愿</span>
+    <span class="chip" data-w="平安喜乐">平安喜乐</span>
+  </div>
+  <input id="wishInput" maxlength="12" placeholder="或写下自己的心愿（12字内）">
+  <button id="releaseBtn">点 灯 放 飞</button>
+</div>
+
+<div id="tip"></div>
+
+<button id="mapBtn" title="星图回放">✦<span class="badge" id="mapBadge">0</span></button>
+
+<div id="mapOverlay">
+  <div id="mapBox">
+    <div class="m-title">我 的 星 空</div>
+    <div class="m-sub" id="mapSub">每一盏灯，都是一个心愿</div>
+    <canvas id="mapCanvas"></canvas>
+    <div class="m-actions">
+      <button class="m-btn primary" id="mapSave">收 下 星 图</button>
+      <button class="m-btn ghost" id="mapClose">回 到 夜 色</button>
+      <button class="m-btn danger" id="mapClear">星 落</button>
+    </div>
+    <div class="m-foot" id="mapFoot">点一点星星，看看当时写下的心愿</div>
+  </div>
+</div>
+<div id="mapTip"></div>
+
+<div id="confirmOverlay">
+  <div id="confirmBox">
+    <div class="c-title">星 落 之 后</div>
+    <div class="c-text">星空将清空，所有心愿记录也会散去。<br>这一页翻过去，就找不回来了。</div>
+    <div class="c-actions">
+      <button class="c-btn no" id="confirmNo">再 想 想</button>
+      <button class="c-btn yes" id="confirmYes">让 星 落 下</button>
+    </div>
+  </div>
+</div>
+
+<div id="poem">
+  <span class="line1">长风破浪会有时</span>
+  <span class="line2">直挂云帆济沧海</span>
+  <span class="attrib">李白 · 行路难</span>
+  <div id="seal">绒球</div>
+</div>
+
+<div id="errlog" style="display:none"></div>
+<div id="state" style="display:none"></div>
+
+<script>
+'use strict';
+
+/* ================= 参数与随机 ================= */
+const Q = new URLSearchParams(location.search);
+const SEED = (parseInt(Q.get('seed') || '20260831', 10) >>> 0);
+const FAST = Q.get('fast') === '1';
+const AUTO = Math.max(0, parseInt(Q.get('auto') || '0', 10) || 0);
+const WARP = Math.max(0, parseFloat(Q.get('warp') || '0') || 0);
+const NOSTORE = Q.get('nostore') === '1';
+const PRESKY = Math.max(0, parseInt(Q.get('presky') || '0', 10) || 0);
+const AUTOPAIR = Q.get('pair') === '1';
+
+/* ================= 跨访问累积星空（localStorage） ================= */
+/* v2: stars 为天上还挂着的星（上限60，FIFO淡出），wishes 为全部心愿记录（永不因淡出而丢） */
+const STORE_KEY = 'tiandeng_sky_v1';
+const STORE_CAP = 60;
+let skyStore = { stars: [], wishes: [], total: 0 };
+
+function loadSkyStore(){
+  if(NOSTORE) return;
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(d && Array.isArray(d.stars)) skyStore.stars = d.stars;
+    if(typeof d.total === 'number') skyStore.total = d.total;
+    /* v1→v2 迁移：旧版只有 stars，把星上的心愿补录进 wishes */
+    if(Array.isArray(d.wishes)){
+      skyStore.wishes = d.wishes;
+    }else{
+      /* v1→v2 迁移：旧版只有 stars，把星上的心愿补录进 wishes 并回写 */
+      skyStore.wishes = skyStore.stars.map(s=>({ wish: s.wish, date: s.date }));
+      try{ localStorage.setItem(STORE_KEY, JSON.stringify(skyStore)); }catch(e){}
+    }
+    if(skyStore.total < skyStore.wishes.length) skyStore.total = skyStore.wishes.length;
+  }catch(e){ /* 存储不可用则静默降级为单会话 */ }
+}
+
+function saveSkyStore(){
+  if(NOSTORE) return;
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(skyStore)); }catch(e){}
+}
+
+function recordStar(l){
+  const rec = {
+    fx: +(l.x / W).toFixed(4),
+    fy: +(l.y / H).toFixed(4),
+    ss: +l.scale.toFixed(3),
+    wish: l.wish,
+    date: l.date
+  };
+  skyStore.stars.push(rec);
+  while(skyStore.stars.length > STORE_CAP) skyStore.stars.shift();
+  /* 心愿全记录：灯化作星的一刻，心愿入册，即使日后从天上淡出也不丢 */
+  skyStore.wishes.push({ wish: l.wish, date: l.date });
+  skyStore.total++;
+  saveSkyStore();
+  refreshMapBtn();
+}
+
+/* 星落：清空整片星空与全部心愿记录 */
+function clearSkyStore(){
+  skyStore = { stars: [], wishes: [], total: 0 };
+  for(let i=lanterns.length-1;i>=0;i--){
+    if(lanterns[i].historic) lanterns.splice(i,1);
+  }
+  saveSkyStore();
+  updateCounter();
+  refreshMapBtn();
+}
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const R = mulberry32(SEED);
+const TAU = Math.PI * 2;
+const lerp = (a,b,t)=>a+(b-a)*t;
+const clamp = (v,a,b)=>v<a?a:(v>b?b:v);
+const easeOut = t=>1-Math.pow(1-t,2);
+function lerpColor(c1,c2,t){
+  return 'rgb('+Math.round(lerp(c1[0],c2[0],t))+','+Math.round(lerp(c1[1],c2[1],t))+','+Math.round(lerp(c1[2],c2[2],t))+')';
+}
+
+const PRESETS = ['毕业快乐','旅途平安','前程似锦','得偿所愿','山水有相逢','平安喜乐'];
+
+/* ================= 画布与场景构建 ================= */
+const cvs = document.getElementById('c');
+const ctx = cvs.getContext('2d');
+let W = 0, H = 0, horizonY = 0, bankH = 0;
+let stars = [], mountains = [], reeds = [];
+const moon = { fx: 0.76, fy: 0.17 };
+
+function buildSky(){
+  stars = [];
+  const n = Math.round(W * H / 8500);
+  for(let i=0;i<n;i++){
+    stars.push({
+      x: R()*W, y: R()*horizonY*0.92,
+      r: 0.4+R()*1.3, ph: R()*TAU,
+      sp: 0.4+R()*1.2, big: R()<0.06
+    });
+  }
+}
+
+function ridge(baseY, amp, off){
+  const pts = [];
+  const step = Math.max(22, W/52);
+  for(let x=-step; x<=W+step; x+=step){
+    const f = Math.sin(x*0.004+off)*0.5 + Math.sin(x*0.011+off*2.3)*0.3 + Math.sin(x*0.027+off*4.1)*0.2;
+    const y = baseY - (0.55+0.45*f)*amp - R()*amp*0.15;
+    pts.push([x,y]);
+  }
+  return pts;
+}
+
+function buildMountains(){
+  mountains = [
+    { pts: ridge(horizonY-4, H*0.150, SEED*0.01+1),  fill:'#1a2040', a:0.80 },
+    { pts: ridge(horizonY-2, H*0.095, SEED*0.02+7),  fill:'#141936', a:0.92 },
+    { pts: ridge(horizonY,   H*0.050, SEED*0.03+13), fill:'#0e1230', a:1 }
+  ];
+}
+
+function buildReeds(){
+  reeds = [];
+  const mk = cx=>{
+    const cl = [];
+    const n = 5+Math.floor(R()*3);
+    for(let i=0;i<n;i++){
+      cl.push({ dx:(R()-0.5)*46, h:26+R()*42, lean:(R()-0.5)*0.9, ph:R()*TAU, w:1+R()*1.2 });
+    }
+    return { x:cx, cl };
+  };
+  reeds.push(mk(W*0.055 + R()*W*0.05));
+  reeds.push(mk(W*0.895 + R()*W*0.05));
+}
+
+function resize(){
+  const DPR = Math.min(window.devicePixelRatio||1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cvs.width = Math.round(W*DPR); cvs.height = Math.round(H*DPR);
+  cvs.style.width = W+'px'; cvs.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  horizonY = Math.round(H*0.70);
+  bankH = Math.max(30, Math.round(H*0.055));
+  buildSky(); buildMountains(); buildReeds();
+  if(ground) placeGround(ground);
+}
+window.addEventListener('resize', resize);
+
+function windAt(t){
+  return (Math.sin(t*0.00007)*0.6 + Math.sin(t*0.00023+1.7)*0.4) * 0.22;
+}
+
+/* ================= 音频（Web Audio 全程序化） ================= */
+let AC = null, master = null, windGain = null, cricketGain = null;
+let soundOn = true;
+
+function initAudio(){
+  if(AC){ if(AC.state==='suspended') AC.resume(); return; }
+  try{
+    AC = new (window.AudioContext||window.webkitAudioContext)();
+  }catch(e){ return; }
+  master = AC.createGain(); master.gain.value = 0.9; master.connect(AC.destination);
+  startWind(); startCrickets();
+}
+
+function startWind(){
+  const len = AC.sampleRate*2;
+  const buf = AC.createBuffer(1, len, AC.sampleRate);
+  const d = buf.getChannelData(0);
+  let last = 0;
+  for(let i=0;i<len;i++){ const w=Math.random()*2-1; last=(last+0.02*w)/1.02; d[i]=last*3.2; }
+  const src = AC.createBufferSource(); src.buffer=buf; src.loop=true;
+  const lp = AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=380;
+  windGain = AC.createGain(); windGain.gain.value=0.045;
+  src.connect(lp); lp.connect(windGain); windGain.connect(master);
+  src.start();
+  const lfo = AC.createOscillator(); lfo.frequency.value=0.06;
+  const lg = AC.createGain(); lg.gain.value=0.02;
+  lfo.connect(lg); lg.connect(windGain.gain); lfo.start();
+}
+
+function startCrickets(){
+  cricketGain = AC.createGain(); cricketGain.gain.value=0.5; cricketGain.connect(master);
+  const chirp = ()=>{
+    if(!AC) return;
+    const t0 = AC.currentTime + 0.05;
+    const n = 2+Math.floor(Math.random()*3);
+    const f = 4100+Math.random()*500;
+    for(let i=0;i<n;i++){
+      const st = t0 + i*0.11;
+      const o = AC.createOscillator(); o.type='triangle'; o.frequency.value=f;
+      const g = AC.createGain();
+      g.gain.setValueAtTime(0.0001, st);
+      g.gain.exponentialRampToValueAtTime(0.016, st+0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, st+0.07);
+      o.connect(g); g.connect(cricketGain);
+      o.start(st); o.stop(st+0.09);
+    }
+    setTimeout(chirp, 1400+Math.random()*2600);
+  };
+  setTimeout(chirp, 600);
+}
+
+function chime(){
+  if(!AC || !soundOn) return;
+  const notes = [523.25, 587.33, 659.25, 783.99, 880.0];
+  const f = notes[(released-1) % notes.length];
+  const t0 = AC.currentTime;
+  const g = AC.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.09, t0+0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0+2.6);
+  const o1 = AC.createOscillator(); o1.type='sine'; o1.frequency.value=f;
+  const o2 = AC.createOscillator(); o2.type='sine'; o2.frequency.value=f*2;
+  const g2 = AC.createGain(); g2.gain.value=0.25;
+  o1.connect(g); o2.connect(g2); g2.connect(g); g.connect(master);
+  o1.start(t0); o2.start(t0); o1.stop(t0+2.7); o2.stop(t0+2.7);
+}
+
+/* ================= 天灯 ================= */
+const DARK = [[74,66,60],[58,50,46],[46,40,38],[40,35,34]];
+const WARM = [[255,224,170],[255,183,99],[255,148,53],[255,127,30]];
+
+function bodyPath(w,h){
+  ctx.beginPath();
+  ctx.moveTo(-w*0.5, h*0.5);
+  ctx.bezierCurveTo(-w*1.02, h*0.30, -w*0.92, -h*0.30, -w*0.40, -h*0.52);
+  ctx.quadraticCurveTo(0, -h*0.80, w*0.40, -h*0.52);
+  ctx.bezierCurveTo(w*0.92, -h*0.30, w*1.02, h*0.30, w*0.5, h*0.5);
+  ctx.quadraticCurveTo(0, h*0.34, -w*0.5, h*0.5);
+  ctx.closePath();
+}
+
+const lanterns = [];
+let released = 0;
+let ground = null, nextGroundAt = 0;
+let tNow = 0;
+
+class Lantern{
+  constructor(wish){
+    this.wish = wish || '平安喜乐';
+    this.x = W/2; this.y = 0;
+    this.s = 13 + R()*3;
+    this.scale = 1;
+    this.state = 'ground';
+    this.lightT = 0;
+    this.vy = 0;
+    this.ph = R()*TAU;
+    this.swF = 0.5 + R()*0.7;
+    this.flick = 1;
+    this.alpha = 1;
+    this.starFade = 1;
+    this.dead = false;
+    this.historic = false;   /* 跨访问累积的历史星 */
+    this.date = null;        /* 放灯日期 YYYY-MM-DD */
+    this.pairOf = null;      /* 双灯齐放时的同伴标记 */
+  }
+
+  /* 由存储记录还原的历史星：位置/大小/心愿/日期固定，只闪烁 */
+  static fromRecord(rec){
+    const l = new Lantern(rec.wish || '平安喜乐');
+    l.historic = true;
+    l.date = rec.date || null;
+    l.x = rec.fx * W;
+    l.y = rec.fy * H;
+    l.scale = clamp(rec.ss || 0.2, 0.14, 0.4);
+    l.state = 'star';
+    return l;
+  }
+
+  update(dt){
+    const dt60 = dt/16.666;
+    if(this.state === 'lighting'){
+      this.lightT += dt/(FAST?180:1400);
+      if(this.lightT >= 1){
+        this.lightT = 1;
+        this.state = 'rising';
+        released++;
+        updateCounter(); checkPoem(); chime();
+        if(this === ground){ ground = null; nextGroundAt = tNow + 1500; }
+      }
+    }else if(this.state === 'rising'){
+      const maxV = FAST ? 2.4 : 0.62;
+      this.vy = Math.min(maxV, this.vy + 0.006*dt60*(FAST?8:1));
+      this.y -= this.vy * dt60;
+      this.x += (windAt(tNow) + Math.sin(tNow*0.001*this.swF + this.ph)*0.18) * dt60;
+      const launchY = H - bankH*0.62;
+      const p = clamp((this.y - H*0.13)/(launchY - H*0.13), 0, 1);
+      this.scale = lerp(0.42, 1, p);
+      if(this.y < H*0.14){
+        this.state = 'star';
+        if(!this.date) this.date = todayStr();
+        recordStar(this);
+      }
+    }else if(this.state === 'star'){
+      if(!this.historic){
+        this.y -= 0.05*dt60;
+        this.x += (windAt(tNow)*0.4 + Math.sin(this.ph)*0.05)*dt60;
+        this.scale = Math.max(0.16, this.scale - 0.0004*dt60);
+        const starsUp = lanterns.filter(l=>l.state==='star' && !l.historic);
+        if(starsUp.length > 14 && starsUp[0] === this){
+          this.starFade -= 0.002*dt60;
+          if(this.starFade <= 0) this.dead = true;
+        }
+      }
+    }
+    this.flick = 0.82 + 0.18*Math.sin(tNow*0.011+this.ph) + 0.06*Math.sin(tNow*0.043+this.ph*2);
+  }
+
+  /* 灯面竖排题字：心愿前四字，随灯点亮渐显 */
+  drawInscription(lit, a){
+    if(lit < 0.3 || !this.wish) return;
+    const s = this.s * (this.scale||1);
+    const h = s*2.35;
+    const chars = this.wish.replace(/\s+/g,'').slice(0,4).split('');
+    if(!chars.length) return;
+    const fs = s*0.46;
+    ctx.save();
+    ctx.globalAlpha = a * clamp((lit-0.3)/0.7, 0, 1) * 0.82;
+    ctx.fillStyle = '#5a2c10';
+    ctx.font = fs + 'px "Ma Shan Zheng", "Noto Serif SC", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const y0 = -h*0.34;
+    const gap = fs*1.18;
+    for(let i=0;i<chars.length;i++){
+      ctx.fillText(chars[i], 0, y0 + i*gap);
+    }
+    ctx.restore();
+  }
+
+  draw(){
+    const s = this.s * (this.scale||1);
+    const h = s*2.35, w = s;
+    const lit = this.state==='ground' ? 0 : (this.state==='lighting' ? easeOut(clamp(this.lightT,0,1)) : 1);
+    const glow = (0.3 + 0.7*lit) * this.flick;
+    const a = this.alpha * (this.state==='star' ? this.starFade : 1);
+    const x = this.x, y = this.y;
+
+    /* 化作星辰 */
+    if(this.state === 'star'){
+      ctx.save();
+      ctx.globalAlpha = 0.75 * a * this.flick;
+      const g = ctx.createRadialGradient(x,y,0, x,y, s*1.4);
+      g.addColorStop(0, 'rgba(255,205,130,0.9)');
+      g.addColorStop(0.4, 'rgba(255,170,80,0.35)');
+      g.addColorStop(1, 'rgba(255,170,80,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x,y, s*1.4, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#ffd9a0';
+      ctx.beginPath(); ctx.arc(x,y, Math.max(1.1, s*0.22), 0, TAU); ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    /* 光晕 */
+    if(lit > 0.02){
+      ctx.globalAlpha = a;
+      const hr = s*4.6;
+      const hg = ctx.createRadialGradient(0,0,0, 0,0,hr);
+      hg.addColorStop(0, 'rgba(255,190,100,'+(0.17*glow).toFixed(3)+')');
+      hg.addColorStop(0.55, 'rgba(255,160,70,'+(0.06*glow).toFixed(3)+')');
+      hg.addColorStop(1, 'rgba(255,160,70,0)');
+      ctx.fillStyle = hg;
+      ctx.beginPath(); ctx.arc(0,0, hr, 0, TAU); ctx.fill();
+    }
+
+    /* 灯体 */
+    bodyPath(w, h);
+    const k = lit;
+    const bg = ctx.createLinearGradient(0, -h*0.7, 0, h*0.5);
+    for(let i=0;i<4;i++) bg.addColorStop(i/3, lerpColor(DARK[i], WARM[i], k));
+    ctx.globalAlpha = a * (0.64 + 0.32*k);
+    ctx.fillStyle = bg; ctx.fill();
+    /* 未点燃时的月光勾边 */
+    if(k < 0.5){
+      ctx.globalAlpha = a * 0.22 * (1-k*2);
+      ctx.strokeStyle = '#ffd9a8';
+      ctx.lineWidth = Math.max(0.7, s*0.04);
+      ctx.stroke();
+    }
+
+    /* 纸骨 */
+    ctx.globalAlpha = a * (0.10 + 0.08*k);
+    ctx.strokeStyle = '#7a3c14';
+    ctx.lineWidth = Math.max(0.6, s*0.03);
+    const seam = f=>{
+      ctx.beginPath();
+      ctx.moveTo(w*f*0.8, -h*0.5);
+      ctx.quadraticCurveTo(w*f*1.35, 0, w*f, h*0.44);
+      ctx.stroke();
+    };
+    seam(-0.42); seam(0.42); seam(0);
+
+    /* 内部亮腔（裁进灯体） */
+    if(k > 0.04){
+      ctx.save();
+      bodyPath(w, h); ctx.clip();
+      const ig = ctx.createRadialGradient(0, h*0.26, 0, 0, h*0.26, w*1.15);
+      ig.addColorStop(0, 'rgba(255,246,210,'+(0.6*glow*k).toFixed(3)+')');
+      ig.addColorStop(0.55, 'rgba(255,210,130,'+(0.22*glow*k).toFixed(3)+')');
+      ig.addColorStop(1, 'rgba(255,210,130,0)');
+      ctx.globalAlpha = a;
+      ctx.fillStyle = ig;
+      ctx.fillRect(-w*1.3, -h, w*2.6, h*2);
+      ctx.restore();
+    }
+
+    /* 灯面题字（心愿随灯上天） */
+    this.drawInscription(lit, a);
+
+    /* 火苗 */
+    if(k > 0.08){
+      ctx.save();
+      ctx.translate(0, h*0.38);
+      const fs = 1 + 0.22*Math.sin(tNow*0.021 + this.ph*3);
+      ctx.scale(1, fs);
+      const fg = ctx.createRadialGradient(0,0,0, 0,0, w*0.24);
+      fg.addColorStop(0, 'rgba(255,244,200,'+(0.95*k).toFixed(3)+')');
+      fg.addColorStop(0.55, 'rgba(255,165,60,'+(0.6*k).toFixed(3)+')');
+      fg.addColorStop(1, 'rgba(255,120,30,0)');
+      ctx.globalAlpha = a;
+      ctx.fillStyle = fg;
+      ctx.beginPath(); ctx.arc(0,0, w*0.24, 0, TAU); ctx.fill();
+      ctx.restore();
+    }
+
+    /* 灯口 */
+    ctx.globalAlpha = a * 0.35;
+    ctx.strokeStyle = '#5a2c10';
+    ctx.lineWidth = Math.max(0.8, s*0.045);
+    ctx.beginPath();
+    ctx.moveTo(-w*0.5, h*0.5);
+    ctx.quadraticCurveTo(0, h*0.34, w*0.5, h*0.5);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  drawReflection(){
+    if(this.state !== 'rising' && this.state !== 'lighting') return;
+    const d = horizonY - this.y;
+    const prox = clamp(1 - d/(H*0.5), 0, 1);
+    if(prox <= 0.02) return;
+    const shim = Math.sin(tNow*0.004 + this.ph)*3;
+    const ry = horizonY + d*0.28;
+    const s = this.s * (this.scale||1);
+    const h = s*2.35;
+    ctx.save();
+    ctx.translate(this.x + shim, ry);
+    ctx.scale(1, -0.32);
+    ctx.globalAlpha = 0.10 * prox * this.flick;
+    bodyPath(s, h);
+    ctx.fillStyle = '#ffb763'; ctx.fill();
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = 0.05 * prox * this.flick;
+    const lg = ctx.createLinearGradient(0, horizonY, 0, horizonY+50);
+    lg.addColorStop(0, 'rgba(255,180,90,0.8)');
+    lg.addColorStop(1, 'rgba(255,180,90,0)');
+    ctx.fillStyle = lg;
+    ctx.fillRect(this.x - s*0.9 + shim, horizonY, s*1.8, 50);
+    ctx.restore();
+  }
+}
+
+function placeGround(l){
+  l.x = W/2;
+  l.y = H - Math.round(bankH*0.62);
+}
+
+function spawnGround(){
+  ground = new Lantern('');
+  placeGround(ground);
+  lanterns.push(ground);
+}
+
+/* ================= 场景绘制 ================= */
+function drawSky(){
+  const g = ctx.createLinearGradient(0,0,0,horizonY);
+  g.addColorStop(0, '#070b1e');
+  g.addColorStop(0.55, '#101636');
+  g.addColorStop(0.85, '#1c2148');
+  g.addColorStop(1, '#2a2650');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,W,horizonY+1);
+
+  const hg = ctx.createRadialGradient(W*0.5, horizonY, 0, W*0.5, horizonY, W*0.55);
+  hg.addColorStop(0, 'rgba(150,95,80,0.16)');
+  hg.addColorStop(1, 'rgba(150,95,80,0)');
+  ctx.fillStyle = hg;
+  ctx.fillRect(0, horizonY-H*0.2, W, H*0.2+2);
+
+  for(const st of stars){
+    const tw = 0.35 + 0.65*(0.5 + 0.5*Math.sin(tNow*0.001*st.sp + st.ph));
+    ctx.globalAlpha = tw*0.85;
+    ctx.fillStyle = '#dfe6ff';
+    ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, TAU); ctx.fill();
+    if(st.big){
+      ctx.globalAlpha = tw*0.3;
+      ctx.strokeStyle = '#dfe6ff'; ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(st.x-st.r*4, st.y); ctx.lineTo(st.x+st.r*4, st.y);
+      ctx.moveTo(st.x, st.y-st.r*4); ctx.lineTo(st.x, st.y+st.r*4);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawMoon(){
+  const mx = W*moon.fx, my = H*moon.fy;
+  const r = Math.min(W,H)*0.045;
+  const hg = ctx.createRadialGradient(mx,my,r*0.5, mx,my,r*4.2);
+  hg.addColorStop(0, 'rgba(245,236,215,0.14)');
+  hg.addColorStop(1, 'rgba(245,236,215,0)');
+  ctx.fillStyle = hg;
+  ctx.beginPath(); ctx.arc(mx,my, r*4.2, 0, TAU); ctx.fill();
+
+  const mg = ctx.createRadialGradient(mx-r*0.3, my-r*0.3, r*0.1, mx, my, r);
+  mg.addColorStop(0, '#fbf5e4');
+  mg.addColorStop(0.8, '#efe4c8');
+  mg.addColorStop(1, '#e2d4b4');
+  ctx.fillStyle = mg;
+  ctx.beginPath(); ctx.arc(mx,my, r, 0, TAU); ctx.fill();
+
+  ctx.fillStyle = 'rgba(190,175,145,0.25)';
+  ctx.beginPath(); ctx.arc(mx+r*0.25, my-r*0.15, r*0.16, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.arc(mx-r*0.2, my+r*0.28, r*0.11, 0, TAU); ctx.fill();
+}
+
+function drawMountains(){
+  for(const m of mountains){
+    ctx.globalAlpha = m.a;
+    ctx.fillStyle = m.fill;
+    ctx.beginPath();
+    ctx.moveTo(-40, horizonY+2);
+    for(const p of m.pts) ctx.lineTo(p[0], p[1]);
+    ctx.lineTo(W+40, horizonY+2);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawWater(){
+  const g = ctx.createLinearGradient(0,horizonY,0,H);
+  g.addColorStop(0, '#1b2145');
+  g.addColorStop(0.4, '#121737');
+  g.addColorStop(1, '#090d22');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,horizonY,W,H-horizonY);
+
+  /* 月光碎道 */
+  const mx = W*moon.fx;
+  for(let i=0;i<14;i++){
+    const yy = horizonY+6 + i*((H-horizonY-10)/14);
+    const ww = (10 + i*7) * (0.7 + 0.3*Math.sin(tNow*0.0016 + i*2.1));
+    const xx = mx + Math.sin(tNow*0.002 + i*1.3)*(4 + i*1.5);
+    ctx.globalAlpha = 0.05*(1 - i/16);
+    ctx.fillStyle = '#f5ecd7';
+    ctx.beginPath(); ctx.ellipse(xx, yy, ww, 1.6, 0, 0, TAU); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawRipples(){
+  ctx.strokeStyle = 'rgba(180,200,255,0.05)';
+  ctx.lineWidth = 1;
+  for(let k=0;k<3;k++){
+    const y0 = horizonY + (H-horizonY)*(0.25 + k*0.28);
+    ctx.beginPath();
+    for(let x=0;x<=W;x+=14){
+      const y = y0 + Math.sin(x*0.02 + tNow*0.0011 + k*2)*(2 + k*1.4);
+      if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  }
+}
+
+function drawBank(){
+  ctx.fillStyle = '#05070f';
+  ctx.beginPath();
+  ctx.moveTo(0,H);
+  ctx.lineTo(0, H-bankH*0.75);
+  const step = W/9;
+  for(let i=0;i<=9;i++) ctx.lineTo(i*step, H - bankH*(0.72 + 0.28*Math.sin(i*2.3 + SEED)));
+  ctx.lineTo(W,H);
+  ctx.closePath(); ctx.fill();
+}
+
+function drawReeds(){
+  for(const cl of reeds){
+    for(const rd of cl.cl){
+      const bx = cl.x + rd.dx, by = H - bankH*0.5;
+      const sway = Math.sin(tNow*0.0012 + rd.ph)*0.12 + windAt(tNow)*0.35;
+      const tipX = bx + (rd.lean+sway)*rd.h;
+      const tipY = by - rd.h;
+      ctx.strokeStyle = '#04060d';
+      ctx.lineWidth = rd.w;
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.quadraticCurveTo(bx + (rd.lean+sway)*rd.h*0.4, by - rd.h*0.6, tipX, tipY);
+      ctx.stroke();
+      ctx.fillStyle = '#04060d';
+      ctx.beginPath(); ctx.ellipse(tipX, tipY-4, 2.2, 6, rd.lean+sway, 0, TAU); ctx.fill();
+    }
+  }
+}
+
+function drawGroundHint(l){
+  if(!l || l.state !== 'ground') return;
+  const p = 0.5 + 0.5*Math.sin(tNow*0.003);
+  ctx.save();
+  ctx.globalAlpha = 0.16 + 0.13*p;
+  ctx.strokeStyle = '#ffc882';
+  ctx.setLineDash([4,7]);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(l.x, l.y, l.s*2.5 + p*4, 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+
+/* ================= 交互 ================= */
+const panel = document.getElementById('panel');
+const wishInput = document.getElementById('wishInput');
+const tip = document.getElementById('tip');
+const hint = document.getElementById('hint');
+const counter = document.getElementById('counter');
+const soundBtn = document.getElementById('soundBtn');
+let tipTimer = null;
+let pairMode = false;
+const panelTitle = panel.querySelector('.p-title');
+
+function openPanel(pair){
+  pairMode = !!pair;
+  panelTitle.textContent = pairMode ? '写 下 心 愿 · 双 灯 齐 放' : '写 下 心 愿';
+  panel.classList.add('open');
+  setTimeout(()=>wishInput.focus(), 120);
+}
+function closePanel(){ panel.classList.remove('open'); }
+
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click', ()=>{ wishInput.value = c.dataset.w; wishInput.focus(); });
+});
+
+function submitWish(){
+  if(!ground || ground.state !== 'ground'){ closePanel(); return; }
+  const v = wishInput.value.trim().slice(0,12);
+  ground.wish = v || PRESETS[Math.floor(R()*PRESETS.length)];
+  ground.state = 'lighting';
+  if(pairMode){
+    /* 双灯齐放：同伴灯共载同一心愿，错峰点亮、并肩上升 */
+    const mate = new Lantern(ground.wish);
+    mate.state = 'lighting';
+    mate.lightT = -0.28;
+    mate.s = ground.s * 0.94;
+    mate.x = ground.x + ground.s*1.42;
+    mate.y = ground.y;
+    ground.x -= ground.s*1.42;
+    ground.pairOf = mate; mate.pairOf = ground;
+    lanterns.push(mate);
+    pairMode = false;
+  }
+  closePanel();
+  hint.classList.add('off');
+}
+document.getElementById('releaseBtn').addEventListener('click', submitWish);
+wishInput.addEventListener('keydown', e=>{ if(e.key==='Enter') submitWish(); });
+
+function showTip(l, x, y){
+  let txt = '「' + l.wish + '」';
+  if(l.date){
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(l.date);
+    if(m) txt += '\n· ' + (+m[2]) + '月' + (+m[3]) + '日 ·';
+  }
+  tip.textContent = txt;
+  tip.style.left = clamp(x, 90, W-90) + 'px';
+  tip.style.top = Math.max(60, y - 14) + 'px';
+  tip.style.opacity = '1';
+  if(tipTimer) clearTimeout(tipTimer);
+  tipTimer = setTimeout(()=>{ tip.style.opacity='0'; }, 2800);
+}
+
+/* 短按开单灯面板，长按(620ms)开双灯面板 */
+let pressTimer = null, pressGX = 0, pressGY = 0;
+function cancelPress(){ if(pressTimer){ clearTimeout(pressTimer); pressTimer = null; } }
+
+cvs.addEventListener('pointerdown', e=>{
+  initAudio();
+  const x = e.clientX, y = e.clientY;
+  if(panel.classList.contains('open')){ closePanel(); return; }
+  if(ground && ground.state==='ground'){
+    if(Math.hypot(x-ground.x, y-ground.y) < ground.s*3.2){
+      pressGX = x; pressGY = y;
+      cancelPress();
+      pressTimer = setTimeout(()=>{ pressTimer = null; openPanel(true); }, 620);
+      return;
+    }
+  }
+  for(let i=lanterns.length-1;i>=0;i--){
+    const l = lanterns[i];
+    if(l.state==='rising' || l.state==='star'){
+      const rr = l.state==='star' ? 14 : l.s*(l.scale||1)*2.2;
+      if(Math.hypot(x-l.x, y-l.y) < rr){ showTip(l, x, y); return; }
+    }
+  }
+});
+
+cvs.addEventListener('pointerup', e=>{
+  if(pressTimer){
+    cancelPress();
+    if(ground && ground.state==='ground' &&
+       Math.hypot(e.clientX-ground.x, e.clientY-ground.y) < ground.s*3.2 &&
+       Math.hypot(e.clientX-pressGX, e.clientY-pressGY) < 14){
+      openPanel(false);
+    }
+  }
+});
+cvs.addEventListener('pointercancel', cancelPress);
+
+cvs.addEventListener('pointermove', e=>{
+  if(pressTimer && Math.hypot(e.clientX-pressGX, e.clientY-pressGY) > 14) cancelPress();
+  let hov = false;
+  if(ground && ground.state==='ground' && Math.hypot(e.clientX-ground.x, e.clientY-ground.y) < ground.s*3.2) hov = true;
+  if(!hov){
+    for(const l of lanterns){
+      if(l.state==='rising' || l.state==='star'){
+        const rr = l.state==='star' ? 14 : l.s*(l.scale||1)*2.2;
+        if(Math.hypot(e.clientX-l.x, e.clientY-l.y) < rr){ hov = true; break; }
+      }
+    }
+  }
+  cvs.style.cursor = hov ? 'pointer' : 'default';
+});
+
+soundBtn.addEventListener('click', ()=>{
+  initAudio();
+  soundOn = !soundOn;
+  soundBtn.textContent = soundOn ? '♪' : '✕';
+  if(master) master.gain.value = soundOn ? 0.9 : 0;
+});
+
+function updateCounter(){
+  let t = '已放 ' + released + ' 盏';
+  if(skyStore.total > released) t += ' · 累计 ' + skyStore.total + ' 盏';
+  counter.textContent = t;
+}
+
+/* ================= 星图回放 ================= */
+const mapBtn = document.getElementById('mapBtn');
+const mapBadge = document.getElementById('mapBadge');
+const mapOverlay = document.getElementById('mapOverlay');
+const mapSub = document.getElementById('mapSub');
+const mapFoot = document.getElementById('mapFoot');
+const mapTipEl = document.getElementById('mapTip');
+const mapCvs = document.getElementById('mapCanvas');
+const mctx = mapCvs.getContext('2d');
+const confirmOverlay = document.getElementById('confirmOverlay');
+let mapStars = [];   /* 星图内星的布局坐标（CSS像素），用于点击命中 */
+let mapTwinkle = []; /* 每颗星的闪烁相位 */
+
+function refreshMapBtn(){
+  const n = skyStore.wishes.length;
+  mapBadge.textContent = n > 99 ? '99+' : String(n);
+  mapBtn.classList.toggle('show', n > 0);
+}
+
+function fmtDate(s){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || '');
+  return m ? (+m[2]) + '月' + (+m[3]) + '日' : '';
+}
+
+/* 绘制星图到指定ctx；W/H为逻辑像素；card=true时为导出卡片（加大留白与落款） */
+function drawStarMap(g, cw, ch, card){
+  const pad = card ? 40 : 18;
+  /* 夜空底 */
+  const bg = g.createLinearGradient(0, 0, 0, ch);
+  bg.addColorStop(0, '#0a0f24');
+  bg.addColorStop(0.65, '#0b1026');
+  bg.addColorStop(1, '#12142e');
+  g.fillStyle = bg;
+  g.fillRect(0, 0, cw, ch);
+
+  /* 细碎背景星（确定性布局，与主场景同种子序列风格） */
+  const skyBottom = card ? ch*0.80 : ch*0.88;
+  const rr = mulberry32(7788);
+  const bgN = Math.round(cw*skyBottom/4200);
+  for(let i=0;i<bgN;i++){
+    const x = rr()*cw, y = rr()*skyBottom;
+    g.globalAlpha = 0.15 + rr()*0.4;
+    g.fillStyle = rr() > 0.7 ? '#ffe9c4' : '#cdd8ff';
+    const r = 0.5 + rr()*0.9;
+    g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
+  }
+  /* 月亮 */
+  const mx = cw*0.82, my = ch*0.15, mr = cw*0.052;
+  const mg = g.createRadialGradient(mx,my,mr*0.2, mx,my, mr*3.2);
+  mg.addColorStop(0, 'rgba(255,238,200,0.9)');
+  mg.addColorStop(0.25, 'rgba(255,225,170,0.28)');
+  mg.addColorStop(1, 'rgba(255,225,170,0)');
+  g.globalAlpha = 1;
+  g.fillStyle = mg;
+  g.beginPath(); g.arc(mx,my, mr*3.2, 0, TAU); g.fill();
+  g.fillStyle = '#f6e8c8';
+  g.beginPath(); g.arc(mx,my, mr, 0, TAU); g.fill();
+
+  /* 远山剪影 */
+  g.fillStyle = 'rgba(8,10,22,0.92)';
+  g.beginPath();
+  g.moveTo(0, ch);
+  g.lineTo(0, skyBottom);
+  for(let x=0;x<=cw;x+=cw/24){
+    const y = skyBottom - (Math.sin(x*0.011+2)*0.5+Math.sin(x*0.027+4)*0.3+0.55)*ch*0.045;
+    g.lineTo(x, y);
+  }
+  g.lineTo(cw, ch); g.closePath(); g.fill();
+
+  /* 心愿星：按放灯先后（记录顺序）在天穹上保序列阵，横向承原场景方位 */
+  const skyW = cw - pad*2;
+  const skyH = skyBottom - pad*2;
+  const t = performance.now();
+  mapStars = []; mapTwinkle = [];
+  const recs = skyStore.stars;
+  const n = recs.length;
+  /* 星列：按放灯次序沿天穹均匀排布（蛇形走向），原 fx 做方位微扰——
+     任何数量的星都必然散开可辨；越早的灯越在天穹高远处 */
+  const rnd = mulberry32(20260904);
+  const pts = recs.map((s,i)=>{
+    /* 时间步：沿一条自右上而左下、再回摆的平缓蛇形带展开 */
+    const f = n > 1 ? i/(n-1) : 0.5;
+    const band = f * skyH * 0.66;
+    const yBase = pad + skyH*0.10 + band;
+    /* 蛇形：每行来回摆，x 走原方位 fx 与蛇形相位的折中 */
+    const rowLen = Math.max(6, Math.ceil(Math.sqrt(n) * 1.15));
+    const row = Math.floor(i / rowLen);
+    const col = i % rowLen;
+    const rowF = rowLen > 1 ? col/(rowLen-1) : 0.5;
+    const dir = (row % 2 === 0) ? rowF : (1 - rowF);   /* 蛇形折返 */
+    const xBase = pad + dir * skyW;
+    /* 微扰：fx 把星轻轻拉回它升起的方位，再加确定性小抖动避免机械感 */
+    const anchorX = pad + (s.fx != null ? s.fx : 0.5) * skyW;
+    const x = xBase*0.72 + anchorX*0.28 + (rnd()-0.5)*cw*0.012;
+    const y = yBase + (rnd()-0.5)*skyH*0.03;
+    return { x: clamp(x, pad+5, cw-pad-5), y: clamp(y, pad+5, skyBottom-10) };
+  });
+  for(let i=0;i<n;i++){
+    const s = recs[i];
+    const x = pts[i].x, y = pts[i].y;
+    const r = clamp((s.ss||0.2) * cw * 0.030, 2.6, 7.5);
+    const ph = i*1.37;
+    const fl = card ? 0.92 : 0.72 + 0.28*Math.sin(t*0.002 + ph);
+    mapStars.push({ x, y, r: Math.max(r, 9), rec: s });
+    mapTwinkle.push(ph);
+    const halo = g.createRadialGradient(x,y,0, x,y, r*3.4);
+    halo.addColorStop(0, 'rgba(255,205,130,'+(0.85*fl)+')');
+    halo.addColorStop(0.4, 'rgba(255,170,80,'+(0.32*fl)+')');
+    halo.addColorStop(1, 'rgba(255,170,80,0)');
+    g.fillStyle = halo;
+    g.beginPath(); g.arc(x,y, r*3.4, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(255,224,168,'+fl+')';
+    g.beginPath(); g.arc(x,y, r*0.55, 0, TAU); g.fill();
+  }
+  g.globalAlpha = 1;
+
+  if(card){
+    /* 卡片落款 */
+    g.textAlign = 'center';
+    g.fillStyle = 'rgba(240,224,190,0.92)';
+    g.font = '600 ' + Math.round(cw*0.052) + 'px "Ma Shan Zheng", "Noto Serif SC", serif';
+    g.fillText('我 的 星 空', cw/2, ch*0.885);
+    g.fillStyle = 'rgba(240,224,190,0.55)';
+    g.font = Math.round(cw*0.026) + 'px "ZCOOL XiaoWei", "Noto Serif SC", serif';
+    const n = skyStore.wishes.length;
+    const first = skyStore.wishes[0] ? fmtDate(skyStore.wishes[0].date) : '';
+    const last = skyStore.wishes[n-1] ? fmtDate(skyStore.wishes[n-1].date) : '';
+    g.fillText(n + ' 盏灯 · ' + skyStore.total + ' 个心愿' + (first ? ' · ' + first + ' 起' : ''), cw/2, ch*0.93);
+    /* 印章 */
+    const sx = cw*0.79, sy = ch*0.90, ss = cw*0.07;
+    g.fillStyle = '#b43a2a';
+    g.save();
+    g.translate(sx, sy); g.rotate(-0.06);
+    g.fillRect(-ss/2, -ss/2, ss, ss);
+    g.fillStyle = '#fdf6ea';
+    g.font = Math.round(ss*0.42) + 'px "Ma Shan Zheng", serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('绒球', 0, 1);
+    g.restore();
+    g.textBaseline = 'alphabetic';
+  }
+}
+
+/* 面板内星图自适应尺寸 */
+function sizeMapCanvas(){
+  const boxW = mapCvs.parentElement.clientWidth - 0;
+  const cw = Math.min(boxW - 48, 520);
+  const cssW = cw, cssH = Math.round(cw * 0.72);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  mapCvs.style.width = cssW + 'px';
+  mapCvs.style.height = cssH + 'px';
+  mapCvs.width = Math.round(cssW * dpr);
+  mapCvs.height = Math.round(cssH * dpr);
+  mctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawStarMap(mctx, cssW, cssH, false);
+}
+
+function openMap(){
+  const n = skyStore.wishes.length;
+  mapSub.textContent = n + ' 盏灯 · ' + skyStore.total + ' 个心愿' +
+    (n ? ' · 最早 ' + fmtDate(skyStore.wishes[0].date) : '');
+  mapFoot.textContent = skyStore.stars.length
+    ? '点一点星星，看看当时写下的心愿'
+    : '天上暂时没有星，去放一盏灯吧';
+  mapOverlay.classList.add('open');
+  requestAnimationFrame(()=>{ sizeMapCanvas(); });
+}
+function closeMap(){ mapOverlay.classList.remove('open'); }
+
+/* 星图动画（面板开启时） */
+(function mapLoop(){
+  requestAnimationFrame(mapLoop);
+  if(mapOverlay.classList.contains('open') && mapCvs.width){
+    const cssW = mapCvs.clientWidth, cssH = mapCvs.clientHeight;
+    if(cssW) drawStarMap(mctx, cssW, cssH, false);
+  }
+})();
+
+/* 点击星图里的星：显示心愿 */
+function mapHit(e){
+  const rect = mapCvs.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  for(let i=mapStars.length-1;i>=0;i--){
+    const s = mapStars[i];
+    if(Math.hypot(mx-s.x, my-s.y) < s.r + 4){
+      mapTipEl.textContent = '「' + s.rec.wish + '」\n· ' + fmtDate(s.rec.date) + ' ·';
+      mapTipEl.style.left = (rect.left + s.x) + 'px';
+      mapTipEl.style.top = (rect.top + s.y) + 'px';
+      mapTipEl.style.opacity = '1';
+      clearTimeout(mapTipEl._t);
+      mapTipEl._t = setTimeout(()=>{ mapTipEl.style.opacity = '0'; }, 2600);
+      return;
+    }
+  }
+  mapTipEl.style.opacity = '0';
+}
+mapCvs.addEventListener('click', mapHit);
+
+/* 收下星图：导出 PNG 卡片 */
+function saveStarCard(){
+  const CW = 1080, CH = 800;
+  const off = document.createElement('canvas');
+  off.width = CW; off.height = CH;
+  const g = off.getContext('2d');
+  g.scale(1, 1);
+  drawStarMap(g, CW, CH, true);
+  try{
+    const a = document.createElement('a');
+    a.download = '我的星空_' + todayStr() + '.png';
+    a.href = off.toDataURL('image/png');
+    a.click();
+  }catch(e){
+    mapFoot.textContent = '卡片保存失败，再试一次吧';
+  }
+}
+
+mapBtn.addEventListener('click', openMap);
+document.getElementById('mapClose').addEventListener('click', closeMap);
+mapOverlay.addEventListener('click', e=>{ if(e.target === mapOverlay) closeMap(); });
+document.getElementById('mapSave').addEventListener('click', saveStarCard);
+document.getElementById('mapClear').addEventListener('click', ()=>{
+  if(skyStore.wishes.length) confirmOverlay.classList.add('open');
+});
+document.getElementById('confirmNo').addEventListener('click', ()=>confirmOverlay.classList.remove('open'));
+confirmOverlay.addEventListener('click', e=>{ if(e.target === confirmOverlay) confirmOverlay.classList.remove('open'); });
+document.getElementById('confirmYes').addEventListener('click', ()=>{
+  confirmOverlay.classList.remove('open');
+  clearSkyStore();
+  closeMap();
+});
+window.addEventListener('resize', ()=>{ if(mapOverlay.classList.contains('open')) sizeMapCanvas(); });
+
+function checkPoem(){
+  if(released >= 5) document.body.classList.add('poem-on');
+}
+
+/* ================= 自动测试钩子 ================= */
+let autoLeft = AUTO, autoNext = 600;
+function autoStep(){
+  if(autoLeft <= 0 || tNow < autoNext) return;
+  if(ground && ground.state === 'ground'){
+    ground.wish = PRESETS[(AUTO - autoLeft) % PRESETS.length];
+    ground.state = 'lighting';
+    if(AUTOPAIR){
+      const mate = new Lantern(ground.wish);
+      mate.state = 'lighting';
+      mate.lightT = -0.28;
+      mate.s = ground.s * 0.94;
+      mate.x = ground.x + ground.s*1.42;
+      mate.y = ground.y;
+      ground.x -= ground.s*1.42;
+      ground.pairOf = mate; mate.pairOf = ground;
+      lanterns.push(mate);
+    }
+    hint.classList.add('off');
+    autoLeft--;
+    autoNext = tNow + (FAST ? 250 : 1300);
+  }
+}
+
+/* ================= 主循环 ================= */
+let tPrev = 0;
+let warpBase = 0;
+function simulate(seconds){
+  const step = 16.666;
+  for(let t=0; t<seconds*1000; t+=step){
+    tNow = warpBase + t;
+    autoStep();
+    if(!ground && tNow > nextGroundAt) spawnGround();
+    for(let i=lanterns.length-1;i>=0;i--){
+      lanterns[i].update(step);
+      if(lanterns[i].dead) lanterns.splice(i,1);
+    }
+  }
+  warpBase += seconds*1000;
+}
+function frame(ts){
+  tNow = ts + warpBase;
+  const dt = Math.min(50, tNow - (tPrev || tNow));
+  tPrev = tNow;
+
+  drawSky();
+  drawMoon();
+  drawMountains();
+  drawWater();
+  for(const l of lanterns) l.drawReflection();
+  drawRipples();
+  drawBank();
+  drawReeds();
+
+  for(let i=lanterns.length-1;i>=0;i--){
+    lanterns[i].update(dt);
+    if(lanterns[i].dead) lanterns.splice(i,1);
+  }
+  for(const l of lanterns){ if(l.state !== 'ground') l.draw(); }
+  if(ground){ ground.draw(); drawGroundHint(ground); }
+
+  if(!ground && tNow > nextGroundAt) spawnGround();
+  autoStep();
+
+  requestAnimationFrame(frame);
+}
+
+/* ================= 测试镜像 ================= */
+window.addEventListener('error', e=>{
+  const el = document.getElementById('errlog');
+  if(el) el.textContent += 'ERR ' + (e.message||'') + ' @' + (e.lineno||0) + ':' + (e.colno||0) + ';';
+});
+setInterval(()=>{
+  const el = document.getElementById('state');
+  if(el) el.textContent = JSON.stringify({
+    r: released,
+    aloft: lanterns.filter(l=>l.state==='rising').length,
+    star: lanterns.filter(l=>l.state==='star').length,
+    hist: lanterns.filter(l=>l.historic).length,
+    storeTotal: skyStore.total,
+    wishes: skyStore.wishes.length,
+    starsStored: skyStore.stars.length,
+    mapBtn: mapBtn.classList.contains('show'),
+    mapOpen: mapOverlay.classList.contains('open'),
+    ground: ground ? ground.state : 'none'
+  });
+}, 400);
+
+/* ================= 启动 ================= */
+resize();
+loadSkyStore();
+/* 历史星回挂：之前放过的灯化作的星，今夜仍在 */
+for(const rec of skyStore.stars){
+  try{ lanterns.push(Lantern.fromRecord(rec)); }catch(e){}
+}
+/* 测试钩子：?presky=N 预置N颗伪历史星（不经localStorage，配合nostore使用；同时填充内存store以测星图） */
+for(let i=0;i<PRESKY;i++){
+  const rec = {
+    fx: 0.08 + R()*0.84,
+    fy: 0.05 + R()*0.5,
+    ss: 0.16 + R()*0.14,
+    wish: PRESETS[i % PRESETS.length],
+    date: '2026-08-31'
+  };
+  lanterns.push(Lantern.fromRecord(rec));
+  skyStore.stars.push(rec);
+  skyStore.wishes.push({ wish: rec.wish, date: rec.date });
+  skyStore.total++;
+}
+spawnGround();
+updateCounter();
+refreshMapBtn();
+if(WARP > 0) simulate(WARP);
+if(Q.get('panel') === '1') openPanel();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

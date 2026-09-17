@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>风铎 · Wind Bells</title>
+<style>
+  html, body { margin: 0; padding: 0; overflow: hidden; background: #0d1020; height: 100%; }
+  canvas { display: block; touch-action: none; }
+  #ui {
+    position: fixed; left: 0; right: 0; bottom: 14px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding: 0 22px; pointer-events: none;
+    font-family: "Songti SC", "Noto Serif SC", serif; color: rgba(214, 200, 170, 0.55);
+  }
+  #hint { font-size: 13px; letter-spacing: 2px; }
+  #windbox { pointer-events: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 2px; }
+  #wind { width: 110px; accent-color: #b08d57; }
+  #title {
+    position: fixed; top: 18px; left: 24px; pointer-events: none;
+    font-family: "Songti SC", "Noto Serif SC", serif; color: rgba(214, 200, 170, 0.6);
+  }
+  #title h1 { font-size: 20px; font-weight: normal; letter-spacing: 6px; margin: 0; }
+  #title p { font-size: 11px; letter-spacing: 2px; margin: 4px 0 0 1px; opacity: 0.6; }
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="title"><h1>风 铎</h1><p>WIND BELLS · 风过檐铃自鸣</p></div>
+<div id="ui">
+  <div id="hint">点铃 · 拽铃 · 空白处横扫起风</div>
+  <div id="windbox"><span>风</span><input id="wind" type="range" min="0" max="100" value="28"></div>
+</div>
+<script>
+'use strict';
+/* ============================================================
+   风铎 · Wind Bells
+   加法合成非谐泛音铃音 + 摆锤/铃舌碰撞物理 + 阵风系统
+   ============================================================ */
+
+const cv = document.getElementById('cv');
+const ctx2d = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  ctx2d.setTransform(DPR, 0, 0, DPR, 0, 0);
+  layoutChimes();
+}
+window.addEventListener('resize', resize);
+
+/* ---------------- 音频 ---------------- */
+let AC = null, masterGain = null, wetGain = null, convolver = null;
+
+function initAudio() {
+  if (AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = AC.createGain(); masterGain.gain.value = 0.7;
+  const comp = AC.createDynamicsCompressor();
+  comp.threshold.value = -18; comp.ratio.value = 4;
+  convolver = AC.createConvolver();
+  convolver.buffer = makeIR(2.4, 2.8);
+  wetGain = AC.createGain(); wetGain.gain.value = 0.42;
+  masterGain.connect(comp); comp.connect(AC.destination);
+  masterGain.connect(convolver); convolver.connect(wetGain); wetGain.connect(AC.destination);
+}
+
+function makeIR(dur, decay) {
+  const rate = AC.sampleRate, len = Math.floor(rate * dur);
+  const buf = AC.createBuffer(2, len, rate);
+  for (let c = 0; c < 2; c++) {
+    const d = buf.getChannelData(c);
+    for (let i = 0; i < len; i++) {
+      d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+  }
+  return buf;
+}
+
+/* 铃的分音列：[比率, 相对幅度, 衰减秒] —— 金属非谐泛音 + hum/tierce */
+const PARTIALS = [
+  [0.50, 0.30, 6.5],
+  [1.00, 1.00, 4.2],
+  [1.19, 0.28, 3.0],
+  [2.76, 0.38, 1.3],
+  [5.40, 0.16, 0.55]
+];
+
+function strikeBell(freq, vel, panX) {
+  if (!AC) return;
+  const t0 = AC.currentTime;
+  const amp = Math.min(0.16 + vel * 0.55, 0.85);
+  const pan = AC.createStereoPanner ? AC.createStereoPanner() : null;
+  let out = masterGain;
+  if (pan) {
+    pan.pan.value = Math.max(-0.8, Math.min(0.8, (panX / W) * 1.6 - 0.8));
+    pan.connect(masterGain); out = pan;
+  }
+  for (let i = 0; i < PARTIALS.length; i++) {
+    const ratio = PARTIALS[i][0], pa = PARTIALS[i][1], dec = PARTIALS[i][2];
+    const osc = AC.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq * ratio * (1 + (Math.random() - 0.5) * 0.004);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(0, t0);
+    g.gain.linearRampToValueAtTime(amp * pa, t0 + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dec * (0.7 + vel * 0.6));
+    osc.connect(g); g.connect(out);
+    osc.start(t0); osc.stop(t0 + dec * 2 + 0.1);
+  }
+}
+
+/* ---------------- 风系统 ---------------- */
+const wind = {
+  base: 0.28,          // 滑杆基础风
+  gust: 0,             // 当前阵风强度
+  gustEnv: 0,          // 阵风包络 0..1
+  nextGust: 3.5,       // 距下次自动阵风
+  now: 0,              // 合成后的当前风力
+  userGust: 0          // 用户横扫注入的风
+};
+
+function stepWind(dt, t) {
+  wind.nextGust -= dt;
+  if (wind.nextGust <= 0) {
+    wind.gustEnv = 1;
+    wind.nextGust = 4 + Math.random() * 5;
+  }
+  if (wind.gustEnv > 0) wind.gustEnv = Math.max(0, wind.gustEnv - dt * 0.35);
+  // 阵风包络：慢起缓落
+  const env = wind.gustEnv;
+  const shaped = env * env * (3 - 2 * env);
+  wind.userGust = Math.max(0, wind.userGust - dt * 0.5);
+  const breathe = 0.5 + 0.5 * Math.sin(t * 0.43) * Math.sin(t * 0.171 + 1.3);
+  wind.now = wind.base * 0.45 * (0.4 + 0.6 * breathe) + shaped * (0.55 + wind.base * 0.5) + wind.userGust;
+}
+
+/* ---------------- 铃 ---------------- */
+/* A小调五声：A3 C4 D4 E4 G4 A4 C5 */
+const FREQS = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+const chimes = [];
+const ripples = [];
+
+/* 聚散布局：三两成组，间距有密有疏，高度错落 */
+const LAYOUT = [
+  { fx: 0.085, cordK: 1.00, lenK: 1.06 },
+  { fx: 0.185, cordK: 1.38, lenK: 0.90 },
+  { fx: 0.360, cordK: 0.88, lenK: 1.00 },
+  { fx: 0.470, cordK: 1.22, lenK: 0.82 },
+  { fx: 0.585, cordK: 1.02, lenK: 0.94 },
+  { fx: 0.800, cordK: 1.30, lenK: 0.72 },
+  { fx: 0.905, cordK: 0.92, lenK: 0.66 }
+];
+
+function layoutChimes() {
+  const n = FREQS.length;
+  const beamY = Math.max(64, H * 0.10);
+  for (let i = 0; i < n; i++) {
+    let c = chimes[i];
+    if (!c) {
+      c = {
+        i: i,
+        theta: (Math.random() - 0.5) * 0.06,
+        omega: 0,
+        s: 0, sv: 0,            // 铃舌偏移与速度
+        energy: 0,
+        phase: Math.random() * Math.PI * 2,
+        grabbed: false
+      };
+      chimes[i] = c;
+    }
+    c.freq = FREQS[i];
+    const lay = LAYOUT[i];
+    c.tubeLen = H * 0.185 * lay.lenK;
+    c.tubeW = 15 + (lay.lenK - 0.66) * 18;
+    c.px = W * lay.fx;
+    c.py = beamY;
+    c.cord = H * 0.085 * lay.cordK;
+  }
+}
+
+function tubeBottom(c) {
+  const sx = Math.sin(c.theta), sy = Math.cos(c.theta);
+  return { x: c.px + sx * c.cord, y: c.py + sy * c.cord };
+}
+
+function strike(c, vel) {
+  vel = Math.max(0.08, Math.min(1, vel));
+  c.energy = Math.min(1, c.energy + 0.5 + vel * 0.6);
+  const b = tubeBottom(c);
+  ripples.push({ x: c.px + Math.sin(c.theta) * (c.cord + c.tubeLen * 0.5),
+                 y: c.py + Math.cos(c.theta) * (c.cord + c.tubeLen * 0.5),
+                 r: c.tubeW, a: 0.5, vr: 90 + vel * 120 });
+  strikeBell(c.freq, vel, c.px);
+}
+
+function stepChime(c, dt, t) {
+  /* 管摆：单摆 + 风力矩 */
+  const L = c.cord + c.tubeLen * 0.5;
+  const g = 9.8 * 220; /* 像素重力尺度 */
+  if (!c.grabbed) {
+    const windTorque = wind.now * (14 + 8 * Math.sin(t * 1.7 + c.phase)) *
+                       (0.7 + 0.5 * Math.sin(t * 0.9 + c.phase * 2));
+    const alpha = -(g / L) * Math.sin(c.theta) - 0.35 * c.omega + windTorque / L * 60;
+    c.omega += alpha * dt;
+    c.theta += c.omega * dt;
+  }
+  /* 铃舌：相对管底的一维弹簧振子，风驱动 + 碰撞 */
+  const drive = wind.now * (46 * Math.sin(t * 2.3 + c.phase * 3.1) +
+                            30 * Math.sin(t * 3.7 + c.phase * 1.7)) +
+                c.omega * 260;
+  const acc = -34 * c.s - 1.6 * c.sv + drive;
+  c.sv += acc * dt;
+  c.s += c.sv * dt;
+  const limit = c.tubeW * 0.5;
+  if (Math.abs(c.s) > limit) {
+    const impact = Math.abs(c.sv);
+    c.s = Math.sign(c.s) * limit;
+    c.sv = -c.sv * 0.42;
+    if (impact > 26) strike(c, impact / 160);
+  }
+  c.energy = Math.max(0, c.energy - dt * 0.55);
+}
+
+/* ---------------- 花瓣/尘 ---------------- */
+const petals = [];
+function initPetals() {
+  petals.length = 0;
+  for (let i = 0; i < 38; i++) {
+    petals.push({
+      x: Math.random() * W, y: Math.random() * H,
+      vy: 4 + Math.random() * 9,
+      ph: Math.random() * Math.PI * 2,
+      sz: 1 + Math.random() * 2.2,
+      petal: Math.random() < 0.35
+    });
+  }
+}
+
+function stepPetals(dt, t) {
+  for (let i = 0; i < petals.length; i++) {
+    const p = petals[i];
+    const wv = wind.now * (60 + 40 * Math.sin(t * 0.8 + p.ph));
+    p.x += (wv + 6 * Math.sin(t * 1.3 + p.ph)) * dt;
+    p.y += (p.vy + wind.now * 10 * Math.cos(t + p.ph)) * dt;
+    if (p.x > W + 20) p.x = -20;
+    if (p.x < -30) p.x = W + 10;
+    if (p.y > H + 20) { p.y = -10; p.x = Math.random() * W; }
+  }
+}
+
+/* ---------------- 渲染 ---------------- */
+function drawBackground(t) {
+  const g = ctx2d.createRadialGradient(W * 0.72, H * 0.16, 60, W * 0.55, H * 0.42, Math.max(W, H));
+  g.addColorStop(0, '#1b2140');
+  g.addColorStop(0.45, '#131730');
+  g.addColorStop(1, '#0a0c1c');
+  ctx2d.fillStyle = g;
+  ctx2d.fillRect(0, 0, W, H);
+  /* 月色：小月高悬右上，避开铃组 */
+  const mx = W * 0.70, my = H * 0.048, mr = 14;
+  const mg = ctx2d.createRadialGradient(mx, my, 2, mx, my, 130);
+  mg.addColorStop(0, 'rgba(232, 226, 205, 0.16)');
+  mg.addColorStop(0.3, 'rgba(232, 226, 205, 0.05)');
+  mg.addColorStop(1, 'rgba(232, 226, 205, 0)');
+  ctx2d.fillStyle = mg;
+  ctx2d.fillRect(mx - 140, my - 140, 280, 280);
+  ctx2d.beginPath();
+  ctx2d.arc(mx, my, mr, 0, Math.PI * 2);
+  ctx2d.fillStyle = 'rgba(236, 230, 210, 0.72)';
+  ctx2d.fill();
+
+  /* 底部：远处水面/地面暗影，让留白有底 */
+  const gy = H * 0.90;
+  const gg = ctx2d.createLinearGradient(0, gy, 0, H);
+  gg.addColorStop(0, 'rgba(30, 38, 66, 0)');
+  gg.addColorStop(0.6, 'rgba(34, 44, 76, 0.35)');
+  gg.addColorStop(1, 'rgba(40, 52, 88, 0.5)');
+  ctx2d.fillStyle = gg;
+  ctx2d.fillRect(0, gy, W, H - gy);
+  /* 月的碎影 */
+  for (let k = 0; k < 5; k++) {
+    const sy = gy + 14 + k * 12 + Math.sin(t * 0.7 + k * 2.1) * 2.5;
+    const sw = (34 - k * 5) * (0.8 + 0.2 * Math.sin(t * 1.3 + k));
+    ctx2d.beginPath();
+    ctx2d.ellipse(mx + Math.sin(t * 0.5 + k * 1.7) * 6, sy, Math.max(4, sw), 1.1, 0, 0, Math.PI * 2);
+    ctx2d.fillStyle = 'rgba(226, 220, 196,' + (0.10 - k * 0.017).toFixed(3) + ')';
+    ctx2d.fill();
+  }
+}
+
+function drawBeam() {
+  const beamY = Math.max(64, H * 0.10);
+  const g = ctx2d.createLinearGradient(0, beamY - 16, 0, beamY + 12);
+  g.addColorStop(0, '#3a2c22');
+  g.addColorStop(0.5, '#2a1f18');
+  g.addColorStop(1, '#171009');
+  ctx2d.fillStyle = g;
+  ctx2d.fillRect(0, beamY - 16, W, 28);
+  ctx2d.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx2d.fillRect(0, beamY + 12, W, 3);
+}
+
+function drawChime(c, t) {
+  const sx = Math.sin(c.theta), sy = Math.cos(c.theta);
+  const topX = c.px + sx * c.cord, topY = c.py + sy * c.cord;
+  const tilt = c.theta * 0.45;
+
+  /* 发光 */
+  if (c.energy > 0.02) {
+    const cy = topY + c.tubeLen * 0.5;
+    const gr = ctx2d.createRadialGradient(topX, cy, 2, topX, cy, c.tubeLen * 0.9);
+    gr.addColorStop(0, 'rgba(255, 205, 130,' + (0.28 * c.energy).toFixed(3) + ')');
+    gr.addColorStop(1, 'rgba(255, 205, 130, 0)');
+    ctx2d.fillStyle = gr;
+    ctx2d.fillRect(topX - c.tubeLen, cy - c.tubeLen, c.tubeLen * 2, c.tubeLen * 2);
+  }
+
+  /* 绳 */
+  ctx2d.beginPath();
+  ctx2d.moveTo(c.px, c.py - 2);
+  ctx2d.lineTo(topX, topY);
+  ctx2d.strokeStyle = 'rgba(150, 128, 96, 0.75)';
+  ctx2d.lineWidth = 1.4;
+  ctx2d.stroke();
+
+  /* 管身 */
+  ctx2d.save();
+  ctx2d.translate(topX, topY);
+  ctx2d.rotate(-tilt);
+  const w = c.tubeW, len = c.tubeLen;
+  const bg = ctx2d.createLinearGradient(-w / 2, 0, w / 2, 0);
+  const glow = 0.10 + c.energy * 0.30;
+  bg.addColorStop(0, 'rgb(' + Math.floor(74 + 40 * glow) + ',' + Math.floor(55 + 30 * glow) + ',' + Math.floor(30 + 16 * glow) + ')');
+  bg.addColorStop(0.35, 'rgb(' + Math.floor(150 + 60 * glow) + ',' + Math.floor(112 + 46 * glow) + ',' + Math.floor(62 + 24 * glow) + ')');
+  bg.addColorStop(0.55, 'rgb(' + Math.floor(188 + 60 * glow) + ',' + Math.floor(148 + 52 * glow) + ',' + Math.floor(88 + 26 * glow) + ')');
+  bg.addColorStop(1, 'rgb(' + Math.floor(58 + 30 * glow) + ',' + Math.floor(42 + 22 * glow) + ',' + Math.floor(24 + 12 * glow) + ')');
+  ctx2d.fillStyle = bg;
+  roundRect(-w / 2, 0, w, len, w * 0.32);
+  ctx2d.fill();
+  ctx2d.strokeStyle = 'rgba(20, 12, 6, 0.65)';
+  ctx2d.lineWidth = 1;
+  ctx2d.stroke();
+  /* 管口 */
+  ctx2d.beginPath();
+  ctx2d.ellipse(0, len, w / 2, w * 0.16, 0, 0, Math.PI * 2);
+  ctx2d.fillStyle = 'rgba(24, 15, 8, 0.9)';
+  ctx2d.fill();
+  ctx2d.restore();
+
+  /* 铃舌与风板 */
+  const bx = topX - Math.sin(tilt) * len, by = topY + Math.cos(tilt) * len;
+  const stX = bx + c.s, stY = by + 26 + Math.abs(c.s) * 0.12;
+  ctx2d.beginPath();
+  ctx2d.moveTo(bx, by - 2);
+  ctx2d.lineTo(stX, stY);
+  ctx2d.strokeStyle = 'rgba(150, 128, 96, 0.6)';
+  ctx2d.lineWidth = 1;
+  ctx2d.stroke();
+  /* 风板（椭圆形小牌） */
+  ctx2d.save();
+  ctx2d.translate(stX, stY + 10);
+  ctx2d.rotate(c.s * 0.012);
+  ctx2d.beginPath();
+  ctx2d.ellipse(0, 0, c.tubeW * 0.62, c.tubeW * 0.40, 0, 0, Math.PI * 2);
+  const pg = ctx2d.createLinearGradient(-c.tubeW * 0.6, 0, c.tubeW * 0.6, 0);
+  pg.addColorStop(0, 'rgba(96, 70, 40, 0.95)');
+  pg.addColorStop(0.5, 'rgba(178, 138, 84, 0.95)');
+  pg.addColorStop(1, 'rgba(70, 50, 28, 0.95)');
+  ctx2d.fillStyle = pg;
+  ctx2d.fill();
+  ctx2d.strokeStyle = 'rgba(20, 12, 6, 0.5)';
+  ctx2d.stroke();
+  ctx2d.restore();
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx2d.beginPath();
+  ctx2d.moveTo(x + r, y);
+  ctx2d.arcTo(x + w, y, x + w, y + h, r);
+  ctx2d.arcTo(x + w, y + h, x, y + h, r);
+  ctx2d.arcTo(x, y + h, x, y, r);
+  ctx2d.arcTo(x, y, x + w, y, r);
+  ctx2d.closePath();
+}
+
+function drawRipples(dt) {
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const r = ripples[i];
+    r.r += r.vr * dt; r.a -= dt * 0.5;
+    if (r.a <= 0) { ripples.splice(i, 1); continue; }
+    ctx2d.beginPath();
+    ctx2d.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+    ctx2d.strokeStyle = 'rgba(255, 214, 150,' + (r.a * 0.5).toFixed(3) + ')';
+    ctx2d.lineWidth = 1.2;
+    ctx2d.stroke();
+  }
+}
+
+function drawPetals(t) {
+  for (let i = 0; i < petals.length; i++) {
+    const p = petals[i];
+    if (p.petal) {
+      ctx2d.save();
+      ctx2d.translate(p.x, p.y);
+      ctx2d.rotate(t * 0.9 + p.ph);
+      ctx2d.beginPath();
+      ctx2d.ellipse(0, 0, p.sz * 1.7, p.sz * 0.85, 0, 0, Math.PI * 2);
+      ctx2d.fillStyle = 'rgba(196, 148, 150, 0.5)';
+      ctx2d.fill();
+      ctx2d.restore();
+    } else {
+      ctx2d.beginPath();
+      ctx2d.arc(p.x, p.y, p.sz * 0.5, 0, Math.PI * 2);
+      ctx2d.fillStyle = 'rgba(214, 200, 170, 0.28)';
+      ctx2d.fill();
+    }
+  }
+}
+
+/* ---------------- 交互 ---------------- */
+let dragC = null, swipe = null;
+
+function ptr(e) {
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left), y: (e.clientY - r.top) };
+}
+
+function hitChime(x, y) {
+  for (let i = chimes.length - 1; i >= 0; i--) {
+    const c = chimes[i];
+    const sx = Math.sin(c.theta), sy = Math.cos(c.theta);
+    const topX = c.px + sx * c.cord, topY = c.py + sy * c.cord;
+    /* 点到管身中轴的最近距离 */
+    const cx = topX, cy = topY + c.tubeLen * 0.5;
+    if (Math.abs(x - cx) < c.tubeW * 1.1 && y > topY - 6 && y < topY + c.tubeLen + 34) return c;
+  }
+  return null;
+}
+
+cv.addEventListener('pointerdown', function(e) {
+  initAudio();
+  if (AC && AC.state === 'suspended') AC.resume();
+  const p = ptr(e);
+  const c = hitChime(p.x, p.y);
+  if (c) {
+    dragC = c; c.grabbed = true;
+    strike(c, 0.45);
+  } else {
+    swipe = { x0: p.x, y0: p.y, x: p.x, y: p.y, t: 0 };
+  }
+  cv.setPointerCapture(e.pointerId);
+});
+
+cv.addEventListener('pointermove', function(e) {
+  const p = ptr(e);
+  if (dragC) {
+    const c = dragC;
+    const dx = p.x - c.px, dy = Math.max(30, p.y - c.py);
+    const target = Math.atan2(dx, dy);
+    c.omega = (target - c.theta) * 14;
+    c.theta += (target - c.theta) * 0.35;
+    c.sv += (target - c.theta) * 30;
+  } else if (swipe) {
+    swipe.x = p.x; swipe.y = p.y;
+  }
+});
+
+cv.addEventListener('pointerup', function(e) {
+  if (dragC) { dragC.grabbed = false; dragC = null; }
+  if (swipe) {
+    const p = ptr(e);
+    const dx = p.x - swipe.x0;
+    if (Math.abs(dx) > 40) {
+      wind.userGust = Math.min(1.2, wind.userGust + Math.abs(dx) / W * 2.2);
+    }
+    swipe = null;
+  }
+});
+
+/* ---------------- 主循环 ---------------- */
+let last = performance.now();
+function frame(now) {
+  const t = now / 1000;
+  let dt = (now - last) / 1000;
+  last = now;
+  if (dt > 0.05) dt = 0.05;
+
+  stepWind(dt, t);
+  for (let i = 0; i < chimes.length; i++) stepChime(chimes[i], dt, t);
+  stepPetals(dt, t);
+
+  drawBackground(t);
+  drawPetals(t);
+  drawBeam();
+  for (let i = 0; i < chimes.length; i++) drawChime(chimes[i], t);
+  drawRipples(dt);
+
+  requestAnimationFrame(frame);
+}
+
+document.getElementById('wind').addEventListener('input', function(e) {
+  wind.base = e.target.value / 100;
+});
+
+resize();
+initPetals();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

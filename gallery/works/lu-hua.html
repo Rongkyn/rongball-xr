@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>芦花 · Lu Hua</title>
+<!-- uses: lib/audio-lib.js v1.1（master 总线出声口；风声部为作品内联自定义声部） -->
+<!-- 系列第十二件：秋江芦荡。传播型阵风场（包络×行波波前）+ 悬臂茎秆弹性 + 蓬松绒穗 + 风载散絮 -->
+<meta name="color-scheme" content="light">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #f2ede2;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; position: fixed; top: 0; left: 0; }
+  #scene { z-index: 1; }
+  #state { position: fixed; bottom: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; z-index: -1; }
+
+  .ui { position: fixed; pointer-events: none; user-select: none; z-index: 10; }
+  .title {
+    top: 26px; left: 30px;
+    font-size: 17px;
+    letter-spacing: 10px;
+    color: #4a463c;
+    opacity: 0;
+    animation: fadeIn 3s ease 1s forwards;
+  }
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #8a8478;
+    margin-top: 6px;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  .hint {
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 6px;
+    color: #7a7466;
+    opacity: 0;
+    animation: hintFade 9s ease 2.5s forwards;
+  }
+  @keyframes hintFade {
+    0% { opacity: 0; }
+    12% { opacity: 0.6; }
+    70% { opacity: 0.6; }
+    100% { opacity: 0; }
+  }
+
+  /* 印章：朱红方印（不依赖外部字体） */
+  .seal {
+    position: fixed;
+    bottom: 26px; right: 30px;
+    z-index: 10;
+    pointer-events: none;
+    width: 38px; height: 38px;
+    background: rgba(176, 58, 42, 0.92);
+    color: #f7ece2;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    transform: rotate(-4deg);
+    opacity: 0;
+    transition: opacity 2.5s ease;
+  }
+  .seal.show { opacity: 0.9; }
+
+  .btn {
+    position: fixed;
+    top: 22px;
+    z-index: 20;
+    pointer-events: auto;
+    background: rgba(120, 110, 92, 0.10);
+    border: 1px solid #b8b0a0;
+    color: #5a544a;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 2s ease 2s forwards;
+    transition: all 0.4s ease;
+  }
+  .btn:hover {
+    border-color: #6a6458;
+    color: #3a362e;
+    background: rgba(120, 110, 92, 0.18);
+  }
+  #btnClear { right: 26px; }
+  #btnSound { right: 86px; }
+
+  /* 竖排诗（苔痕四轮定版写法）：flex row-reverse 从右往左成列；每字显式 span */
+  #poem {
+    position: fixed; right: 7%; top: 11%; z-index: 9;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-start;
+    gap: 24px;
+    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: clamp(19px, 3.2vh, 25px);
+    color: rgba(74, 66, 52, 0.9);
+    opacity: 0; transition: opacity 4s ease;
+    pointer-events: none;
+  }
+  #poem.show { opacity: 0.86; }
+  #poem .line, #poem .attrib {
+    width: 1.05em;
+    text-align: center;
+    flex: none;
+  }
+  #poem .line > span, #poem .attrib > span {
+    display: block;
+    height: 1.4em;
+    line-height: 1.4;
+  }
+  #poem .attrib {
+    font-size: 12px; letter-spacing: 2px;
+    color: rgba(110, 100, 82, 0.7);
+    padding-top: 72px;
+    width: 1.3em;
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="state">{}</div>
+
+<div class="ui title">
+ 芦 花
+  <div class="subtitle">lu hua · wind through autumn reeds</div>
+</div>
+<div class="ui hint">轻 点 江 滩 · 起 一 阵 秋 风</div>
+<div class="ui seal" id="seal">绒 球</div>
+<button class="btn" id="btnSound">♪</button>
+<button class="btn" id="btnClear">再 来</button>
+
+<div id="poem">
+  <span class="line"><span>蒹</span><span>葭</span><span>苍</span><span>苍</span></span>
+  <span class="line"><span>白</span><span>露</span><span>为</span><span>霜</span></span>
+  <span class="line"><span>所</span><span>谓</span><span>伊</span><span>人</span></span>
+  <span class="line line1"><span>在</span><span>水</span><span>一</span><span>方</span></span>
+  <span class="attrib"><span>诗</span><span>经</span><span>·</span><span>秦</span><span>风</span></span>
+</div>
+
+<script src="lib/audio-lib.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  // ---------- URL 钩子（验收用） ----------
+  const params = new URLSearchParams(location.search);
+  const FAST = params.has('fast');
+  const SPEED = FAST ? 3 : 1;
+  const seedParam = params.get('seed');
+  let SEED = seedParam != null ? (parseInt(seedParam, 10) || 7) : 7;
+
+  function mulberry32(a){
+    return function(){
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  const rng = mulberry32(SEED);
+  const rand = (a, b) => a + (b - a) * rng();
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  function smoothstep(e0, e1, x){
+    const t = clamp((x - e0) / (e1 - e0), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+  // 高斯-ish（两次均匀平均）
+  function grand(a, b){ return (rng() + rng()) * 0.5 * (b - a) + a; }
+
+  // ---------- 画布 ----------
+  const cvs = document.getElementById('scene');
+  const ctx = cvs.getContext('2d');
+  let W = 0, H = 0, DPR = 1, HORIZON = 0;
+
+  // ---------- 风场 ----------
+  // 环境微风：两个低频叠加，永不完全静止
+  // 阵风 gust：生命周期包络 × 沿 x 传播的行波波前（风像手一样拂过芦荡）
+  const wind = {
+    dir: 1,            // 主导方向 +1 向右弯 / -1 向左弯
+    ambient: 0.06,
+    gusts: [],         // {t0, dur, peak, x0, v, width, dir}
+    drag: 0,           // 拖动产生的持续风（全局强度）
+    t: 0
+  };
+
+  function ambientAt(t){
+    return wind.ambient * (0.62 + 0.26 * Math.sin(t * 0.45) + 0.12 * Math.sin(t * 1.17 + 2.1));
+  }
+  // 在 (x, t) 处的阵风强度（含传播波前）
+  function gustAt(x, t){
+    let g = 0;
+    for (const u of wind.gusts) {
+      const age = (t - u.t0) / u.dur;
+      if (age < 0 || age > 1) continue;
+      // 起—峰—衰包络
+      const env = Math.sin(Math.PI * age);
+      // 波前：风从 x0 以 v 传播，茎秆在波前经过时受力最大
+      const front = u.x0 + u.v * (t - u.t0) * u.dir;
+      const d = (x - front) * u.dir;           // 迎风为正
+      const prof = Math.exp(-(d * d) / (2 * u.width * u.width));
+      g += u.peak * env * prof;
+    }
+    return g;
+  }
+  function windAt(x, t){
+    const g = gustAt(x, t) + wind.drag;
+    return wind.dir * (ambientAt(t) + g);
+  }
+  function spawnGust(x, peak){
+    // 一程风方向一致（轻点时决定），后续同程 tap 沿用当前方向
+    if (wind.gusts.length === 0) wind.dir = rng() < 0.5 ? 1 : -1;
+    wind.gusts.push({
+      t0: wind.t,
+      dur: FAST ? rand(1.6, 2.2) : rand(4.5, 6.0),
+      peak: peak == null ? rand(0.85, 1.15) : peak,
+      x0: x,
+      v: rand(0.20, 0.28) * Math.max(W, 1),   // px/s，约 4-6s 拂过全屏
+      width: rand(150, 210),
+      dir: wind.dir
+    });
+    if (wind.gusts.length > 5) wind.gusts.shift();
+  }
+
+  // ---------- 芦苇 ----------
+  // layer: 0 近景（大、绒毛可读） 1 中景 2 远景（淡笔触）
+  let reeds = [];
+  function buildReeds(){
+    reeds = [];
+    const layers = [
+      { n: Math.round(clamp(W / 26, 30, 46)), depthMin: 0.00, depthMax: 0.42, hMin: 0.34, hMax: 0.58 },
+      { n: Math.round(clamp(W / 20, 40, 62)), depthMin: 0.42, depthMax: 0.72, hMin: 0.24, hMax: 0.40 },
+      { n: Math.round(clamp(W / 15, 52, 80)), depthMin: 0.72, depthMax: 1.00, hMin: 0.16, hMax: 0.28 }
+    ];
+    for (let li = 0; li < 3; li++){
+      const L = layers[li];
+      // 远景聚成几簇（洲渚芦丛），近景均匀些
+      const nCluster = li === 2 ? 6 : li === 1 ? 5 : 0;
+      const centers = nCluster ? Array.from({length: nCluster}, () => rand(-0.02, 1.02) * W) : null;
+      for (let i = 0; i < L.n; i++){
+        const depth = rand(L.depthMin, L.depthMax);
+        const baseX = centers
+          ? centers[Math.floor(rng() * nCluster)] + grand(-W * 0.035, W * 0.035)
+          : rand(-0.04, 1.04) * W;
+        // 近景基线在画面底缘，远景基线抬到滩涂线
+        const groundLift = depth * (H * 0.05);
+        const baseY = H - rand(0, 10) - groundLift * 0.35;
+        const h = rand(L.hMin, L.hMax) * H * (1 - depth * 0.25);
+        const w0 = li === 0 ? rand(1.7, 2.7) : li === 1 ? rand(1.1, 1.7) : rand(0.7, 1.1);
+        const hue = rng();
+        reeds.push({
+          layer: li, depth,
+          baseX, baseY, h,
+          // 茎的自然微弯（生长姿态），用控制点偏移
+          lean0: rand(-0.05, 0.05) * h,
+          swayPhase: rand(0, Math.PI * 2),
+          swayFreq: rand(0.7, 1.3),
+          // 弹性
+          theta: 0, omega: 0,
+          k: rand(15, 21),          // 劲挺（芦苇有节，回弹快、不翻折）
+          damp: rand(1.7, 2.4),
+          // 穗
+          plumeLen: rand(0.16, 0.24) * h,
+          plumeW: w0 * rand(5.5, 8),
+          plumeFull: 1,             // 被撕薄程度 1→0.55
+          hue,
+          leaves: makeLeaves(li, h),
+          // 穗部固定随机源（绘制用，避免每帧跳变闪烁）
+          pr: mulberry32(Math.floor(rand(1, 1e9))),
+          // 散絮节流
+          shedAcc: 0
+        });
+      }
+    }
+    // 远→近排序（先画远）
+    reeds.sort((a, b) => b.depth - a.depth);
+  }
+  function makeLeaves(li, h){
+    const n = li === 0 ? 1 + Math.floor(rng() * 2) : li === 1 ? (rng() < 0.45 ? 1 : 0) : 0;
+    const arr = [];
+    for (let i = 0; i < n; i++){
+      arr.push({
+        u: rand(0.08, 0.52),          // 叶在茎上的高度比例
+        side: rng() < 0.5 ? -1 : 1,
+        len: rand(0.10, 0.22) * h,
+        droop: rand(0.3, 0.72),       // 叶尖下垂
+        phase: rand(0, Math.PI * 2)
+      });
+    }
+    return arr.sort((a,b)=>a.u-b.u);
+  }
+
+  // 基部长草簇：贴滩涂成片，一丛几枝偏向同一侧（打破「每株对称门拱」）
+  let grassClumps = [];
+  function buildGrass(){
+    grassClumps = [];
+    const nCl = Math.round(clamp(W / 120, 7, 12));
+    for (let c = 0; c < nCl; c++){
+      const cx = rand(-0.02, 1.02) * W;
+      const nBlades = 7 + Math.floor(rng() * 9);
+      const prefer = rng() < 0.5 ? -1 : 1;       // 一丛整体偏向
+      const baseY = H - rand(0, 8) - rand(0, H * 0.02);
+      const hue = rng();
+      for (let i = 0; i < nBlades; i++){
+        const side = rng() < 0.78 ? prefer : -prefer;
+        grassClumps.push({
+          x: cx + grand(-26, 26),
+          baseY: baseY + rand(-4, 6),
+          len: rand(22, 62) * (1 - Math.abs(rand(-1,1)) * 0.25),
+          side,
+          arch: rand(0.25, 0.75),                 // 横向弯出量
+          lift: rand(0.35, 0.7),                 // 先上挑
+          w: rand(0.6, 1.3),
+          hue,
+          phase: rand(0, Math.PI * 2),
+          depth: rand(0.05, 0.5)
+        });
+      }
+    }
+    grassClumps.sort((a,b)=>b.depth-a.depth);
+  }
+  function drawGrass(){
+    const wMid = windAt(W * 0.5, wind.t);
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (const g of grassClumps){
+      const wl = windAt(g.x, wind.t);
+      // 草短而柔，顺风伏贴
+      const flap = wl * g.len * 0.5 + Math.sin(wind.t * 1.3 + g.phase) * 2;
+      const sx = g.side * g.len * g.arch + flap;
+      const sy = -g.len * g.lift + Math.abs(flap) * 0.25;
+      const mx = g.x + g.side * g.len * g.arch * 0.3 + flap * 0.5;
+      const my = g.baseY - g.len * 0.9;
+      const a = 0.34 - g.depth * 0.22;
+      ctx.strokeStyle = g.hue < 0.55 ? `rgba(58,72,46,${a})` : `rgba(84,70,44,${a})`;
+      ctx.lineWidth = g.w;
+      ctx.beginPath();
+      ctx.moveTo(g.x, g.baseY);
+      ctx.quadraticCurveTo(mx, my, g.x + sx, g.baseY + sy);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // 茎顶端世界坐标（弯曲角 + 自然微弯，s∈[0,1] 沿茎）
+  function stemPoint(r, s, wForce){
+    // 悬臂弯曲：近似为曲率沿高增大，位移 ∝ s²；theta 为顶端倾角（rad）
+    const bend = r.theta * s * s;
+    const nat = r.lean0 * s * s;
+    const ang = bend + nat / Math.max(r.h, 1);
+    // 简化：沿「平均方向」积分，二阶近似
+    const x = r.baseX + (nat + Math.sin(r.theta) * r.h * 0.55) * (s * s)
+            + Math.sin(ambientAt(wind.t)) * 2 * (1 - r.depth) * s;
+    // 上式把自然弯和风弯都投影进 x；y 随弯略降
+    const y = r.baseY - r.h * s + Math.abs(Math.sin(r.theta)) * r.h * 0.10 * s * s
+            - (r.lean0 < 0 ? 0 : 0);
+    return { x, y, ang };
+  }
+
+  // 更稳的做法：分段累加。重写为分段积分，供绘制与散絮共用
+  function stemPoints(r, segments){
+    const pts = [];
+    let px = r.baseX, py = r.baseY;
+    const amb = ambientAt(wind.t);
+    for (let i = 0; i <= segments; i++){
+      const s = i / segments;
+      // 局部倾角：自然 lean + 风弯（s^1.6，根部刚、梢部柔）+ 微风轻摆
+      const localAng = (r.lean0 / r.h) * s
+                     + r.theta * Math.pow(s, 1.7)
+                     + amb * 0.10 * Math.sin(wind.t * r.swayFreq + r.swayPhase) * s;
+      pts.push({ x: px, y: py, ang: localAng, s });
+      if (i < segments){
+        const ds = r.h / segments;
+        px += Math.sin(localAng) * ds;
+        py -= Math.cos(localAng) * ds;
+      }
+    }
+    return pts;
+  }
+
+  // ---------- 飞絮 ----------
+  let seeds = [];
+  let totalShed = 0;
+  function shedSeed(r, tip){
+    if (r.plumeFull <= 0.5) return;
+    r.plumeFull = Math.max(0.5, r.plumeFull - 0.012);
+    totalShed++;
+    const scale = r.layer === 0 ? 1 : r.layer === 1 ? 0.7 : 0.5;
+    seeds.push({
+      x: tip.x + grand(-3, 3) * scale,
+      y: tip.y + grand(-4, 4) * scale,
+      vx: wind.dir * rand(14, 40),
+      vy: rand(-34, -14),
+      size: rand(2.6, 4.8) * scale,
+      rot: rand(0, Math.PI * 2),
+      vrot: rand(-1.5, 1.5),
+      phase: rand(0, Math.PI * 2),
+      alpha: r.layer === 2 ? rand(0.35, 0.55) : rand(0.6, 0.9),
+      life: 0,
+      maxLife: FAST ? rand(3.0, 4.2) : rand(9, 15),
+      layer: r.layer
+    });
+    if (seeds.length > 420) seeds.shift();
+  }
+
+  // ---------- 远鸟（风大时偶尔掠过） ----------
+  let birds = [];
+  let birdTimer = rand(6, 12);
+  function updateBirds(dt){
+    birdTimer -= dt;
+    const wNow = Math.abs(gustAt(W * 0.5, wind.t));
+    if (birdTimer <= 0 && wNow > 0.4 && birds.length < 3){
+      birds.push({
+        x: wind.dir > 0 ? -40 : W + 40,
+        y: HORIZON - rand(H * 0.10, H * 0.26),
+        vx: wind.dir * rand(34, 52),
+        flap: rand(0, Math.PI * 2),
+        s: rand(0.5, 0.9),
+        life: 0
+      });
+      birdTimer = rand(9, 16);
+    }
+    for (const b of birds){
+      b.x += b.vx * dt * (1 + wNow * 0.4);
+      b.flap += dt * 7;
+      b.life += dt;
+    }
+    birds = birds.filter(b => b.x > -80 && b.x < W + 80);
+  }
+
+  // ---------- 物理 ----------
+  function stepReeds(dt){
+    for (const r of reeds){
+      // 风力矩：高处茎受风面大（∝ 1.1 - depth），柔度随高
+      const tip = stemPoints(r, 6)[6];
+      const wF = windAt(tip.x, wind.t);
+      const flex = 0.85 + r.h / H;                 // 高株更柔
+      const torque = wF * flex * 14.5 * (1 - r.depth * 0.4);
+      const acc = torque - r.k * r.theta - r.damp * r.omega;
+      r.omega += acc * dt;
+      r.theta += r.omega * dt;
+      // 散絮：风够强、穗在迎风波前中
+      const strong = Math.abs(wF);
+      if (strong > 0.55 && r.plumeFull > 0.5){
+        r.shedAcc += dt * (strong - 0.45) * (r.layer === 0 ? 12 : r.layer === 1 ? 8 : 4.5);
+        while (r.shedAcc >= 1){
+          r.shedAcc -= 1;
+          const tipNow = stemPoints(r, 6)[6];
+          // 絮从穗部中上部撕出
+          shedSeed(r, { x: tipNow.x, y: tipNow.y - r.plumeLen * rand(0.25, 0.9) });
+        }
+      }
+    }
+  }
+  function stepSeeds(dt){
+    for (const s of seeds){
+      const localWind = ambientAt(wind.t) + gustAt(s.x, wind.t) + wind.drag;
+      // 平流 + 沉浮（终端速度近零，正弦飘摆）
+      s.phase += dt * 3;
+      s.vx += (wind.dir * (30 + localWind * 130) - s.vx) * dt * 1.6;
+      s.vy += (Math.sin(s.phase) * 10 - 16 - s.vy) * dt * 0.9;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.rot += s.vrot * dt;
+      s.life += dt;
+      // 落到水面以下或超龄淡出由 alpha 控制
+    }
+    seeds = seeds.filter(s => s.life < s.maxLife && s.y < H + 30 && s.x > -60 && s.x < W + 60);
+  }
+  function cleanupGusts(){
+    wind.gusts = wind.gusts.filter(u => wind.t - u.t0 < u.dur + 0.5);
+    wind.drag *= Math.pow(0.05, 1/60);   // 松手约 1s 内衰减
+    if (wind.drag < 0.002) wind.drag = 0;
+  }
+
+  // ---------- 绘制：底、滩、水、芦、絮、鸟 ----------
+  function drawPaper(){
+    // 纸白底：极淡的上暖下冷
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#f4efe4');
+    g.addColorStop(0.55, '#f0ece1');
+    g.addColorStop(1, '#eae5d8');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    // 纸纹颗粒（一次性画进 offscreen 更省，这里极轻量随机点）
+    // 用固定噪声，避免每帧闪烁：改为纸纹 canvas 缓存（见 paperTex）
+  }
+  let paperTex = null;
+  function buildPaperTex(){
+    const pc = document.createElement('canvas');
+    pc.width = W; pc.height = H;
+    const p = pc.getContext('2d');
+    const g = p.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#f4efe4');
+    g.addColorStop(0.55, '#f0ece1');
+    g.addColorStop(1, '#eae4d6');
+    p.fillStyle = g; p.fillRect(0, 0, W, H);
+    const pr = mulberry32(SEED * 7919 + 3);
+    const dots = Math.floor(W * H / 1400);
+    for (let i = 0; i < dots; i++){
+      const x = pr() * W, y = pr() * H;
+      const a = 0.02 + pr() * 0.03;
+      p.fillStyle = pr() < 0.5 ? `rgba(120,104,80,${a})` : `rgba(255,250,240,${a})`;
+      p.fillRect(x, y, 1, 1);
+    }
+    paperTex = pc;
+  }
+
+  function drawShoal(){
+    // 远岸两道：极淡墨带，平远
+    const wNow = windAt(W * 0.5, wind.t);
+    ctx.save();
+    // 最远岸
+    ctx.fillStyle = 'rgba(96,108,100,0.10)';
+    ctx.beginPath();
+    ctx.moveTo(0, HORIZON + 6);
+    for (let x = 0; x <= W; x += 24){
+      ctx.lineTo(x, HORIZON + 2 + Math.sin(x * 0.011 + SEED) * 3 + Math.sin(x * 0.03) * 1.5);
+    }
+    ctx.lineTo(W, HORIZON + 22); ctx.lineTo(0, HORIZON + 22);
+    ctx.closePath(); ctx.fill();
+    // 中景洲渚
+    ctx.fillStyle = 'rgba(88,96,84,0.16)';
+    ctx.beginPath();
+    const midY = HORIZON + H * 0.055;
+    ctx.moveTo(0, midY + 8);
+    for (let x = 0; x <= W; x += 20){
+      ctx.lineTo(x, midY + Math.sin(x * 0.013 + SEED + 2) * 4);
+    }
+    ctx.lineTo(W, midY + 16); ctx.lineTo(0, midY + 16);
+    ctx.closePath(); ctx.fill();
+    // 洲渚上的远芦：十几丛错落芦簇（非等距刻度），风过齐偃
+    const rr = mulberry32(SEED * 131 + 9);
+    const nTuft = 13;
+    ctx.lineWidth = 1;
+    for (let c = 0; c < nTuft; c++){
+      const cx = rr() * W;
+      const spread = 6 + rr() * 16;
+      const nStk = 4 + Math.floor(rr() * 6);
+      const baseH = 6 + rr() * 13;
+      const aTuft = 0.18 + rr() * 0.2;
+      ctx.strokeStyle = `rgba(66,76,62,${aTuft})`;
+      ctx.beginPath();
+      for (let i = 0; i < nStk; i++){
+        const x = cx + (rr() - 0.5) * spread;
+        const y = midY + rr() * 4;
+        const hgt = baseH * (0.6 + rr() * 0.6);
+        const lean = wNow * (5 + rr() * 9);
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + lean, y - hgt);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawWater(){
+    // 留白即江：几条淡墨横线波纹，风大时略密略长
+    const wNow = windAt(W * 0.5, wind.t);
+    const gustMag = Math.abs(wNow);
+    ctx.save();
+    ctx.lineCap = 'round';
+    const top = HORIZON + H * 0.075;
+    const rr = mulberry32(SEED * 977 + 5);
+    const rows = 16;
+    for (let i = 0; i < rows; i++){
+      const f = i / rows;
+      const y = top + f * (H - top);
+      const persp = 0.35 + f * 1.2;                 // 近处纹长
+      const baseLen = (14 + rr() * 30) * persp;
+      const len = baseLen * (1 + gustMag * 0.7);
+      const count = Math.floor(W / (90 - gustMag * 26) * persp);
+      const alpha = (0.05 + f * 0.07) * (0.7 + gustMag * 0.5);
+      ctx.strokeStyle = `rgba(86,102,104,${alpha})`;
+      ctx.lineWidth = 0.7 + f * 0.7;
+      for (let c = 0; c < count; c++){
+        const x = rr() * W;
+        const drift = wNow * 10 * f;
+        const wob = Math.sin(wind.t * 1.4 + i + c) * 1.6;
+        ctx.beginPath();
+        ctx.moveTo(x + drift, y + wob);
+        ctx.quadraticCurveTo(x + len * 0.5 + drift, y + wob + rr() * 1.6, x + len + drift, y + wob);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+
+  function stemColor(r){
+    // 枯赭绿→焦茶，近深远淡
+    const depthA = 0.85 - r.depth * 0.55;
+    if (r.hue < 0.35) return `rgba(74,84,58,${depthA})`;      // 赭绿
+    if (r.hue < 0.7)  return `rgba(96,84,54,${depthA})`;      // 枯草金
+    return `rgba(78,64,48,${depthA})`;                          // 焦茶
+  }
+
+  function drawReed(r){
+    const seg = r.layer === 0 ? 8 : 5;
+    const pts = stemPoints(r, seg);
+    const tip = pts[seg];
+    const a = tip.ang;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // ---- 叶：侧出、拱起再垂落的窄长叶，受风时顺风贴伏（非对称弧线）----
+    for (const lf of r.leaves){
+      const idx = Math.round(lf.u * seg);
+      const p = pts[idx];
+      const len = lf.len;
+      const side = lf.side;
+      // 风把叶片吹向风去向：theta>0 茎向右弯，叶也向右顺
+      const wT = clamp(r.theta * 1.1, -0.9, 0.9);
+      // 叶根切向：侧出微上挑；叶尖：侧伸后大幅下垂 + 风推
+      const rootDx = side * len * 0.28 + wT * len * 0.3;
+      const rootDy = -len * 0.16;                       // 先上挑
+      const tipDx = side * len * (0.42 - Math.abs(wT) * 0.3) + wT * len * 0.85;
+      const tipDy = len * lf.droop;                      // 再垂落
+      const mx = p.x + rootDx + wT * len * 0.2;
+      const my = p.y + rootDy - Math.abs(wT) * len * 0.15;
+      const ex = p.x + tipDx;
+      const ey = p.y + tipDy + Math.abs(wT) * len * 0.35;
+      const la = ((r.layer === 0 ? 0.55 : 0.38) - r.depth * 0.22);
+      ctx.strokeStyle = r.hue < 0.5 ? `rgba(62,76,50,${la})` : `rgba(80,68,46,${la})`;
+      ctx.lineWidth = r.layer === 0 ? 1.15 : 0.75;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.quadraticCurveTo(mx, my, ex, ey);
+      ctx.stroke();
+      // 主脉中轴的第二笔更淡（叶片宽度感），仅近景大叶
+      if (r.layer === 0 && len > r.h * 0.13){
+        ctx.strokeStyle = r.hue < 0.5 ? `rgba(62,76,50,${la * 0.4})` : `rgba(80,68,46,${la * 0.4})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(p.x + side * 1, p.y);
+        ctx.quadraticCurveTo(mx + side * 1.2, my, ex + side * 1, ey);
+        ctx.stroke();
+      }
+    }
+
+    // ---- 茎 ----
+    const depthA = 0.85 - r.depth * 0.5;
+    ctx.strokeStyle = stemColor(r);
+    ctx.lineWidth = r.layer === 2 ? 0.7 : r.plumeW * 0.16;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i <= seg; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    // 茎节（近景才点）
+    if (r.layer === 0){
+      ctx.fillStyle = `rgba(60,52,38,0.35)`;
+      for (let i = 2; i < seg; i += 2){
+        ctx.beginPath();
+        ctx.arc(pts[i].x, pts[i].y, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // ---- 芦花穗 ----
+    drawPlume(r, tip, a);
+
+    ctx.restore();
+  }
+
+  // 蓬松绒穗：暖影打底 + 米白绒体积团 + 棕褐丝缕脉络 + 透光绒边
+  function softBlob(x, y, rad, rgb, a){
+    const grd = ctx.createRadialGradient(x, y, 0, x, y, rad);
+    grd.addColorStop(0, `rgba(${rgb},${a})`);
+    grd.addColorStop(1, `rgba(${rgb},0)`);
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(x, y, rad, 0, Math.PI * 2); ctx.fill();
+  }
+  function drawPlume(r, tip, stemAng){
+    const plen = r.plumeLen;
+    const full = r.plumeFull;
+    const depthA = 1 - r.depth * 0.4;
+    const pr = r.pr;
+    const prand = (a, b) => a + (b - a) * pr();
+    const pgtrand = (a, b) => (pr() + pr()) * 0.5 * (b - a) + a;
+    // 穗轴：顺茎向上，自身再微微垂头（沿轴 t 越大越垂）
+    const droop = 0.16;
+    const axisAng0 = stemAng + 0.05;
+    const axisX = Math.sin(axisAng0), axisY = -Math.cos(axisAng0);
+    const perpX = Math.cos(axisAng0), perpY = Math.sin(axisAng0);
+    // 穗轴中点与梢（梢向垂直方向多沉一点）
+    const midX = tip.x + axisX * plen * 0.5 + perpX * 0;
+    const midY = tip.y + axisY * plen * 0.5 + droop * plen * 0.18;
+    const ex = tip.x + axisX * plen * 0.92;
+    const ey = tip.y + axisY * plen * 0.92 + droop * plen * 0.5;
+    const axPts = [];
+    for (let i = 0; i <= 6; i++){
+      const t = i / 6;
+      axPts.push({
+        x: lerp(lerp(tip.x, midX, t), lerp(midX, ex, t), t) + 0,
+        y: lerp(lerp(tip.y, midY, t), lerp(midY, ey, t), t)
+      });
+    }
+    const axPos = t => { const i = clamp(Math.floor(t * 6), 0, 5), f = t * 6 - i;
+      return { x: lerp(axPts[i].x, axPts[i+1].x, f), y: lerp(axPts[i].y, axPts[i+1].y, f) }; };
+    // 纺锤半径包络（两头尖、中后段最饱满）
+    const envR = t => Math.pow(Math.sin(Math.PI * clamp(t, 0, 1)), 0.8) * plen * (0.15 + 0.05 * full);
+
+    if (r.layer === 2){
+      // 远景：暖白小纺锤（软团+细轴），不画丝缕
+      const p = axPos(0.5);
+      softBlob(p.x, p.y, plen * 0.13 * (0.7 + full * 0.3), '236,226,200', 0.34 * depthA);
+      ctx.strokeStyle = `rgba(168,146,108,${0.4 * depthA})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.moveTo(tip.x, tip.y); ctx.lineTo(ex, ey); ctx.stroke();
+      return;
+    }
+
+    const near = r.layer === 0;
+    // 1) 暖影底：让白绒在纸白上「浮起来」（逆光芦花的棕底透光感）
+    const nBlob = near ? 7 : 4;
+    for (let i = 0; i < nBlob; i++){
+      const t = 0.14 + (i / (nBlob - 1)) * 0.74;
+      const p = axPos(t);
+      const rad = envR(t) * (near ? 1.05 : 0.85) * (0.85 + ((i * 13) % 7) / 22);
+      softBlob(p.x + perpX * pgtrand(-0.25, 0.25) * rad, p.y + perpY * pgtrand(-0.25, 0.25) * rad,
+               rad * 1.06, '176,148,104', (near ? 0.16 : 0.13) * depthA);
+    }
+    // 2) 米白绒体积：沿轴叠软团，这是芦花「白」的主体
+    for (let i = 0; i < nBlob; i++){
+      const t = 0.12 + (i / (nBlob - 1)) * 0.78;
+      const p = axPos(t);
+      const rad = envR(t) * (near ? 0.92 : 0.72) * (0.8 + ((i * 29) % 9) / 30) * (0.62 + full * 0.38);
+      softBlob(p.x + perpX * pgtrand(-0.3, 0.3) * rad, p.y + perpY * pgtrand(-0.3, 0.3) * rad,
+               rad, '250,245,232', (near ? 0.72 : 0.55) * depthA * (0.6 + full * 0.4));
+    }
+    // 3) 破碎绒羽：随机角度散丝 + 绒尖（不画等距 herringbone，那是麦穗不是芦花）
+    const nFil = near ? 22 : 12;
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < nFil; i++){
+      const t = clamp(0.08 + Math.pow(pr(), 0.9) * 0.86, 0.05, 0.97);
+      const p = axPos(t);
+      const fr = envR(t);
+      // 沿垂直穗轴方向随机散布（绕轴一圈压到 2D），梢部细丝更顺轴飘
+      const ang = pr() * Math.PI * 2;
+      const rr = fr * (0.25 + Math.pow(pr(), 0.6) * 0.85);
+      const alongAxis = t > 0.72 ? rr * 0.9 : rr * 0.25;   // 穗梢飘丝顺轴
+      const fx = p.x + perpX * Math.cos(ang) * rr + axisX * alongAxis;
+      const fy = p.y + perpY * Math.cos(ang) * rr * 0.9 + axisY * alongAxis + rr * 0.22;
+      ctx.strokeStyle = `rgba(138,110,72,${(near ? 0.16 : 0.13) * depthA})`;
+      ctx.beginPath();
+      ctx.moveTo(p.x + perpX * Math.cos(ang) * rr * 0.2, p.y + perpY * Math.cos(ang) * rr * 0.2);
+      ctx.lineTo(fx, fy);
+      ctx.stroke();
+      if (pr() < (near ? 0.65 : 0.45)){
+        softBlob(fx, fy, near ? prand(1.4, 2.4) : 1.2, '252,247,235', (near ? 0.5 : 0.36) * depthA * (0.6 + full * 0.4));
+      }
+    }
+    // 4) 透光绒边：随机几粒亮白高光（逆光），位置不规律
+    const nEdge = near ? 6 : 3;
+    for (let i = 0; i < nEdge; i++){
+      const t = 0.15 + pr() * 0.68;
+      const p = axPos(t);
+      const fr = envR(t);
+      const ang = pr() * Math.PI * 2;
+      const rr = fr * (0.5 + pr() * 0.5);
+      softBlob(p.x + perpX * Math.cos(ang) * rr + axisX * rr * 0.2,
+               p.y + perpY * Math.cos(ang) * rr * 0.9 + fr * 0.12,
+               near ? prand(2, 3.2) : 1.7, '255,252,244', (near ? prand(0.4,0.62) : 0.4) * depthA);
+    }
+    // 梢部飘丝：穗尖 2-3 根顺轴细丝（芦花特有的散乱梢）
+    if (near){
+      ctx.strokeStyle = `rgba(150,124,86,${0.3 * depthA})`;
+      for (let i = 0; i < 3; i++){
+        const p = axPos(0.82 + pr() * 0.16);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x + axisX * plen * prand(0.08, 0.18) + perpX * pgtrand(-0.5, 0.5) * 6,
+                   p.y + axisY * plen * prand(0.08, 0.18) + plen * 0.05);
+        ctx.stroke();
+      }
+    }
+    // 5) 深一点的穗轴芯线（仅近景，压在绒体中下部）
+    if (near){
+      ctx.strokeStyle = `rgba(120,96,62,${0.4 * depthA})`;
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(tip.x, tip.y);
+      for (let i = 1; i <= 6; i++) ctx.lineTo(axPts[i].x, axPts[i].y);
+      ctx.stroke();
+    }
+  }
+
+  function drawSeeds(){
+    for (const s of seeds){
+      const fadeIn = smoothstep(0, 0.4, s.life);
+      const fadeOut = 1 - smoothstep(s.maxLife - 2, s.maxLife, s.life);
+      const a = s.alpha * fadeIn * fadeOut;
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(s.rot);
+      // 细丝
+      ctx.strokeStyle = `rgba(150,128,92,${a * 0.7})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(-s.size * 1.6, 0);
+      ctx.lineTo(s.size * 1.2, 0);
+      ctx.stroke();
+      // 白绒团
+      const grd = ctx.createRadialGradient(0, 0, 0, 0, 0, s.size);
+      grd.addColorStop(0, `rgba(253,250,242,${Math.min(1, a * 1.15)})`);
+      grd.addColorStop(1, 'rgba(252,248,238,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(0, 0, s.size * 1.25, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawBirds(){
+    ctx.save();
+    ctx.strokeStyle = 'rgba(60,58,50,0.5)';
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = 'round';
+    for (const b of birds){
+      const f = Math.sin(b.flap) * 4 * b.s;
+      ctx.beginPath();
+      ctx.moveTo(b.x - 7 * b.s, b.y + f);
+      ctx.quadraticCurveTo(b.x - 2 * b.s, b.y - 2 * b.s, b.x, b.y);
+      ctx.quadraticCurveTo(b.x + 2 * b.s, b.y - 2 * b.s, b.x + 7 * b.s, b.y + f);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function render(){
+    ctx.clearRect(0, 0, W, H);
+    if (paperTex) ctx.drawImage(paperTex, 0, 0, W, H); else drawPaper();
+    drawShoal();
+    drawWater();
+    drawBirds();
+    // 芦：已按 depth 降序（远→近）
+    for (const r of reeds) drawReed(r);
+    drawGrass();
+    drawSeeds();
+  }
+
+  // ---------- 声音 ----------
+  let audioOn = false, windNode = null;
+  function initAudio(){
+    if (typeof RongAudio === 'undefined') return;
+    RongAudio.init({ master: 0.8, wet: 0.22 });
+    // 风：棕噪 → 带通，频率/增益随全局风速
+    const AC = RongAudio.ctx();
+    const buf = AC.createBuffer(1, AC.sampleRate * 3, AC.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < d.length; i++){
+      const white = Math.random() * 2 - 1;
+      last = (last + 0.02 * white) / 1.02;      // 棕噪积分
+      d[i] = last * 3.2;
+    }
+    const src = AC.createBufferSource();
+    src.buffer = buf; src.loop = true;
+    const bp = AC.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 480; bp.Q.value = 0.6;
+    const lp = AC.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 1400;
+    const g = AC.createGain(); g.gain.value = 0;
+    src.connect(bp); bp.connect(lp); lp.connect(g);
+    g.connect(RongAudio.out(0));
+    src.start();
+    windNode = { bp, g, lp };
+    audioOn = true;
+  }
+  function updateAudio(){
+    if (!audioOn || !windNode) return;
+    // 全局风速：取几个采样点最大阵风 + ambient
+    let wm = ambientAt(wind.t) + wind.drag;
+    for (const u of wind.gusts){
+      const age = (wind.t - u.t0) / u.dur;
+      if (age >= 0 && age <= 1) wm = Math.max(wm, ambientAt(wind.t) + u.peak * Math.sin(Math.PI * age) * 0.85);
+    }
+    const target = Math.min(0.16, Math.max(0, wm - 0.08) * 0.16);
+    const AC = RongAudio.ctx();
+    windNode.g.gain.setTargetAtTime(target, AC.currentTime, 0.18);
+    windNode.bp.frequency.setTargetAtTime(420 + wm * 700, AC.currentTime, 0.3);
+  }
+  function chime(){
+    if (!audioOn || typeof RongAudio === 'undefined') return;
+    // 风住时一声轻磬（五声阶 C/E/G）
+    const notes = [523.25, 659.25, 783.99];
+    RongAudio.strikeBell(notes[Math.floor(Math.random() * notes.length)], 0.16, { pan: rand(-0.4, 0.4) });
+  }
+  let chimeArmed = false;
+
+  // ---------- 诗 ----------
+  let poemShown = false;
+  function showPoem(){
+    if (poemShown) return;
+    poemShown = true;
+    document.getElementById('poem').classList.add('show');
+    document.getElementById('seal').classList.add('show');
+  }
+
+  // ---------- 交互 ----------
+  let dragging = false, lastPX = 0, lastT = 0;
+  function pointerWind(cx){
+    spawnGust(cx);
+  }
+  cvs.addEventListener('pointerdown', e => {
+    if (typeof RongAudio !== 'undefined' && !audioOn) initAudio();
+    if (RongAudio && RongAudio.ctx && RongAudio.ctx().state === 'suspended') RongAudio.ctx().resume();
+    dragging = true;
+    lastPX = e.clientX; lastT = performance.now();
+    pointerWind(e.clientX);
+  });
+  cvs.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const now = performance.now();
+    const dt = Math.max(0.016, (now - lastT) / 1000);
+    const speed = (e.clientX - lastPX) / dt;          // px/s，带方向
+    wind.dir = speed >= 0 ? 1 : -1;
+    wind.drag = clamp(Math.abs(speed) / 900, 0, 0.9);
+    if (Math.random() < 0.12) wind.gusts.forEach(()=>{});
+    lastPX = e.clientX; lastT = now;
+    // 拖动也刷新阵风波前
+    if (Math.random() < 0.25) spawnGust(e.clientX, rand(0.5, 0.8));
+  });
+  window.addEventListener('pointerup', () => { dragging = false; });
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    SEED = (SEED + 1) % 99991;
+    rebuild();
+    document.getElementById('poem').classList.remove('show');
+    document.getElementById('seal').classList.remove('show');
+  });
+  document.getElementById('btnSound').addEventListener('click', function(){
+    if (!audioOn){ initAudio(); this.textContent = '♪'; if (RongAudio.ctx().state==='suspended') RongAudio.ctx().resume(); }
+    else {
+      const AC = RongAudio.ctx();
+      if (AC.state === 'suspended'){ AC.resume(); this.textContent = '♪'; }
+      else { AC.suspend(); this.textContent = '✕'; }
+    }
+  });
+
+  // ---------- 状态镜像（harness 读取） ----------
+  function mirror(){
+    const peakTheta = reeds.reduce((m, r) => Math.max(m, Math.abs(r.theta)), 0);
+    document.getElementById('state').textContent = JSON.stringify({
+      t: +wind.t.toFixed(2),
+      gusts: wind.gusts.length,
+      seeds: seeds.length,
+      totalShed,
+      peakTheta: +peakTheta.toFixed(3),
+      birds: birds.length,
+      poem: poemShown,
+      reeds: reeds.length
+    });
+  }
+
+  // ---------- 尺寸 / 重建 ----------
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cvs.width = W * DPR; cvs.height = H * DPR;
+    cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    HORIZON = H * 0.40;
+    buildPaperTex();
+    buildReeds(); buildGrass();
+  }
+  function rebuild(){
+    seeds = []; birds = []; totalShed = 0; poemShown = false;
+    wind.gusts = []; wind.drag = 0; wind.t = 0;
+    buildPaperTex(); buildReeds(); buildGrass();
+  }
+  window.addEventListener('resize', resize);
+
+  // ---------- 主循环 ----------
+  let lastNow = performance.now();
+  function loop(now){
+    const rdt = Math.min(0.05, (now - lastNow) / 1000);
+    lastNow = now;
+    const dt = rdt * SPEED;
+    wind.t += dt;
+    // 子步（fast 下稳一点）
+    const sub = SPEED > 1 ? 3 : 1;
+    for (let i = 0; i < sub; i++){
+      stepReeds(dt / sub);
+      stepSeeds(dt / sub);
+    }
+    updateBirds(dt);
+    cleanupGusts();
+    updateAudio();
+    // 诗触发：散絮累计达到阈值（近景可读规模）
+    if (!poemShown && totalShed >= (FAST ? 18 : 26)) showPoem();
+    // 风住磬声：曾有过强阵风、现在归于平静
+    if (!chimeArmed && Math.abs(gustAt(W * 0.5, wind.t)) > 0.7) chimeArmed = true;
+    if (chimeArmed && Math.abs(gustAt(W * 0.5, wind.t)) < 0.08
+        && wind.drag < 0.02 && seeds.length < 6 && poemShown){
+      chime(); chimeArmed = false;
+    }
+    render();
+    mirror();
+    requestAnimationFrame(loop);
+  }
+
+  resize();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

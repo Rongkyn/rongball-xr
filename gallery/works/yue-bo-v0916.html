@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>月波 · Yue Bo</title>
+<!-- uses: lib/audio-lib.js v1.1 架构（master 总线/压缩/加法铃音 BELL_PARTIALS 同源；本作为单文件内联实现） -->
+<!-- 系列第十三件：月下秋江。点水涟漪击碎月影、点天拨云过松、静置浮李白《静夜思》。中秋（2026-09-25）应景作 -->
+<meta name="color-scheme" content="dark">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #0e131c;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  canvas { display: block; position: fixed; top: 0; left: 0; }
+  #scene { z-index: 1; }
+  #state { position: fixed; bottom: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; z-index: -1; }
+
+  .ui { position: fixed; pointer-events: none; user-select: none; z-index: 10; }
+  .title {
+    top: 26px; left: 30px;
+    font-size: 17px;
+    letter-spacing: 10px;
+    color: #c9cdcf;
+    opacity: 0;
+    animation: fadeIn 3s ease 1s forwards;
+  }
+  .subtitle {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: #7e868c;
+    margin-top: 6px;
+  }
+  @keyframes fadeIn { to { opacity: 1; } }
+
+  .hint {
+    bottom: 30px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    letter-spacing: 6px;
+    white-space: nowrap;
+    color: #9aa0a4;
+    opacity: 0;
+    animation: hintFade 10s ease 2.5s forwards;
+  }
+  @media (max-width: 480px) {
+    .hint { font-size: 11px; letter-spacing: 3px; bottom: 26px; }
+    #poem { left: 7%; top: 19%; font-size: 17px; }
+  }
+  @keyframes hintFade {
+    0% { opacity: 0; }
+    12% { opacity: 0.55; }
+    70% { opacity: 0.55; }
+    100% { opacity: 0; }
+  }
+
+  .seal {
+    position: fixed;
+    bottom: 26px; right: 30px;
+    z-index: 10;
+    pointer-events: none;
+    width: 38px; height: 38px;
+    background: rgba(176, 58, 42, 0.85);
+    color: #e8e2d6;
+    font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    transform: rotate(-4deg);
+    opacity: 0;
+    transition: opacity 2.5s ease;
+  }
+  .seal.show { opacity: 0.85; }
+
+  .btn {
+    position: fixed;
+    top: 22px;
+    z-index: 20;
+    pointer-events: auto;
+    background: rgba(200, 205, 208, 0.08);
+    border: 1px solid #565e66;
+    color: #b8bec2;
+    font-family: inherit;
+    font-size: 11px;
+    letter-spacing: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+    opacity: 0;
+    animation: fadeIn 2s ease 2s forwards;
+    transition: all 0.4s ease;
+  }
+  .btn:hover {
+    border-color: #9098a0;
+    color: #e2e6e8;
+    background: rgba(200, 205, 208, 0.16);
+  }
+  #btnClear { right: 26px; }
+  #btnSound { right: 86px; }
+
+  /* 竖排诗：芦花/秋虫验证过的 row-reverse + 逐字 span */
+  #poem {
+    position: fixed; left: 6.5%; top: 26%; z-index: 9;
+    display: flex;
+    flex-direction: row-reverse;
+    align-items: flex-start;
+    gap: 20px;
+    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: clamp(18px, 3.0vh, 24px);
+    color: rgba(214, 219, 220, 0.92);
+    opacity: 0; transition: opacity 5s ease;
+    pointer-events: none;
+  }
+  #poem.show { opacity: 0.75; }
+  #poem .line, #poem .attrib {
+    width: 1.05em;
+    text-align: center;
+    flex: none;
+  }
+  #poem .line > span, #poem .attrib > span {
+    display: block;
+    height: 1.4em;
+    line-height: 1.4;
+  }
+  #poem .attrib {
+    font-size: 11px; letter-spacing: 2px;
+    opacity: 0.6;
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div class="ui title">月 波<div class="subtitle">yue bo · moonlight on the autumn river</div></div>
+<button class="btn" id="btnSound">♪</button>
+<button class="btn" id="btnClear">再 来</button>
+<div class="ui hint">轻点水面 · 月影会碎；点点天上 · 云会走开</div>
+<div id="poem"><div class="line"><span>床</span><span>前</span><span>明</span><span>月</span><span>光</span></div><div class="line"><span>疑</span><span>是</span><span>地</span><span>上</span><span>霜</span></div><div class="attrib"><span>唐</span><span>·</span><span>李</span><span>白</span><span>静</span><span>夜</span><span>思</span></div></div>
+<div class="seal" id="seal">绒球</div>
+<div id="state"></div>
+
+<script>
+(function () {
+  'use strict';
+  /* ============================ 基础 ============================ */
+  const params = new URLSearchParams(location.search);
+  const FAST = params.has('fast');
+  const SEED = parseInt(params.get('seed') || '7', 10);
+  const TM = FAST ? 3.0 : 1;                  // 计时压缩（fast）
+  const AUTO_T = FAST ? 6.0 : 36;             // 无交互多久入「静」
+  const RIP_LIFE = FAST ? 1.7 : 3.4;          // 涟漪寿命（秒）
+  const GUST_DUR = FAST ? 1.5 : 3.4;          // 阵风时长
+
+  function mulberry32(a) {
+    return function () {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const TAU = Math.PI * 2;
+
+  const cv = document.getElementById('scene');
+  const ctx = cv.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.floor(W * DPR);
+    cv.height = Math.floor(H * DPR);
+    cv.style.width = W + 'px';
+    cv.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* ============================ 音频 ============================ */
+  let AC = null, master = null, ambientGain = null, windGain = null;
+  let soundOn = true;
+  let dropBuf = null;
+  // 加法铃音泛音（与 audio-lib.js BELL_PARTIALS 同源，单文件内联）
+  const BELL_PARTIALS = [
+    [0.50, 0.30, 6.5],
+    [1.00, 1.00, 4.2],
+    [1.19, 0.28, 3.0],
+    [2.76, 0.38, 1.3],
+    [5.40, 0.16, 0.55]
+  ];
+  const PENTA = [523.25, 587.33, 659.25, 783.99, 880.0]; // 宫商角徵羽 C D E G A
+
+  function makeDropBuffer() {
+    const sr = AC.sampleRate, dur = 1.3;
+    const buf = AC.createBuffer(1, Math.floor(sr * dur), sr);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) {
+      const t = i / sr;
+      // 水滴入江：高频 sine 快降 + 轻金属泛音尾（秋虫露滴同源，尾略宽）
+      const f = 1450 * Math.exp(-t * 24) + 560;
+      const s = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 8.5);
+      const ring = Math.sin(2 * Math.PI * 1960 * t) * Math.exp(-t * 4.0) * 0.10;
+      const low = Math.sin(2 * Math.PI * 220 * t) * Math.exp(-t * 14) * 0.18;
+      d[i] = (s * 0.45 + ring + low) * 0.55;
+    }
+    return buf;
+  }
+
+  function initAudio() {
+    if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain();
+    master.gain.value = 0.85;
+    const comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -20; comp.ratio.value = 4;
+    master.connect(comp); comp.connect(AC.destination);
+
+    // 循环噪声 buffer（夜气 + 松风共用）
+    const sr = AC.sampleRate, n = sr * 4;
+    const nb = AC.createBuffer(1, n, sr);
+    const nd = nb.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < n; i++) {
+      const w = Math.random() * 2 - 1;
+      last = (last + 0.02 * w) / 1.02;
+      nd[i] = last * 3.0;
+    }
+    // 夜气：棕噪极低铺底
+    const asrc = AC.createBufferSource();
+    asrc.buffer = nb; asrc.loop = true;
+    const af = AC.createBiquadFilter();
+    af.type = 'lowpass'; af.frequency.value = 200;
+    ambientGain = AC.createGain();
+    ambientGain.gain.value = soundOn ? 0.045 : 0;
+    asrc.connect(af); af.connect(ambientGain); ambientGain.connect(master);
+    asrc.start();
+    // 松风：带通白噪 + 阵风包络（gain 平时为 0）
+    const wsrc = AC.createBufferSource();
+    const wb = AC.createBuffer(1, n, sr);
+    const wd = wb.getChannelData(0);
+    for (let i = 0; i < n; i++) wd[i] = Math.random() * 2 - 1;
+    wsrc.buffer = wb; wsrc.loop = true;
+    const wf = AC.createBiquadFilter();
+    wf.type = 'bandpass'; wf.frequency.value = 480; wf.Q.value = 0.6;
+    windGain = AC.createGain();
+    windGain.gain.value = 0;
+    wsrc.connect(wf); wf.connect(windGain); windGain.connect(master);
+    wsrc.start();
+
+    dropBuf = makeDropBuffer();
+  }
+
+  function playDrop(pan) {
+    if (!AC || !soundOn || !dropBuf) return;
+    const s = AC.createBufferSource();
+    s.buffer = dropBuf;
+    const g = AC.createGain();
+    g.gain.value = 0.32;
+    s.connect(g);
+    if (AC.createStereoPanner) {
+      const p = AC.createStereoPanner();
+      p.pan.value = pan;
+      g.connect(p); p.connect(master);
+    } else g.connect(master);
+    s.start();
+  }
+
+  function playBell(pan) {
+    if (!AC || !soundOn) return;
+    const freq = PENTA[Math.floor(Math.random() * PENTA.length)];
+    const vel = 0.35 + Math.random() * 0.2;
+    const t0 = AC.currentTime;
+    let out = master;
+    let panner = null;
+    if (AC.createStereoPanner) {
+      panner = AC.createStereoPanner();
+      panner.pan.value = clamp(pan, -0.8, 0.8);
+      panner.connect(master);
+      out = panner;
+    }
+    const amp = Math.min(0.10 + vel * 0.35, 0.5);
+    for (let i = 0; i < BELL_PARTIALS.length; i++) {
+      const ratio = BELL_PARTIALS[i][0], pa = BELL_PARTIALS[i][1], dec = BELL_PARTIALS[i][2];
+      const osc = AC.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq * ratio;
+      const g = AC.createGain();
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, amp * pa), t0 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dec);
+      osc.connect(g); g.connect(out);
+      osc.start(t0); osc.stop(t0 + dec + 0.1);
+    }
+  }
+
+  function playWind() {
+    if (!AC || !soundOn || !windGain) return;
+    const t0 = AC.currentTime;
+    windGain.gain.cancelScheduledValues(t0);
+    windGain.gain.setValueAtTime(windGain.gain.value, t0);
+    windGain.gain.linearRampToValueAtTime(0.10, t0 + 0.35);
+    windGain.gain.linearRampToValueAtTime(0.06, t0 + GUST_DUR * 0.55);
+    windGain.gain.exponentialRampToValueAtTime(0.0001, t0 + GUST_DUR);
+  }
+
+  /* ============================ 场景生成 ============================ */
+  const HORIZON = () => H * 0.62;
+  const MOON = {
+    x: () => W * 0.72,
+    y: () => H * 0.205,
+    r: () => Math.min(W, H) * 0.078
+  };
+
+  let sceneRng = null;
+  let stars = [], mtnFar = [], mtnNear = [], clouds = [], pads = [], pine = [];
+  let buildCount = 0;
+
+  function buildScene() {
+    sceneRng = mulberry32(SEED + buildCount * 7919);
+    const r = sceneRng;
+    // 星河
+    stars = [];
+    const nStar = Math.floor(W * H / 16000) + 48;
+    for (let i = 0; i < nStar; i++) {
+      stars.push({
+        x: r() * W,
+        y: r() * H * 0.52,
+        s: 0.4 + r() * 0.9,
+        ph: r() * TAU,
+        tw: 0.5 + r() * 1.4
+      });
+    }
+    // 山脊（两层），基线在地平线
+    function ridge(amp, seg) {
+      const pts = [];
+      for (let i = 0; i <= seg; i++) {
+        const x = W * i / seg;
+        const y = HORIZON() - amp * (0.35 + 0.65 * Math.abs(Math.sin(i * 1.7 + r() * 2.1)));
+        pts.push({ x, y });
+      }
+      return pts;
+    }
+    mtnFar = ridge(H * 0.055, 9);
+    mtnNear = ridge(H * 0.085, 7);
+    // 墨云（三团）；一团与月同高（遮月主角），另外两团做高空层次
+    clouds = [
+      { x: 0.55,  y: 0.195, w: 0.34, sp: 0.006 + r() * 0.004, a: 0.95 },          // 遮月云
+      { x: -0.22, y: 0.10, w: 0.5,  sp: 0.020 + r() * 0.007, a: 0.6 + r() * 0.15 }, // 高层流云
+      { x: 1.1,   y: 0.27, w: 0.42, sp: 0.014 + r() * 0.005, a: 0.55 }             // 远岸云气
+    ];
+    // 睡莲叶（避开水中月影列 0.63~0.81W）
+    pads = [];
+    const padCfg = [
+      { x: 0.26 + (r() - 0.5) * 0.05, y: 0.80, rx: 0.045, ph: r() * TAU },
+      { x: 0.90 + (r() - 0.5) * 0.04, y: 0.88, rx: 0.032, ph: r() * TAU },
+      { x: 0.40 + (r() - 0.5) * 0.05, y: 0.93, rx: 0.026, ph: r() * TAU }
+    ];
+    padCfg.forEach(c => {
+      pads.push({ x: c.x * W, y: c.y * H, rx: c.rx * W, ry: c.rx * W * 0.34, ph: c.ph });
+    });
+    // 松枝几何见 BRANCH 常量（drawPine 专用），无需按尺寸重建
+    buildCount++;
+  }
+
+  /* ============================ 动态状态 ============================ */
+  const ripples = [];
+  const stat = { drops: 0, bells: 0, gusts: 0, maxShard: 0, events: [] };
+  let gusts = [];   // 活动阵风 {t0Real}（用户体感事件，跟真实时钟，不跟 RAF 追帧）
+  let simT = 0, last = performance.now();
+  let lastInteract = -100;
+  let settled = false, poemShown = false;
+
+  function gustEnv(g) {
+    const age = (performance.now() - g.t0Real) / 1000;
+    if (age < 0 || age > GUST_DUR) return 0;
+    // 快起慢落
+    const rise = clamp(age / 0.45, 0, 1);
+    const fall = clamp(1 - (age - 0.45) / (GUST_DUR - 0.45), 0, 1);
+    return Math.sin(rise * Math.PI / 2) * fall;
+  }
+  function gustLevel() {
+    let v = 0;
+    gusts.forEach(g => { v = Math.max(v, gustEnv(g)); });
+    return v;
+  }
+
+  // 阵风冲量：每团云一个归一化位移，阵风发生时获得、随后指数衰减
+  let cloudImpulse = [0, 0, 0];
+  let lastGustN = 0;
+  function cloudPos(cl, i) {
+    // 本底缓移（simT 秒，速度单位 W/s）+ 阵风冲量位移（峰值约 0.18W）
+    const base = cl.x + simT * cl.sp;
+    const cx = ((base + cloudImpulse[i]) % 1.7 + 1.7) % 1.7 - 0.35;
+    return cx;
+  }
+  function cloudCover() {
+    let c = 0;
+    clouds.forEach((cl, i) => {
+      const cx = cloudPos(cl, i);
+      const d = Math.abs(cx - MOON.x() / W);
+      if (d < cl.w) c += Math.max(0, 1 - d / cl.w) * cl.a;
+    });
+    return clamp(c, 0, 0.9);
+  }
+
+  /* ============================ 绘制：天 / 月 / 山 / 水 ============================ */
+  function drawSky(cover) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#1b2532');
+    g.addColorStop(0.5, '#141c28');
+    g.addColorStop(1, '#0d131c');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    // 月光带
+    const mx = MOON.x(), my = MOON.y();
+    const mg = ctx.createRadialGradient(mx, my, 10, mx, my, Math.max(0.5, Math.max(W, H) * 0.7));
+    mg.addColorStop(0, `rgba(196,208,220,${0.10 * (1 - cover)})`);
+    mg.addColorStop(0.4, `rgba(150,168,186,${0.045 * (1 - cover)})`);
+    mg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = mg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function drawStars(cover) {
+    const dim = 1 - cover * 0.85;
+    stars.forEach(s => {
+      const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(simT * s.tw + s.ph));
+      ctx.fillStyle = `rgba(216,224,232,${0.28 * tw * dim})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.s, 0, TAU);
+      ctx.fill();
+    });
+  }
+
+  function drawMoon(cover) {
+    const x = MOON.x(), y = MOON.y(), r = MOON.r();
+    const ha = 1 - cover;
+    // 月晕
+    const haloR = Math.max(0.5, r * 5.2);
+    const halo = ctx.createRadialGradient(x, y, r * 0.4, x, y, haloR);
+    halo.addColorStop(0, `rgba(220,228,234,${0.30 * ha})`);
+    halo.addColorStop(0.5, `rgba(190,205,216,${0.10 * ha})`);
+    halo.addColorStop(1, 'rgba(214,224,232,0)');
+    ctx.fillStyle = halo;
+    ctx.beginPath(); ctx.arc(x, y, haloR, 0, TAU); ctx.fill();
+    // 月体
+    ctx.save();
+    ctx.globalAlpha = clamp(0.95 - cover * 0.8, 0.08, 1);
+    const mr = Math.max(0.5, r);
+    const mg = ctx.createRadialGradient(x - r * 0.25, y - r * 0.25, r * 0.1, x, y, mr);
+    mg.addColorStop(0, '#f4f1e2');
+    mg.addColorStop(0.78, '#e0e1cf');
+    mg.addColorStop(1, '#c4c9bb');
+    ctx.fillStyle = mg;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    // 桂影
+    ctx.globalAlpha = clamp(0.10 - cover * 0.08, 0, 0.1);
+    ctx.fillStyle = '#8d968f';
+    ctx.beginPath(); ctx.arc(x + r * 0.22, y - r * 0.08, Math.max(0.5, r * 0.21), 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(x - r * 0.16, y + r * 0.26, Math.max(0.5, r * 0.13), 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + r * 0.05, y + r * 0.05, Math.max(0.5, r * 0.09), 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  function drawClouds(cover) {
+    clouds.forEach((cl, i) => {
+      const cx = cloudPos(cl, i);
+      const px = cx * W, py = cl.y * H;
+      const rad = Math.max(0.5, cl.w * W * 0.55);
+      // 三团软雾拼一朵云：淡墨色（比夜天亮的冷灰），月旁才有「云来月隐」的层次
+      for (let k = -1; k <= 1; k++) {
+        const ox = k * rad * 0.42;
+        const oy = Math.abs(k) * rad * 0.12;
+        const rr = Math.max(0.5, rad * (0.75 - Math.abs(k) * 0.12));
+        const g = ctx.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, rr);
+        g.addColorStop(0, `rgba(104,116,132,${0.42 * cl.a})`);
+        g.addColorStop(0.62, `rgba(82,94,110,${0.22 * cl.a})`);
+        g.addColorStop(1, 'rgba(60,70,86,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(px + ox - rr, py + oy - rr, rr * 2, rr * 2);
+      }
+    });
+  }
+
+  function drawRidge(pts, fill) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(-2, pts[0].y);
+    pts.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(W + 2, pts[pts.length - 1].y);
+    ctx.lineTo(W + 2, HORIZON() + 2);
+    ctx.lineTo(-2, HORIZON() + 2);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawMountains(cover) {
+    const dim = 1 - cover * 0.35;
+    drawRidge(mtnFar, `rgba(32,42,56,${0.5 * dim})`);
+    drawRidge(mtnNear, `rgba(18,26,38,${0.82 * dim})`);
+    // 地平线一线月雾
+    const hg = ctx.createLinearGradient(0, HORIZON() - H * 0.03, 0, HORIZON() + H * 0.02);
+    hg.addColorStop(0, 'rgba(150,168,186,0)');
+    hg.addColorStop(1, `rgba(150,168,186,${0.05 * (1 - cover)})`);
+    ctx.fillStyle = hg;
+    ctx.fillRect(0, HORIZON() - H * 0.03, W, H * 0.05);
+  }
+
+  function drawWater(cover, wave) {
+    const g = ctx.createLinearGradient(0, HORIZON(), 0, H);
+    g.addColorStop(0, '#101826');
+    g.addColorStop(0.5, '#0b121d');
+    g.addColorStop(1, '#070c14');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, HORIZON(), W, H - HORIZON());
+    // 细波纹：几条极淡横向正弦线
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 5; i++) {
+      const yy = HORIZON() + (H - HORIZON()) * i / 6;
+      ctx.strokeStyle = `rgba(120,140,158,${0.035 + wave * 0.02 - cover * 0.01})`;
+      ctx.beginPath();
+      for (let x = 0; x <= W; x += 14) {
+        const y = yy + Math.sin(x * 0.02 + simT * (0.6 + i * 0.12) + i) * (1.2 + wave * 2);
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  function drawPads(cover, wave) {
+    pads.forEach(p => {
+      const bob = Math.sin(simT * 0.8 + p.ph) * (1 + wave * 1.5);
+      ctx.save();
+      ctx.translate(p.x, p.y + bob);
+      ctx.scale(1, p.ry / p.rx);   // 正圆压扁成浮叶
+      // 秋塘残叶：留一道浅裂向心（非吃豆人式大楔口）
+      const crack = -0.32, gap = 0.20;
+      ctx.fillStyle = `rgba(6,12,18,${0.82 - cover * 0.15})`;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(crack) * p.rx, Math.sin(crack) * p.rx);
+      ctx.arc(0, 0, p.rx, crack, crack + TAU - gap);
+      ctx.closePath();
+      ctx.fill();
+      // 月照叶缘：只勾上缘半弧
+      ctx.strokeStyle = `rgba(130,150,166,${0.10 * (1 - cover)})`;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.rx * 0.985, Math.PI * 1.04, Math.PI * 1.72);
+      ctx.stroke();
+      ctx.restore();
+    });
+  }
+
+  /* ============================ 水中月影（本作核心） ============================ */
+  // 波浪场：多层行正弦，返回某水面点的横向偏移与竖直波动
+  function waveField(x, y, wave) {
+    const d = (y - HORIZON()) / Math.max(1, H - HORIZON()); // 0 远 1 近
+    const amp = (1.5 + d * 3.5) * (1 + wave * 2.2);
+    const ph = simT * 1.2;
+    const off = Math.sin(y * 0.05 + ph + x * 0.008) * amp
+              + Math.sin(y * 0.021 - ph * 0.7) * amp * 0.6;
+    return off;
+  }
+
+  // 涟漪对水面点的破碎影响（0..1）
+  function rippleInfluence(x, y) {
+    let inf = 0, kick = 0;
+    for (const rp of ripples) {
+      const age = simT - rp.born;
+      const life = 1 - clamp(age / RIP_LIFE, 0, 1);
+      if (life <= 0) continue;
+      const rr = rp.r;
+      const band = 9 + rr * 0.05;
+      const d = Math.hypot(x - rp.x, y - rp.y);
+      const q = Math.abs(d - rr);
+      if (q < band * 2.2) {
+        const e = Math.exp(-q / band) * life;
+        inf += e;
+        kick += Math.cos((x - rp.x) * 0.35 + simT * 3) * e;
+      }
+    }
+    return { inf: clamp(inf, 0, 1.6), kick };
+  }
+
+  function drawMoonReflection(cover, wave) {
+    const mx = MOON.x(), topY = HORIZON() + MOON.r() * 0.1, botY = H * 0.99;
+    const baseR = MOON.r();
+    const dim = clamp(1 - cover * 0.82, 0.05, 1);
+
+    // —— 软光雾：多层椭圆径向渐变，绝无边（旧版矩形光柱是穿帮主因） ——
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(mx - baseR * 3.2, topY - 4, baseR * 6.4, botY - topY + 8);
+    ctx.clip();
+    const mists = [
+      { cy: topY + (botY - topY) * 0.18, rr: baseR * 1.25, a: 0.10 },
+      { cy: topY + (botY - topY) * 0.42, rr: baseR * 1.55, a: 0.075 },
+      { cy: topY + (botY - topY) * 0.68, rr: baseR * 1.9,  a: 0.055 },
+      { cy: topY + (botY - topY) * 0.9,  rr: baseR * 2.3,  a: 0.035 }
+    ];
+    mists.forEach(m => {
+      const rx = Math.max(0.5, m.rr), ry = Math.max(0.5, (botY - topY) * 0.30);
+      const g = ctx.createRadialGradient(mx, m.cy, 0, mx, m.cy, Math.max(rx, ry));
+      g.addColorStop(0, `rgba(198,210,212,${m.a * dim})`);
+      g.addColorStop(0.45, `rgba(170,186,194,${m.a * 0.5 * dim})`);
+      g.addColorStop(1, 'rgba(150,170,182,0)');
+      ctx.save();
+      ctx.translate(mx, m.cy);
+      ctx.scale(rx / Math.max(rx, ry), ry / Math.max(rx, ry));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, Math.max(rx, ry), 0, TAU); ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+
+    // —— 近地平线：水中月的一团暖白（最亮、最聚拢） ——
+    const headR = Math.max(0.5, baseR * 0.95);
+    const hg = ctx.createRadialGradient(mx, topY + headR * 0.5, 0, mx, topY + headR * 0.5, headR * 2.1);
+    hg.addColorStop(0, `rgba(236,238,226,${0.42 * dim})`);
+    hg.addColorStop(0.4, `rgba(208,218,216,${0.15 * dim})`);
+    hg.addColorStop(1, 'rgba(190,204,208,0)');
+    ctx.fillStyle = hg;
+    ctx.save();
+    ctx.translate(mx, topY + headR * 0.5);
+    ctx.scale(1, 0.55);
+    ctx.beginPath(); ctx.arc(0, 0, headR * 2.1, 0, TAU); ctx.fill();
+    ctx.restore();
+
+    // —— 碎金短笔：行级哈希打散（固定槽位配对 → 双螺旋，弃） ——
+    // 每行 1~3 笔，位置/门限/长度由行哈希+慢速波决定：帧间稳定、行间无配对
+    const step = 3.6;
+    let shardSum = 0, shardN = 0, rowIdx = 0;
+    ctx.lineCap = 'round';
+    const h1 = n => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+    for (let y = topY + 3; y < botY; y += step, rowIdx++) {
+      const d = (y - topY) / Math.max(1, botY - topY);
+      const halfW = baseR * (0.66 + d * 1.1);
+      const ri = rippleInfluence(mx, y);
+      const shard = clamp(ri.inf * 0.85 + wave * 0.3, 0, 1.5);
+      shardSum += Math.min(ri.inf, 1); shardN++;
+      // 行整体密度（垂直团簇：亮一段暗一段），慢速漂移
+      const cluster = 0.5
+        + 0.26 * Math.sin(y * 0.030 - simT * 1.1)
+        + 0.14 * Math.sin(y * 0.011 + 2.2);
+      // 该行落几笔：近地平线(头)更易多笔成光团，往下更疏
+      const nRoll = h1(rowIdx * 3.1);
+      let n = 1;
+      if (nRoll < 0.40 + (1 - d) * 0.24) n = 2;
+      if (nRoll < 0.15 + (1 - d) * 0.10) n = 3;
+      for (let k = 0; k < n; k++) {
+        const r1 = h1(rowIdx * 7.7 + k * 13.3);
+        const r2 = h1(rowIdx * 3.3 + k * 17.7 + 99);
+        const r3 = h1(rowIdx * 5.9 + k * 7.1 + 47);
+        // 单笔触自己的生灭门限（独立于其他笔）
+        const flick = 0.5 + 0.5 * Math.sin(simT * (0.9 + r1 * 0.7) + y * (0.02 + r2 * 0.03) + k * 5);
+        const gate = cluster * (0.55 + 0.45 * r1) * (0.6 + 0.4 * flick);
+        if (gate < 0.30 + shard * 0.34) continue;
+        // 位置：均匀散布在列宽内，加缓慢波推（不配对）
+        const off = (r2 * 2 - 1) * halfW * 0.92
+                  + Math.sin(y * (0.02 + r3 * 0.03) - simT * (0.7 + r1 * 0.5) + k * 4) * halfW * 0.16;
+        if (Math.abs(off) > halfW) continue;
+        const x = mx + off + ri.kick * shard * (16 + r1 * 18)
+          + (r1 - 0.5) * shard * 26;   // 破碎时碎笔横向炸开
+        const center = 1 - Math.abs(off) / halfW;
+        const len = baseR * (0.06 + 0.11 * Math.max(0, center) + r3 * 0.03)
+          * (1 + d * 0.7) * (1 - shard * 0.5);
+        const a = (0.06 + 0.17 * Math.max(0, center))
+          * gate * dim * (1 - shard * 0.1) * (1 - d * 0.42);
+        ctx.strokeStyle = `rgba(232,236,224,${clamp(a, 0, 0.5)})`;
+        ctx.lineWidth = Math.max(0.7, (1.8 - d * 0.8) * (1 + center * 0.25));
+        const jit = (r1 - 0.5) * 1.6;
+        ctx.beginPath();
+        ctx.moveTo(x - len, y + jit);
+        ctx.quadraticCurveTo(x, y + jit - 0.6, x + len, y + jit + 0.4);
+        ctx.stroke();
+      }
+    }
+    currentShard = shardN ? shardSum / shardN : 0;
+    if (currentShard > stat.maxShard) stat.maxShard = currentShard;
+  }
+  let currentShard = 0;
+
+  function drawRipples(cover) {
+    // 涟漪只在水中月柱一带显现为断裂弧，不画横跨水面的完整几何圈
+    const colCx = MOON.x();
+    const colTop = HORIZON() + 2, colBot = H;
+    for (const rp of ripples) {
+      const age = simT - rp.born;
+      const life = 1 - clamp(age / RIP_LIFE, 0, 1);
+      if (life <= 0) continue;
+      const rr = Math.max(0.5, rp.r);
+      const ry = Math.max(0.5, rr * 0.30);
+      // 弧分成数段，段内透明度随偏离月柱衰减
+      const segs = 5;
+      for (let k = 0; k < 2; k++) {
+        const rk = Math.max(0.5, rr - k * 6);
+        for (let s = 0; s < segs; s++) {
+          // 稳定的断口（非随机）
+          const sk = Math.sin(rp.seed + s * 2.31 + k) * 0.5 + 0.5;
+          if (sk < 0.18) continue;
+          const a0 = (s / segs) * TAU + sk * 0.3;
+          const a1 = a0 + (TAU / segs) * (0.45 + 0.4 * sk);
+          // 采样弧中点，按离月柱横向距离做衰减
+          const mid = (a0 + a1) / 2;
+          const ex = rp.x + Math.cos(mid) * rk;
+          const ey = rp.y + Math.sin(mid) * rk * 0.30;
+          if (ey < colTop || ey > colBot) continue;
+          const edge = Math.abs(ex - colCx) / Math.max(1, MOON.r() * 2.4);
+          const fade = clamp(1 - edge, 0, 1);
+          if (fade <= 0.03) continue;
+          const a = 0.30 * life * fade * (k ? 0.5 : 1) * (1 - cover * 0.3);
+          ctx.strokeStyle = `rgba(200,214,222,${a})`;
+          ctx.lineWidth = k ? 0.7 : 1.05;
+          ctx.beginPath();
+          ctx.ellipse(rp.x, rp.y, rk, ry, 0, a0, a1);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  /* ============================ 探入松枝 ============================ */
+  // 松枝几何（随尺寸重建；sway 在绘制点上加，不在这写死）
+  const BRANCH = {
+    p0: [-0.03, 0.045],
+    c1: [0.085, 0.02], c2: [0.185, 0.155], p1: [0.30, 0.245],
+    c3: [0.355, 0.285], p2: [0.392, 0.315],
+    twigs: [
+      { m: 0.16, out: [-0.038, -0.05] },
+      { m: 0.30, out: [-0.032, -0.052] },
+      { m: 0.44, out: [0.03, -0.05] },
+      { m: 0.58, out: [-0.026, -0.046] },
+      { m: 0.72, out: [0.028, -0.044] },
+      { m: 0.86, out: [-0.02, -0.034] }
+    ],
+    // 直接挂在主枝上的针簇（密实感主力）：m=枝位，sgn=朝下(-1)/朝上(1)偏角
+    hang: [
+      { m: 0.10, sgn: 1, len: 0.024, n: 10 },
+      { m: 0.24, sgn: -1, len: 0.026, n: 11 },
+      { m: 0.38, sgn: 1, len: 0.024, n: 10 },
+      { m: 0.52, sgn: -1, len: 0.025, n: 11 },
+      { m: 0.66, sgn: 1, len: 0.023, n: 10 },
+      { m: 0.80, sgn: -1, len: 0.022, n: 9 }
+    ]
+  };
+  function branchPoint(m, sway) {
+    // 0..0.58 走第一段贝塞尔，之后走第二段
+    const sy = sway * (10 + m * 22);
+    if (m <= 0.58) {
+      const t = m / 0.58;
+      const [x0, y0] = BRANCH.p0, [x1, y1] = BRANCH.c1, [x2, y2] = BRANCH.c2, [x3, y3] = BRANCH.p1;
+      const u = 1 - t;
+      return {
+        x: W * (u * u * u * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t * t * t * x3),
+        y: H * (u * u * u * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t * t * t * y3) + sy
+      };
+    }
+    const t = (m - 0.58) / 0.42;
+    const [x0, y0] = BRANCH.p1, [x1, y1] = BRANCH.c3, [x2, y2] = BRANCH.p2;
+    const u = 1 - t;
+    return {
+      x: W * (u * u * x0 + 2 * u * t * x1 + t * t * x2),
+      y: H * (u * u * y0 + 2 * u * t * y1 + t * t * y2) + sy
+    };
+  }
+  function branchAngle(m) {
+    const a = branchPoint(m, 0), b = branchPoint(Math.min(1, m + 0.02), 0);
+    return Math.atan2(b.y - a.y, b.x - a.x);
+  }
+
+  function drawNeedleFan(ax, ay, aim, spread, len, n) {
+    // 扇形密针：根部聚、梢散开；两层，长针深、短针淡
+    const layer = [[n, 1.0, 'rgba(8,14,19,0.85)', 1.0],
+                   [Math.floor(n * 0.6), 0.62, 'rgba(26,38,48,0.55)', 0.75]];
+    layer.forEach(L => {
+      const [num, lenMul, style, wMul] = L;
+      ctx.strokeStyle = style;
+      ctx.lineWidth = 1.0 * wMul;
+      for (let i = 0; i < num; i++) {
+        const t = num === 1 ? 0 : (i / (num - 1) - 0.5);
+        const ang = aim + t * spread + Math.sin(i * 2.7 + len) * 0.09;
+        const l = len * lenMul * (0.78 + 0.32 * Math.abs(Math.sin(i * 1.9)));
+        const sx = ax + Math.cos(ang) * l * 0.12;
+        const sy = ay + Math.sin(ang) * l * 0.12;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        // 微微弯的针
+        ctx.quadraticCurveTo(
+          ax + Math.cos(ang - 0.12) * l * 0.55, ay + Math.sin(ang - 0.12) * l * 0.55,
+          ax + Math.cos(ang) * l, ay + Math.sin(ang) * l
+        );
+        ctx.stroke();
+      }
+    });
+  }
+
+  function drawPine(sway) {
+    ctx.lineCap = 'round';
+    // 主枝：从根部到梢分多段压感（粗→细），墨色深
+    const segs = 10;
+    for (let i = 0; i < segs; i++) {
+      const a = branchPoint(i / segs, sway), b = branchPoint((i + 1) / segs, sway);
+      const w = 5.2 - (i / segs) * 4.0;
+      ctx.strokeStyle = `rgba(7,12,17,${0.92 - i * 0.025})`;
+      ctx.lineWidth = w;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      // 向月一侧的冷色细边（断续感）
+      if (i % 2 === 1) {
+        ctx.strokeStyle = 'rgba(128,146,160,0.10)';
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y - w * 0.32);
+        ctx.lineTo(b.x, b.y - w * 0.32);
+        ctx.stroke();
+      }
+    }
+    const unit = Math.min(W, H);
+    // 主枝上的挂针簇（先画，让后续主枝笔画压住根部）
+    BRANCH.hang.forEach((hg, hi) => {
+      const p = branchPoint(hg.m, sway);
+      const ang = branchAngle(hg.m) + hg.sgn * 0.95;
+      drawNeedleFan(p.x, p.y, ang, 1.15, unit * hg.len, hg.n);
+    });
+    // 小枝 + 针束（小枝短而内收，不再是天线）
+    BRANCH.twigs.forEach((tg, ti) => {
+      const base = branchPoint(tg.m, sway);
+      const baseAng = branchAngle(tg.m);
+      const outAng = baseAng + (tg.out[1] < 0 ? -0.95 : 0.95) + tg.out[0] * 3;
+      const reach = unit * (0.022 + (ti % 2) * 0.006);
+      const ex = base.x + Math.cos(outAng) * reach;
+      const ey = base.y + Math.sin(outAng) * reach + sway * (12 + ti * 1.5);
+      ctx.strokeStyle = 'rgba(7,12,17,0.82)';
+      ctx.lineWidth = 1.5 - ti * 0.06;
+      ctx.beginPath();
+      ctx.moveTo(base.x, base.y);
+      ctx.quadraticCurveTo((base.x + ex) / 2 - 3, (base.y + ey) / 2 - 2, ex, ey);
+      ctx.stroke();
+      drawNeedleFan(ex, ey, outAng - 0.2, 1.2 + (ti % 2) * 0.25,
+        unit * (0.024 + 0.003 * (ti % 3)), 10 + (ti % 3) * 2);
+    });
+    // 主枝梢一束（最长，沿枝向）
+    const tip = branchPoint(1, sway);
+    drawNeedleFan(tip.x, tip.y, branchAngle(0.98) - 0.1, 1.3, unit * 0.032, 13);
+  }
+
+  function drawVignette(cover) {
+    const g = ctx.createRadialGradient(W / 2, H * 0.45, H * 0.3, W / 2, H * 0.5, Math.max(0.5, Math.max(W, H) * 0.8));
+    g.addColorStop(0, `rgba(3,6,9,${cover * 0.10})`);
+    g.addColorStop(0.6, 'rgba(3,6,9,0)');
+    g.addColorStop(1, `rgba(3,6,9,${0.55 + cover * 0.10})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  /* ============================ 主循环 ============================ */
+  function mirror() {
+    const el = document.getElementById('state');
+    el.textContent = JSON.stringify({
+      t: +simT.toFixed(2),
+      nRipple: ripples.length,
+      shard: +currentShard.toFixed(3),
+      maxShard: +stat.maxShard.toFixed(3),
+      gust: +gustLevel().toFixed(2),
+      cover: +cloudCover().toFixed(2),
+      drops: stat.drops, bells: stat.bells, gusts: stat.gusts,
+      settled, poemShown,
+      audio: !!AC,
+      nStar: stars.length, nPad: pads.length,
+      horizon: +HORIZON().toFixed(1),
+      moon: { x: +MOON.x().toFixed(1), y: +MOON.y().toFixed(1), r: +MOON.r().toFixed(1) }
+    });
+  }
+
+  function frame(now) {
+    // dt 双侧夹（秋虫教训：负 dt → 负半径渐变崩溃）
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
+    last = now;
+    simT += dt;
+
+    // 清过期涟漪
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      if (simT - ripples[i].born > RIP_LIFE) ripples.splice(i, 1);
+    }
+    // 清过期阵风
+    gusts = gusts.filter(g => (performance.now() - g.t0Real) / 1000 < GUST_DUR);
+
+    ripples.forEach(rp => {
+      const age = simT - rp.born;
+      const p = clamp(age / RIP_LIFE, 0, 1);
+      // 先快后慢扩散
+      rp.r = rp.r0 + (rp.maxR - rp.r0) * (1 - Math.pow(1 - p, 2.2));
+    });
+
+    // 静置入「静」
+    if (!settled && simT - lastInteract > AUTO_T / TM) settled = true;
+    if (settled && !poemShown && simT > (FAST ? 5.2 : 14)) {
+      poemShown = true;
+      document.getElementById('poem').classList.add('show');
+      document.getElementById('seal').classList.add('show');
+    }
+
+    const wave = gustLevel();
+    // 阵风冲量衰减（慢衰减，云被推走后要看得见地飘）
+    cloudImpulse = cloudImpulse.map(v => v * (1 - dt * 0.10));
+    const cover = cloudCover();
+
+    drawSky(cover);
+    drawStars(cover);
+    drawMoon(cover);
+    drawClouds(cover);
+    drawMountains(cover);
+    drawWater(cover, wave);
+    drawPads(cover, wave);
+    drawMoonReflection(cover, wave);
+    drawRipples(cover);
+    drawPine(Math.sin(simT * 0.8) * 0.012 + wave * 0.085);
+    drawVignette(cover);
+    mirror();
+    requestAnimationFrame(frame);
+  }
+  window.addEventListener('error', e => {
+    document.getElementById('state').textContent = 'JSERR:' + (e.message || e.error) + ' @' + (e.lineno || '');
+  });
+
+  /* ============================ 交互 ============================ */
+  function tapWater(x, y, silent) {
+    if (ripples.length < 14) {
+      ripples.push({
+        x, y,
+        r0: 4, r: 4,
+        maxR: W * (0.075 + sceneRng() * 0.035),
+        born: simT,
+        seed: sceneRng() * 100
+      });
+    }
+    if (!silent) {
+      stat.drops++;
+      playDrop(clamp((x / W - 0.5) * 2, -0.9, 0.9));
+      if (stat.events.length < 240) stat.events.push({ t: +simT.toFixed(2), k: 'drop', x: Math.round(x) });
+    }
+    lastInteract = simT;
+  }
+
+  function tapSky(x) {
+    gusts.push({ t0Real: performance.now() });
+    stat.gusts++;
+    stat.bells++;
+    playWind();
+    playBell(clamp((x / W - 0.5) * 2, -0.9, 0.9));
+    // 云冲量：点在月左→云向右掠过月，点在月右→向左；离月越近推得越轻（怕过冲）
+    const moonX = MOON.x() / W;
+    const dir = x / W < moonX ? 1 : -1;
+    cloudImpulse = cloudImpulse.map((v, i) => v + dir * (0.20 + i * 0.06));
+    if (stat.events.length < 240) stat.events.push({ t: +simT.toFixed(2), k: 'gust' });
+    lastInteract = simT;
+  }
+
+  function pointer(e) {
+    const r = cv.getBoundingClientRect();
+    const pt = e.touches ? e.touches[0] : e;
+    return { x: pt.clientX - r.left, y: pt.clientY - r.top };
+  }
+
+  let dragging = false, lastDragWater = 0, lastDragSky = 0;
+  cv.addEventListener('pointerdown', e => {
+    initAudio();
+    const p = pointer(e);
+    if (p.y > HORIZON()) tapWater(p.x, p.y);
+    else tapSky(p.x);
+    dragging = true;
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const nowP = performance.now();
+    const p = pointer(e);
+    if (p.y > HORIZON()) {
+      if (nowP - lastDragWater > 110) { lastDragWater = nowP; tapWater(p.x, p.y); }
+    }
+  });
+  window.addEventListener('pointerup', () => { dragging = false; });
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    initAudio();
+    rebuild();
+  });
+  document.getElementById('btnSound').addEventListener('click', () => {
+    initAudio();
+    soundOn = !soundOn;
+    document.getElementById('btnSound').textContent = soundOn ? '♪' : '×';
+    if (ambientGain) ambientGain.gain.linearRampToValueAtTime(soundOn ? 0.045 : 0, AC.currentTime + 0.4);
+    if (!soundOn && windGain) windGain.gain.value = 0;
+  });
+
+  function rebuild() {
+    buildScene();
+    ripples.length = 0;
+    gusts = [];
+    cloudImpulse = [0, 0, 0];
+    stat.drops = 0; stat.bells = 0; stat.gusts = 0; stat.maxShard = 0; stat.events.length = 0;
+    simT = 0; last = performance.now(); lastInteract = -100;
+    settled = false; poemShown = false; currentShard = 0;
+    document.getElementById('poem').classList.remove('show');
+    document.getElementById('seal').classList.remove('show');
+  }
+
+  /* ============================ 启动 ============================ */
+  buildScene();
+  document.addEventListener('pointerdown', function once() { initAudio(); }, { once: true });
+  requestAnimationFrame(frame);
+
+  // 暴露给 harness
+  window.__yb = {
+    tapWater, tapSky, rebuild,
+    stat,
+    get state() {
+      return {
+        t: simT, ripples, gusts, settled, poemShown,
+        shard: currentShard,
+        cover: cloudCover(),
+        horizon: HORIZON(), moon: { x: MOON.x(), y: MOON.y(), r: MOON.r() }
+      };
+    }
+  };
+})();
+</script>
+</body>
+</html>
