@@ -15,13 +15,8 @@
     -webkit-user-select:none;user-select:none;
     overflow:hidden;
   }
-:root{
-    /* 画框边长：默认 704；随屏宽收缩；矮屏按高度收缩。min(92vw,704px,72dvh) 保证横屏手机也完整可见 */
-    --frame: min(92vw, 704px, 72dvh);
-  }
-  @supports not (height: 1dvh){ :root{ --frame: min(92vw, 704px, 72vh); } }
   header{
-    width:var(--frame);display:flex;align-items:baseline;justify-content:space-between;
+    width:704px;display:flex;align-items:baseline;justify-content:space-between;
     margin-bottom:14px;
   }
   h1{
@@ -30,12 +25,12 @@
   }
   .sub{font-size:12px;letter-spacing:3px;color:#8a8172;}
   .frame{
-    position:relative;width:var(--frame);height:var(--frame);
+    position:relative;width:704px;height:704px;
     background:#f3eee1;
     box-shadow:0 1px 2px rgba(60,50,30,.18),0 12px 40px rgba(60,50,30,.22),inset 0 0 60px rgba(120,105,75,.10);
     border:1px solid rgba(120,105,75,.25);
   }
-  canvas#paper,canvas#ink{position:absolute;left:0;top:0;width:100%;height:100%;display:block;}
+  canvas#paper,canvas#ink{position:absolute;left:0;top:0;width:704px;height:704px;display:block;}
   canvas#ink{touch-action:none;cursor:crosshair;}
   .seal{
     position:absolute;right:18px;bottom:16px;width:44px;height:44px;
@@ -49,37 +44,14 @@
   }
   .seal.done{opacity:.92;}
   footer{
-    width:var(--frame);display:flex;justify-content:space-between;align-items:center;
-    gap:12px;margin-top:12px;font-size:12px;letter-spacing:2px;color:#8a8172;
+    width:704px;display:flex;justify-content:space-between;margin-top:12px;
+    font-size:12px;letter-spacing:2px;color:#8a8172;
   }
-  #snd,#clear{min-width:44px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;}
-  .hint-touch{display:none;}
-  @media (pointer:coarse){ .hint-desk{display:none;} .hint-touch{display:inline;} }
-  #snd{margin:0 2px;}
   #state{transition:color .8s;}
   #snd{cursor:pointer;transition:color .5s;}
   #snd:hover{color:#5c5244;}
   #clear{cursor:pointer;transition:color .5s;user-select:none;}
   #clear:hover{color:#5c5244;}
-
-  /* ===== 窄屏（手机竖屏）===== */
-  @media (max-width:560px){
-    body{justify-content:flex-start;padding:max(10px, env(safe-area-inset-top)) 0 max(10px, env(safe-area-inset-bottom));}
-    :root{ --frame: min(94vw, 64dvh); }
-    h1{font-size:26px;letter-spacing:8px;}
-    .sub{font-size:10px;letter-spacing:2px;}
-    header{margin-bottom:9px;}
-    footer{flex-wrap:wrap;justify-content:center;gap:4px 14px;margin-top:9px;font-size:11px;text-align:center;}
-    footer>div:first-child{width:100%;order:2;}
-    footer>div:last-child{order:1;}
-  }
-  /* ===== 超矮屏（手机横屏）：标题页脚压缩，画框按高度走 ===== */
-  @media (max-height:520px){
-    header{margin-bottom:4px;}
-    h1{font-size:20px;letter-spacing:6px;}
-    .sub{display:none;}
-    footer{margin-top:5px;}
-  }
 </style>
 </head>
 <body>
@@ -93,7 +65,7 @@
   <div class="seal" id="seal">绒<br>球</div>
 </div>
 <footer>
-  <div class="hint-desk">点落一团墨 · 拖扫行笔 · 双击清纸</div><div class="hint-touch">点落墨 · 拖扫行笔 · 长按清纸</div>
+  <div>点落一团墨 · 拖扫行笔 · 双击清纸</div>
   <div><span id="state">研墨…</span> · <span id="snd">声·待启</span> · <span id="clear" title="清除纸面重新研墨">研墨清纸</span></div>
 </footer>
 
@@ -444,7 +416,7 @@ const sndEl=document.getElementById('snd');
 let alive=true, idleFrames=0, dried=false;
 
 function frame(){
-  if(alive && pageVisible){
+  if(alive){
     frontAcc = 0;
     for(let k=0;k<STEPS;k++) step();
     SND.acc = frontAcc;                       // 标定探针：原始锋线累计
@@ -478,7 +450,7 @@ function toGrid(e){
   const r=inkCv.getBoundingClientRect();
   return [ (e.clientX-r.left)/r.width*N, (e.clientY-r.top)/r.height*N ];
 }
-let drawing=false, lastP=null, lastT=0, lastGrain=0;   // v0918 修：lastGrain 原未声明，行笔必抛错，颗粒声从未响过
+let drawing=false, lastP=null, lastT=0;
 inkCv.addEventListener('pointerdown', e=>{
   e.preventDefault();
   initAudio();
@@ -505,8 +477,6 @@ inkCv.addEventListener('pointermove', e=>{
   lastP=[gx,gy]; lastT=now; revive();
 });
 addEventListener('pointerup', ()=>{ drawing=false; });
-addEventListener('pointercancel', ()=>{ drawing=false; });
-
 function clearPaper(){
   W.fill(0);P.fill(0);S.fill(0);
   grind();
@@ -514,31 +484,6 @@ function clearPaper(){
 }
 inkCv.addEventListener('dblclick', clearPaper);
 document.getElementById('clear').addEventListener('click', clearPaper);
-
-/* ---- v0918 移动端手感：长按 650ms 清纸（移动浏览器 dblclick 不可靠），拖动超过 12px 取消 ---- */
-let pressTimer=null, pressStart=null;
-inkCv.addEventListener('pointerdown', ev=>{
-  pressStart=[ev.clientX, ev.clientY];
-  clearTimeout(pressTimer);
-  pressTimer=setTimeout(()=>{ pressTimer=null; clearPaper(); }, 650);
-}, true);
-function cancelPress(e){
-  if(pressStart && e && Math.hypot(e.clientX-pressStart[0], e.clientY-pressStart[1])>12){
-    clearTimeout(pressTimer); pressTimer=null;
-  }
-  if(e && e.type==='pointerup'){ clearTimeout(pressTimer); pressTimer=null; }
-}
-inkCv.addEventListener('pointermove', cancelPress, true);
-addEventListener('pointerup', ()=>{ clearTimeout(pressTimer); pressTimer=null; }, true);
-/* 屏蔽长按画布弹系统菜单/放大镜（不影响 #clear 等真实控件） */
-inkCv.addEventListener('contextmenu', e=>e.preventDefault());
-
-/* ---- v0918 性能：切后台时停物理，回前台恢复（手机省电 + rAF 自动停，双保险） ---- */
-let pageVisible=true;
-document.addEventListener('visibilitychange', ()=>{
-  pageVisible = !document.hidden;
-  if(pageVisible) revive();
-});
 
 /* ---------- 声音开关 ---------- */
 sndEl.addEventListener('click', ()=>{

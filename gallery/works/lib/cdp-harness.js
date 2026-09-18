@@ -5,13 +5,30 @@
  * 来源：天灯 17/17 独立验收（2026-09-05）+ 苔痕 15 轮视觉迭代（2026-09-07）实锤。
  * 依赖：google-chrome 在 PATH；ws 模块（路径由 wsPath 指定，默认就近 node_modules）。
  *
- * ★ 五条避坑已内置（踩过的坑不踩第二遍）：
+ * ★ 避坑清单（踩过的坑不踩第二遍；1-5 首批，8-12 为 0917/0918 回流）：
  *  1. 坐标：tap/drag 一律取运行时 getBoundingClientRect() 真实位置派发；
  *     window.innerHeight 视口 ≠ --window-size（headless 有滚动条/UI 差），勿用窗口尺寸算坐标。
  *  2. 时序：物理断言用 waitFor(predicate) 轮询，禁固定 sleep；功能旅程配合作品侧 ?fast=1 加速钩子。
  *  3. 顶层 let/const 是词法全局、不挂 window：q() 里用裸名（let 也可），勿写 window.xxx。
  *  4. Page.navigate 后上下文复用不稳：本模块 goto() 每次重新拉 target 建连。
  *  5. 每个场景独立 user-data-dir：脏 localStorage / 脏状态会污染「空初始」断言。
+ *  8. 僵尸 Chrome 占调试端口 → eval 串台（0917 桂雨）：残留 headless 仍占 remote-debugging-port，
+ *     新连接抓到旧 about:blank target，表现为探针 undefined / getElementById null / __evalError:'Uncaught'，
+ *     但截图是对的——极易误判作品坏。对策见 killAll(port)：验收前清僵尸；boot 后先验作品探针/关键节点，
+ *     不满足就换端口+新 profile 重开。严禁 .catch(()=>null) 吞掉串台错误空转返回坏会话。
+ *  9. headless 无音频硬件良性噪声（0917 桂雨）：'AudioContext encountered an error from the audio
+ *     device / WebAudio renderer' 是容器告警非代码错，跑得越久越易冒。用 realErrors() 取过滤后的
+ *     错误断言，errors 仍保留全量供排查。
+ * 10. 测试点位先核对作品判区（0917 桂雨）：热区可能经 inflate 外扩到视觉边界之外，点错会触发别的
+ *     交互；先在页面实跑作品侧命中函数选点。动画有淡入时固定 sleep 会读到 0，用 waitFor 轮询。
+ * 11. 移动端视口口径（0918 听墨）：mobile override 后若页面内容比屏宽更宽（如固定 704px 画框），
+ *     window.innerWidth 会被撑大成「布局视口」宽（实测 390 屏 innerWidth=548），scrollWidth 也跟着
+ *     变大，二者比较永远「无横向溢出」假阴性。真可见宽用 visualViewport.width；判溢出/元素是否完整
+ *     入屏一律以 visualViewport 为准（见 viewport()）。
+ * 12. pixelRatio() 只向 judgeExpr 暴露 r,g,b（0918 听墨）：判透明会把 a=0 的黑底误算成墨（空纸
+ *     覆盖率 100% 假阳性）。需判 alpha 或更复杂条件时用 pixels(probeFn, stepPx)，见方法文档。
+ * 13. mobile 不只视口（0918 听墨）：setDeviceMetricsOverride 不影响 @media (pointer:coarse)/hover，
+ *     launch({mobile:true}) 内部已补 setTouchEmulationEnabled，触屏专属 UI 断言前确认已走该分支。
  *
  * 最小示例：
  *   const H = require('./cdp-harness.js');
@@ -118,6 +135,13 @@ async function launch(o) {
       await send('Emulation.setDeviceMetricsOverride', {
         width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
       });
+      // 避坑#13（0918 听墨）：setDeviceMetricsOverride 只改视口，不改 pointer/hover 媒体特性，
+      // @media (pointer:coarse) 仍判为 fine，导致触屏专属 UI（长按提示等）不出现。
+      // 必须显式开触摸模拟；setEmitTouchEventsForMouse 让合成鼠标事件同时派 touch 事件。
+      try {
+        await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+        await send('Emulation.setEmitTouchEventsForMouse', { enabled: true, configuration: 'mobile' });
+      } catch (e) { /* 老版本协议无此方法时不阻塞 */ }
     }
 
     q = async expr => {
@@ -195,10 +219,62 @@ async function launch(o) {
     }
     return hit/tot;
   })()`);
+  /**
+   * 通用像素探针（避坑#12）：probeExpr 为表达式，作用域内有 r,g,b,a（0-255）。
+   * 对抽样像素求和 probeExpr 的真/数值结果；想取占比就写布尔表达式。
+   *   pixels('#c','a>40 && r<120', 2)            // 不透明黑像素计数（步长2px，更密）
+   */
+  const pixels = async (sel, probeExpr, stepPx = 4) => q(`(function(){
+    var c=document.querySelector(${JSON.stringify(sel)});
+    var x=c.getContext('2d');
+    var d=x.getImageData(0,0,c.width,c.height).data;
+    var hit=0;
+    for(var i=0;i<d.length;i+=${stepPx}*4){
+      var r=d[i],g=d[i+1],b=d[i+2],a=d[i+3];
+      if(${probeExpr}) hit++;
+    }
+    return hit;
+  })()`);
+  /**
+   * 真视口（避坑#11）：移动端且页面被宽内容撑大时，innerWidth 是布局视口、不可信；
+   * 返回 {w,h,dpr} 优先取 visualViewport（视觉视口），用于判横向溢出 / 元素完整入屏。
+   */
+  const viewport = async () => q(`(function(){
+    return {
+      w: visualViewport ? Math.round(visualViewport.width) : window.innerWidth,
+      h: visualViewport ? Math.round(visualViewport.height) : window.innerHeight,
+      innerW: window.innerWidth, innerH: window.innerHeight, dpr: window.devicePixelRatio||1
+    };
+  })()`);
+  /**
+   * 过滤良性噪声后的错误（避坑#9）：剔除 headless 无音频硬件告警；
+   * errors 仍保留全量。作品断言用 (await s.realErrors()).length===0。
+   */
+  const realErrors = async () => errors.filter(e => !/AudioContext encountered an error from the audio device|WebAudio renderer/i.test(e));
   const kill = async () => { try { chrome.kill(); } catch (e) {} };
 
-  return { send, q, shot, goto, tap, drag, waitFor, state, pixelRatio,
+  return { send, q, shot, goto, tap, drag, waitFor, state, pixelRatio, pixels, viewport, realErrors,
            get errors() { return errors; }, kill, chrome };
 }
 
-module.exports = { launch, waitMs };
+/**
+ * 清掉占用某调试端口的僵尸 Chrome（避坑#8，0917 桂雨实锤）。
+ * 每轮验收前调用：残留 headless 会让新连接抓到旧 about:blank target 串台。
+ * @param {number} port remote-debugging-port
+ * @returns {Promise<number>} 被清理的进程数
+ */
+async function killAll(port) {
+  // 用 pgrep -f 精确匹配该端口的 chrome 启动参数，不经 shell 拼接，避免引号地狱
+  try {
+    const { execFileSync } = require('child_process');
+    let out = '';
+    try {
+      out = execFileSync('pgrep', ['-f', 'remote-debugging-port=' + port], { encoding: 'utf8' });
+    } catch (e) { return 0; }   // pgrep 无匹配时退出码 1
+    const pids = out.trim().split(/\s+/).filter(Boolean);
+    pids.forEach(pid => { try { process.kill(Number(pid), 'SIGKILL'); } catch (e) {} });
+    return pids.length;
+  } catch (e) { return 0; }
+}
+
+module.exports = { launch, waitMs, killAll };

@@ -70,6 +70,8 @@
 | 液体/纸面声组（落墨噗/行笔摩擦/锋线耳语/拂纸唰） | 模拟状态驱动的声音合成，frontAcc 锋线活动度标定 | `ting-mo.html` | 已在 audio-lib 路线图登记；参数档案见 `works/ting-mo-notes.md` |
 | 笔刷引擎（brushPath stamp 铺贴） | 压感墨色、枯笔飞白、笔触纸纹 | `ink-garden.html` | 墨园主线壁垒，体量大，版本稳定后提取核心层 |
 | 踏雪三件套（递归枝干/遮罩像素积雪/粒子飘落） | 程序化植物形态+积雪累积+氛围粒子 | `ta-xue.html` | 下一件植物或季节主题作品出现时提取 |
+| 响应式方画框（CSS `--frame: min(92vw,704px,72dvh)` + canvas 100% 缩放 + 窄屏媒体查询） | 固定方形画布在手机/横屏完整入屏不改物理坐标 | `ting-mo.html` v0918 | candidate：待第二件方形作品（残荷/墨洇）移动端打磨时提取为 ui-layout 片段 |
+| 触屏清纸手势（长按 650ms + 位移>12px 取消 + contextmenu 拦截 + `pointer:coarse` 提示切换） | 移动浏览器 dblclick 不可靠时的等效"重开"原语 | `ting-mo.html` v0918 | candidate：与上同期提取；注意须与作品自身 pointerdown 共存（capture 阶段挂） |
 
 ## 四、规划中（研究线输血）
 
@@ -87,6 +89,7 @@
 
 - **资产管理员角色**由绒球每周复盘日程（周日）承担：检查候选是否达提取条件、L3 采用记录是否齐全、版本是否过期、清单是否与实际一致。
 - 体检记录：20260830 首次体检——audio-lib 状态由 validated 修正为 selected（实际仅听墨 1 件 import）；踏雪三件套维持 candidate（无第二使用作品，触发规则如此）；noise-lib/season-lib 重复实锤仍待触碰山水作品时提取。
+- 20260918 听墨移动端深磨：新增两条候选（响应式方画框 / 触屏长按清纸），均为单一来源，按"第二件复用才提取"留 candidate；audio-lib 采用情况无变化（仍 selected）。
 - 本池随 rongball-room 仓库公开，取用请注明来源。
 
 *维护者：绒球 🧶 ｜ 分层模型致谢 AIOS Project Asset Intelligence*

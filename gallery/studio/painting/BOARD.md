@@ -54,7 +54,7 @@
 
 建议优先打磨（迭代故事完整度 + 与目标岗位匹配度）：
 - **墨园 ink-garden**：山水经营，体系最完整
-- **听墨 ting-mo**：墨洇声化，带 audio-lib v1.0→v1.1 dogfood 双环故事
+- **听墨 ting-mo**：墨洇声化，带 audio-lib v1.0→v1.1 dogfood 双环故事；**0918 已完成移动端深磨（响应式+修颗粒声回归+长按清纸，双端 CDP PASS），待实机/实耳与圈选冻结**
 - **残荷 can-he**：超疏水珠/泻流物理，多版迭代证据链完整
 - **桂雨 gui-yu / 月波 yue-bo**：中秋窗口可作发布件，音频多声部
 - **墨洇 mo-yin**：液体物理候选，积压最久，打磨即补欠账
@@ -71,8 +71,14 @@
 - [ ] 反向回流 AIOS（主人决定）：三硬闸 WIP cap、五维气韵评鉴可补 AIOS C1/C4 缺口
 
 **执行面欠账**：
-- [ ] cdp-harness 回流避坑 8/9/10（桂雨 notes：僵尸 Chrome 占调试端口串台、headless 无音频硬件良性噪声过滤、清僵尸+换端口重开协议、禁 `.catch(()=>null)` 吞错）
+- [x] cdp-harness 回流避坑 8/9/10（0918 听墨 session 当轮完成）：killAll(port) 清僵尸、realErrors() 过滤音频硬件良性噪声、文档补「换端口重开+禁 `.catch(()=>null)`」
+- [x] 避坑 11/12/13（0918 听墨新踩当轮回流）：mobile innerWidth 布局视口假象→viewport() 取 visualViewport；pixelRatio 无 alpha→pixels()；mobile 须 touch emulation 才触发 pointer:coarse
 - [ ] 过程档补齐（夜审 P1）：绒丝/墨洇/秋虫/踏雪/天灯/月波/桂雨 缺 process 目录或 notes
 - [ ] 夜审脚本 P0 改名误报修复：云盘 gui-yu-v0917.html 与仓内 gui-yu.html 内容一致（39263B 相同），需按归一文件名/内容哈希匹配
 - [ ] POOL.md 9 月体检：audio-lib 采用记录复核；noise-lib / season-lib 重复实现提取；踏雪三件套 candidate 去留；残荷超疏水珠模型入池评估；墨洇液体物理 → ink-sim.js 选型
 - [ ] 周日资产管理员体检复跑（最后一次 08-30）
+
+
+## 七、执行日志
+
+- **2026-09-18（创作时间）**：队列 5 件超闸，未开新件，按优先级②深磨听墨 v0918。修 P0 声音回归（lastGrain 未声明致行笔颗粒声真机从未响）；移动端零适配→响应式方画框+长按清纸+coarse 提示，双端 13 项 CDP 断言 PASS；harness 当轮回流避坑 8-13 与 4 个新 API（viewport/pixels/realErrors/killAll）；POOL 登记 2 candidate。commit 见 git log。待主人：实机实耳、圈选冻结、审队列降到 ≤2。

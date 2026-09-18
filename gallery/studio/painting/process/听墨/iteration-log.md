@@ -33,3 +33,19 @@
   1. edit_file 同文件禁并行（再犯，这次抓到实锤：第一个修复被第二个并行编辑覆盖）
   2. CDP Runtime.evaluate 表达式顶层禁裸 return，必须 IIFE；evaluate 的 exceptionDetails 在响应里不回抛，不回看就会"静默没执行"
   3. 探针字段要区分快照与实时（SND.ac 教训）：状态类探针要么实时读，要么在转换回调里更新
+
+
+---
+
+## v0918 移动端深磨（2026-09-18 创作时间，旧作迭代非新件）
+
+- **背景**：看板待审队列 5 件超闸（限 2），不开新件；优先级②作品集候选件深磨，听墨 P12 移动端零适配。
+- **基线（mobile-acc.js baseline）**：
+  - 抓到 **P0 回归**：`lastGrain` 未声明 → 行笔 grain() 必抛错，颗粒声真机从未响（8 个 EXC 实锤，plop 正常造成"声音好像没问题"的假象）。
+  - 横向溢出假阴性：初版断言用 scrollWidth>innerWidth 报"无溢出"，探针发现 innerWidth=548（视觉视口实为 390）→ 固定 704 内容把布局视口撑大，成避坑#11。
+  - 墨覆盖 100% 假象：pixelRatio 判 `r<120` 不判 alpha，透明黑底算墨 → 避坑#12。
+- **磨**：CSS 响应式方画框（--frame 变量 + dvh + 两档媒体查询 + 安全区）；补 lastGrain；长按清纸+contextmenu 拦截+coarse 提示；visibilitychange 省电。物理/声音参数零改动。
+- **验**：harness 补 touch emulation（避坑#13：不加则 pointer:coarse 不生效，长按提示断言失败）后，mobile+desktop 各 13 项断言全 PASS、零真错误。
+- **回流（当轮）**：harness 避坑 8/9/10（桂雨欠账）+11/12/13，新 API `viewport()/pixels()/realErrors()/killAll()`，均 dogfood 通过；POOL 登记 2 条 candidate（响应式方画框、长按清纸）。
+- **产物**：`works/ting-mo.html`（v0918）、验收脚本与基线/验收截图在本目录 `acc_v0918/`、改前备份 `ting-mo.bak-v0918.html`。
+- **待主人**：①实机（手机）长按清纸手感与音色实耳；②听墨是否圈进作品集冻结名单；③待审队列仍 5 件（芦花/残荷/秋虫/月波/桂雨），请尽快审到 ≤2。

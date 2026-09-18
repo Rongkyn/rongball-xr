@@ -60,3 +60,33 @@
 - grind: 320Hz Q2.2，LFO 0.9Hz×±180Hz，gain 0.10，0.95s
 - bell: strikeBell(196, 0.30)
 - 总线：init({master:0.55, wet:0.38})
+
+
+---
+
+## v0918 移动端深磨（2026-09-18，作品集 P12/P13）
+
+> 触发：创作看板五档优先级②，听墨是作品集强候选（audio-lib dogfood 双环故事），但移动端零适配（0 个 @media、704px 写死）。基线 CDP（390×844 dpr2）实锤手机端不可用。
+
+### 基线实锤（改动前）
+1. **P0 声音回归**：`grain()` 引用的 `lastGrain` 全文未声明，strict 模式下行笔第一句 `now-lastGrain` 即抛 ReferenceError——**摩擦颗粒声在任何真机上从未响过**，且每次拖笔刷一条 JS 错误。0827 v3「全量 PASS」时该变量应存在，属后续回归/遗漏（plop/whisper 正常，唯独拖笔声死）。
+2. **布局裁切**：固定 704px 画框/标题/页脚，在 390 屏被裁掉大半；标题整个在屏外，页脚左右文字贴边。body `overflow:hidden` 还锁死了横滚。
+3. **清纸入口缺失**：移动端只有双击清纸，而移动 WebKit 的 dblclick 不可靠；控件 12px、热区仅 14px 高。
+
+### 改动（物理/渲染/声音参数零改动，纯适配+修 bug）
+- 修：`let …, lastGrain=0` 补声明（一行，恢复颗粒声）。
+- 响应式：`:root{--frame:min(92vw,704px,72dvh)}`，header/frame/footer 宽与 canvas 全部改用变量/100%；窄屏（≤560px）标题字距收缩、页脚换行居中、控件 ≥44×32 触摸热区；超矮屏（≤520px）隐藏副标题；`env(safe-area-inset-*)` 刘海屏安全区。
+- 手感：长按 650ms 清纸（移动>12px 视为拖笔取消），`pointercancel` 收手，画布屏蔽 contextmenu；`@media(pointer:coarse)` 页脚提示切换为"点落墨·拖扫行笔·长按清纸"。
+- 性能：`visibilitychange` 切后台停物理省电（rAF 本就停，物理门闸双保险）。
+
+### 验收（cdp-harness，mobile 390×844 dpr2 + desktop 1280×860 双端 PASS）
+- 布局：画框 369×369 完整入可视区（11→379）、标题可见；桌面 704→521 是 721 视口高下 72dvh 正常收缩，无回归。
+- 声音：plops=4 / **grains=1（回归修复实锤）** / 长按清纸 grinds=1 / AC running / 零真错误。
+- 交互：拖笔不透明墨像素 +160~210（步长2抽样）；长按清纸后 stateText='研墨…'、totalWater=0。
+- 性能：软件渲染（--disable-gpu）忙时 ~28fps；真机 GPU 预计更高，物理分辨率 320² 不变，未做自适应降步（避免改标定）。
+- harness 当轮回流：避坑 #8/#9/#10（桂雨欠账）+ 新坑 #11（移动 innerWidth 布局视口假象，用 visualViewport）/#12（pixelRatio 无 alpha）/#13（mobile 须开 touch emulation 才触发 pointer:coarse）；新增 API viewport()/pixels()/realErrors()/killAll()。
+
+### 自评变化
+- 大众/专家分维持 7.2 基线，**可用性门槛从"桌面独占"变为"双端可用"**——这是作品集 P13（双端自测+公开链接）的硬前置。
+- 颗粒声恢复后，声音叙事弧（研墨→落墨→行笔→洇散→墨定）才真正完整闭环；此前"五声对五态"在真机只有四声。
+- 仍待实耳/真机校验：音色参数、长按 650ms 是否顺手（headless 只验逻辑）。
