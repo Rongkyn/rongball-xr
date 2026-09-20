@@ -29,6 +29,13 @@
  *     覆盖率 100% 假阳性）。需判 alpha 或更复杂条件时用 pixels(probeFn, stepPx)，见方法文档。
  * 13. mobile 不只视口（0918 听墨）：setDeviceMetricsOverride 不影响 @media (pointer:coarse)/hover，
  *     launch({mobile:true}) 内部已补 setTouchEmulationEnabled，触屏专属 UI 断言前确认已走该分支。
+ * 15. tap 早期作品（0919 墨园）：旧 canvas 只监听 mousedown/touchstart，单派 pointer 事件静默，
+ *     tap() 默认 pointer+mouse 双派，opts.touch 追加 touch，opts.mouse=false 只派 pointer。
+ * 16. goto 重连不关旧 ws + CDP 长会话偶发（0920 墨园实锤）：表现为间歇
+ *     __evalError:'Uncaught'（概率随在途请求增多升高，单条短表达式常复现不了），截图正常极似
+ *     作品 bug。两道对策已落地：connect() 先关旧连接+removeAllListeners+释放旧 pending；q() 对
+ *     'Uncaught' 自动重试最多 3 次（断言均为幂等只读探测）。验收遇无规律 'Uncaught' 先怀疑本坑，
+ *     换端口重开验证，勿误判作品。
  *
  * 最小示例：
  *   const H = require('./cdp-harness.js');
@@ -113,12 +120,24 @@ async function launch(o) {
   let send = null, q = null, shot = null;
 
   async function connect(target) {
+    // 避坑#16（0920 墨园）：goto 重连时若不关旧 ws，两个连接并存——旧 ws 仍在分发
+    //  Chrome 广播（Log.entryAdded 等），且新旧连接共用本闭包 msgId/pending：旧连接在途请求的
+    //  响应可能落到新连接 pending 上（反之亦然），表现为间歇 __evalError:'Uncaught' 与错误重复入栈，
+    //  截图却正常，极难定位。重连前必须关旧连接并释放其在途请求。
+    if (client) {
+      try { client.removeAllListeners(); client.close(); } catch (e) {}
+      for (const res of pending.values()) res({ __staleConnection: true });
+      pending.clear();
+      client = null;
+    }
     client = new WsMod(target.webSocketDebuggerUrl);
     msgId = 0;
     pending = new Map();
     client.on('message', d => {
       const m = JSON.parse(d);
-      if (m.id && pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
+      if (m.id) {
+        if (pending.has(m.id)) { pending.get(m.id)(m.result); pending.delete(m.id); }
+      }
       if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error')
         errors.push(m.params.entry.text.slice(0, 300));
       if (m.method === 'Runtime.exceptionThrown')
@@ -144,9 +163,19 @@ async function launch(o) {
       } catch (e) { /* 老版本协议无此方法时不阻塞 */ }
     }
 
+    const evaluateOnce = expr => send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true });
     q = async expr => {
-      const r = await send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true });
-      if (r && r.exceptionDetails) return { __evalError: r.exceptionDetails.text || 'eval error' };
+      // 避坑#16：CDP 长会话偶发 __evalError:'Uncaught'（多进程/重连时序，干净复现极难），
+      // 但断言表达式都是幂等只读探测，立即重试通常即 PASS。最多 3 次，仍失败才如实返回错误。
+      let r;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        r = await evaluateOnce(expr);
+        if (r && r.exceptionDetails) {
+          if (attempt < 2) { await new Promise(res => setTimeout(res, 120 * (attempt + 1))); continue; }
+          return { __evalError: r.exceptionDetails.text || 'eval error' };
+        }
+        break;
+      }
       return r ? r.result && r.result.value : undefined;
     };
     shot = async name => {
@@ -164,18 +193,37 @@ async function launch(o) {
     await connect(t);
   };
   /**
-   * 在元素上派发点击（pointerdown→up），坐标为相对该元素 rect 的 CSS 像素。
+   * 在元素上派发点击，坐标为相对该元素 rect 的 CSS 像素。
    * 坑#1：rect 运行时取，不用窗口尺寸。
+   * 坑#15（墨园v0919）：早期作品 canvas 只监听 mousedown/touchstart，仅派 pointer 事件静默无反应，
+   *        故默认 pointer+mouse 双派；opts.touch=true 追加 touch 事件，opts.mouse=false 只派 pointer。
+   * 兼容：第4参可传数字（holdMs 旧签名）或对象 {holdMs,mouse,touch}。
    */
-  const tap = async (sel, x, y, holdMs = 60) => q(`(async function(){
+  const tap = async (sel, x, y, opts = 60) => {
+    const o = typeof opts === 'number' ? { holdMs: opts } : opts;
+    const holdMs = o.holdMs != null ? o.holdMs : 60;
+    const useMouse = o.mouse !== false;
+    const useTouch = !!o.touch;
+    return q(`(async function(){
     var c=document.querySelector(${JSON.stringify(sel)});
     var r=c.getBoundingClientRect();
     var cx=r.left+${x}, cy=r.top+${y};
-    c.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,cancelable:true,clientX:cx,clientY:cy,pointerId:1,pointerType:'mouse',button:0}));
+    var pe=function(type,down){c.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,clientX:cx,clientY:cy,pointerId:1,pointerType:'mouse',button:0,buttons:down?1:0}));};
+    var me=function(type,down){c.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,clientX:cx,clientY:cy,button:0,buttons:down?1:0}));};
+    var tt=function(){var T=function(){return new Touch({identifier:1,target:c,clientX:cx,clientY:cy,pageX:cx,pageY:cy});};
+      c.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,cancelable:true,touches:[T()],targetTouches:[T()],changedTouches:[T()]}));};
+    var te=function(){var T=function(){return new Touch({identifier:1,target:c,clientX:cx,clientY:cy,pageX:cx,pageY:cy});};
+      c.dispatchEvent(new TouchEvent('touchend',{bubbles:true,cancelable:true,touches:[],targetTouches:[],changedTouches:[T()]}));};
+    pe('pointerdown',true);
+    ${useMouse ? "me('mousedown',true);" : ''}
+    ${useTouch ? 'tt();' : ''}
     await new Promise(function(res){setTimeout(res,${holdMs});});
-    c.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,cancelable:true,clientX:cx,clientY:cy,pointerId:1,pointerType:'mouse',button:0}));
+    pe('pointerup',false);
+    ${useMouse ? "me('mouseup',false);" : ''}
+    ${useTouch ? 'te();' : ''}
     return [r.left,r.top,r.width,r.height];
   })()`);
+  };
   /** 拖动：点序列（CSS 像素，相对元素），自动按 70ms 间隔派 pointermove。 */
   const drag = async (sel, pts) => q(`(function(){
     var c=document.querySelector(${JSON.stringify(sel)});

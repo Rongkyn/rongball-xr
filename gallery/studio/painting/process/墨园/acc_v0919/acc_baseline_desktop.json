@@ -1,0 +1,77 @@
+{
+  "mode": "baseline",
+  "shape": "desktop",
+  "ts": "2026-09-19T06:26:02.994Z",
+  "bootMs": 4669,
+  "viewport": {
+    "w": 1280,
+    "h": 721,
+    "innerW": 1280,
+    "innerH": 721,
+    "dpr": 1
+  },
+  "layout": {
+    "canvasW": 300,
+    "canvasH": 150,
+    "docScrollW": 1280,
+    "overflowX": false,
+    "bar": {
+      "l": 350,
+      "t": 645,
+      "r": 931,
+      "b": 701,
+      "fits": true
+    },
+    "hint": {
+      "l": 495,
+      "t": 606,
+      "r": 785,
+      "b": 625,
+      "fits": true
+    },
+    "stats": {
+      "l": 1183,
+      "t": 22,
+      "r": 1254,
+      "b": 58,
+      "fits": true
+    },
+    "title": {
+      "l": 18,
+      "t": 66,
+      "r": 115,
+      "b": 117,
+      "fits": true
+    },
+    "wind": {
+      "l": 1235,
+      "t": 287,
+      "r": 1258,
+      "b": 435,
+      "fits": true
+    }
+  },
+  "resources": {
+    "count": 0,
+    "fontReqs": 0,
+    "fontBytes": 0,
+    "totalTransfer": 0,
+    "domMs": 0,
+    "loadMs": 0
+  },
+  "jsHeap": 10000000,
+  "tapRect": [
+    0,
+    0,
+    300,
+    150
+  ],
+  "plantCount": "0",
+  "fps": {
+    "frames": 1,
+    "fps": 0.2
+  },
+  "paintRatio": 291378,
+  "errors": [],
+  "shot": "ig_baseline_desktop.png"
+}

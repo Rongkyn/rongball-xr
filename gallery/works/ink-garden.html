@@ -1,4 +1,4 @@
-<!DOCTYPE html><!-- 墨园 v12.1 · Brush Engine V5正式版 · 兰竹毛笔笔触调校 · 人-Agent统一通道 · 竹子宋画墨竹法 --><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>墨园 · Ink Garden</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" rel="stylesheet"><style>:root {
+<!DOCTYPE html><!-- 墨园 v12.1 · Brush Engine V5正式版 · 兰竹毛笔笔触调校 · 人-Agent统一通道 · 竹子宋画墨竹法 --><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><title>墨园 · Ink Garden</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><!-- v0919 P0加载修复：Google Fonts 改非渲染阻塞，弱网/离线立即用本地楷体/宋体回退，不再卡死 readyState --><link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" onload="this.onload=null;this.rel='stylesheet'"><noscript><link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript><style>:root {
   --paper:#e8dfc8;
   --paper-2:#ddd2b8;
   --ink:#1a1612;
@@ -307,32 +307,56 @@ canvas#scene {
   padding:5px 10px;
   font-size:11px}
 #sealCanvas {
-  bottom:18px;
-  right:18px}
-#barWrap {
-  bottom:16px;
+  bottom:116px;
   left:auto;
-  right:90px;
+  right:12px;
+  width:52px !important;
+  height:52px !important}
+/* v0919 P0移动端：11 键全部入屏，双行胶囊——上行植物(7) 下行操作(4) */
+#barWrap {
+  bottom:12px;
+  left:12px;
+  right:12px;
   transform:none;
-  max-width:calc(100vw - 108px)}
+  max-width:none}
 #plantBar {
-  padding:5px 8px 6px}
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:4px 6px;
+  padding:7px 10px;
+  border-radius:22px;
+  overflow:visible}
+#barDivider {
+  display:none}
 .pbtn {
-  width:44px;
-  height:44px;
-  font-size:18px}
+  width:38px;
+  height:38px;
+  font-size:17px}
 .pbtn.icon-btn {
-  font-size:14px}
+  font-size:13px}
+/* 操作行另起一行：JS 在 <=640 时于撤键前插入 .bar-row-break */
 .pbtn::after {
   opacity:.75;
-  top:44px;
+  top:40px;
   font-size:10px}
 #hint {
-  bottom:82px;
-  font-size:12px;
-  letter-spacing:3px}
+  bottom:116px;
+  font-size:11.5px;
+  letter-spacing:2px;
+  white-space:nowrap}
 #wind-indicator {
-  right:14px}
+  right:10px;
+  bottom:120px}
+}
+/* v0919 P0移动端：JS 注入的双行结构 */
+#plantBar .bar-row-break {
+  flex-basis:100%;
+  height:0;
+  border:none;
+  margin:0;
+  padding:0}
+@media (min-width:641px) {
+  #plantBar .bar-row-break { display:none }
 }
 /* 出画模式：隐藏所有UI，只留画心与印章 */
 body.gallery-mode #titleBlock,
@@ -414,7 +438,33 @@ body.gallery-mode #toast { display:none !important; }
   }
   // v12.0 P4-fix6: 骨架预检模式 ?skeleton=1——不做水墨渲染，画彩色几何线框+指标overlay
   const skeletonMode = urlParams.has('skeleton');
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  // v0919 P1性能：自适应渲染倍率。设备 dpr 为上限；运行时若持续低帧则软降采样保流畅
+  // （无头/低端 GPU 在 dpr2 大画布光栅化成本高，真机 GPU 通常可满帧维持 dpr2）。
+  const dprMax = Math.min(window.devicePixelRatio || 1, 2);
+  let dpr = dprMax;
+  let __fpsFrames = 0, __fpsWindowStart = 0, __downgradeLevel = 0;
+  const RS_LEVELS = [dprMax, Math.min(dprMax, 1.5), 1];
+  function applyRenderScale(level) {
+    dpr = RS_LEVELS[level];
+    if (vignetteCanvas) vignetteCanvas = null;
+    // 已烘焙的叶 sprite 按旧 dpr 生成，降采样后需按新 dpr 重建（避免放大模糊）
+    for (const pl of plants) { if (pl._leafSprite) pl._leafSprite = null; if (pl._wholeSprite) pl._wholeSprite = null; }
+    resize();
+  }
+  function noteFrameForScale(now) {
+    if (__fpsWindowStart === 0) __fpsWindowStart = now;
+    __fpsFrames++;
+    const elapsed = now - __fpsWindowStart;
+    if (elapsed >= 2500) {
+      const fps = __fpsFrames / (elapsed/1000);
+      // 仅在栽种过内容、且当前非最高负载保护期时评估；连续低帧降一级（最多降到1）
+      if (plants.length > 0 && fps < 32 && __downgradeLevel < RS_LEVELS.length - 1) {
+        __downgradeLevel++;
+        applyRenderScale(__downgradeLevel);
+      }
+      __fpsFrames = 0; __fpsWindowStart = now;
+    }
+  }
   const canvas = document.getElementById('scene');
   const ctx = canvas.getContext('2d');
   const sealCv = document.getElementById('sealCanvas');
@@ -444,6 +494,24 @@ body.gallery-mode #toast { display:none !important; }
   };
 
   // ─── Brush Engine (v4.0) · stamp铺贴毛笔触感 ───
+  // v0919 P1性能：离屏画布跨帧复用池。笔触渲染每帧大量新建 canvas（实测桌面3株植物约3-5ms/帧），
+  // 取 canvas 后由调用方清空/重设 transform；上限保护防失控。
+  const __offscreenPool = [];
+  // 精确尺寸复用：笔触离屏画布无 clip 到 bw×bh，复用大画布会漏旧像素；
+  // 故只复用同尺寸画布（仍消除绝大多数 createElement 开销，因尺寸帧间稳定）。
+  function acquireCanvas(w, h) {
+    for (let i = __offscreenPool.length - 1; i >= 0; i--) {
+      const c = __offscreenPool[i];
+      if (c.width === w && c.height === h) { __offscreenPool.splice(i, 1); return c; }
+    }
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    return c;
+  }
+  function releaseCanvas(c) {
+    if (!c || __offscreenPool.length >= 32) return;
+    __offscreenPool.push(c);
+  }
   function createBrushStamp(size, opts) {
     opts = opts || {};
     var c = document.createElement('canvas');
@@ -561,11 +629,11 @@ body.gallery-mode #toast { display:none !important; }
     var bw = maxX - minX + pad * 2, bh = maxY - minY + pad * 2;
     var bx = minX - pad, by = minY - pad;
 
-    var offCanvas = document.createElement('canvas');
-    offCanvas.width = Math.ceil(bw * dpr);
-    offCanvas.height = Math.ceil(bh * dpr);
+    var offCanvas = acquireCanvas(Math.ceil(bw * dpr), Math.ceil(bh * dpr));
+    var __poolFB = true;
     var off = offCanvas.getContext('2d');
     off.setTransform(dpr, 0, 0, dpr, 0, 0);
+    off.clearRect(0, 0, bw, bh);
 
     var segLens = [], total = 0;
     for (var i = 0; i < pts.length - 1; i++) {
@@ -659,6 +727,7 @@ body.gallery-mode #toast { display:none !important; }
       off.restore();
     }
     mainCtx.drawImage(offCanvas, bx, by, bw, bh);
+    releaseCanvas(offCanvas);
   }
 
   function sampleQuad(p0, c, p1, segments) {
@@ -838,11 +907,10 @@ body.gallery-mode #toast { display:none !important; }
     if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) return;
     var bw = maxX - minX, bh = maxY - minY;
     if (bw < 2 || bh < 2) return;
-    var off = document.createElement('canvas');
-    off.width = Math.ceil(bw * dpr);
-    off.height = Math.ceil(bh * dpr);
+    var off = acquireCanvas(Math.ceil(bw * dpr), Math.ceil(bh * dpr));
     var oc = off.getContext('2d');
     oc.setTransform(dpr, 0, 0, dpr, 0, 0);
+    oc.clearRect(0, 0, bw, bh);
 
     // 为每个采样点计算切线、法线、左右边缘
     var left = [], right = [];
@@ -989,6 +1057,7 @@ body.gallery-mode #toast { display:none !important; }
     }
 
     mainCtx.drawImage(off, minX, minY, bw, bh);
+    releaseCanvas(off);
   }
 
   // 兰叶专用提按包络（v12.1 正式版）：细劲飘举，钉头小而含蓄，行笔若即若离，鼠尾出锋劲利
@@ -1073,18 +1142,22 @@ body.gallery-mode #toast { display:none !important; }
   var stampDan = createBrushStamp(64, { elongation: 1, feather: 0.52, dryness: 0.28, rgb: rgbOf(INK.dan) });
   var stampDanDry = createBrushStamp(64, { elongation: 1, feather: 0.62, dryness: 0.52, rgb: rgbOf(INK.dan) });
 
-  let paperCanvas, paperW = 0, paperH = 0;
+  // v0919 P1性能：纸纹改为定尺寸 tile 生成一次、CSS 像素级平铺，resize/转向零像素重算。
+  // tile 本身按 dpr 超采样，平铺在已 setTransform(dpr) 的主 ctx 上，清晰度与旧全屏版一致。
+  const PAPER_TILE = 256;
+  let paperCanvas = null, paperW = 0, paperH = 0;
   let resizeTimer = null, firstResize = true;
   function createPaperTexture() {
+    if (paperCanvas) return;  // tile 只生成一次，与屏幕尺寸无关
+    const ts = Math.round(PAPER_TILE * dpr);
     paperCanvas = document.createElement('canvas');
-    paperCanvas.width = Math.round(W * dpr);
-    paperCanvas.height = Math.round(H * dpr);
-    paperW = W; paperH = H;
+    paperCanvas.width = ts; paperCanvas.height = ts;
+    paperW = W; paperH = H;  // 兼容旧字段；实际绘制按 tile 平铺
     const pc = paperCanvas.getContext('2d');
     pc.setTransform(dpr, 0, 0, dpr, 0, 0);
     pc.fillStyle = INK.paper;
-    pc.fillRect(0, 0, W, H);
-    const imgData = pc.getImageData(0, 0, Math.round(W*dpr), Math.round(H*dpr));
+    pc.fillRect(0, 0, PAPER_TILE, PAPER_TILE);
+    const imgData = pc.getImageData(0, 0, ts, ts);
     const d = imgData.data;
     for (let i = 0; i < d.length; i += 4) {
       const n = (Math.random() - 0.5) * 14;
@@ -1093,9 +1166,10 @@ body.gallery-mode #toast { display:none !important; }
       d[i+2] = Math.max(0, Math.min(255, d[i+2] + n));
     }
     pc.putImageData(imgData, 0, 0);
-    for (let i = 0; i < 16; i++) {
-      const x = Math.random() * W, y = Math.random() * H;
-      const r = 60 + Math.random() * 160;
+    // 旧版整屏 16 团渍按密度折算到 tile（约 16/1280/721*256² ≈ 1.1，放 2 团保证层次）
+    for (let i = 0; i < 2; i++) {
+      const x = Math.random() * PAPER_TILE, y = Math.random() * PAPER_TILE;
+      const r = 60 + Math.random() * 100;
       const grad = pc.createRadialGradient(x, y, 0, x, y, r);
       const tone = Math.random() > 0.5 ? '180,168,140' : '210,198,170';
       grad.addColorStop(0, 'rgba(' + tone + ',0.12)');
@@ -2895,6 +2969,23 @@ body.gallery-mode #toast { display:none !important; }
     }
     draw(ctx, wind, time, layer) {
       const sp = this.species;
+      // v0919 P1性能：成熟竹全株（枝干+叶）烘焙 sprite，每帧一次 drawImage，整体风摆平移
+      if (sp.name === '竹' && !this._bakingWhole
+          && this.growth >= this.maxGrowth && !this.dying) {
+        this.buildBambooWholeSprite(layer);
+        if (this._wholeSprite && this._wholeSprite.ready) {
+          const spr = this._wholeSprite;
+          ctx.save();
+          ctx.globalAlpha = this.fade;
+          const swayDx = Math.sin((wind.gust||0)*3 + time*0.002 + this.seed) *
+            (wind.strength + wind.gust) * 3 * (wind.direction||1);
+          ctx.drawImage(spr.canvas, spr.ox + swayDx, spr.oy);
+          ctx.restore();
+          return;
+        }
+      } else if (sp.name === '竹' && this.dying && this._wholeSprite) {
+        this._wholeSprite = null;  // 枯败回退实时（需逐帧 fade 且枝垂变形）
+      }
       // v12.0 P4: compose 三竹藏露——远竹→辅竹→主竹（主竹最后画，覆盖在最前）
       // 仅当存在 _composeRole 标记时排序，非compose路径完全保持原序
       let orderedBranches;
@@ -2963,13 +3054,19 @@ body.gallery-mode #toast { display:none !important; }
         } else if (sp.name === '柳') {
           this.drawWillowBranch(ctx, b, dpts, strokeColor, alpha, layer, time, windX, windY, swayFactor, this.fade);
         } else if (sp.name === '兰' && b.kind === 'leaf') {
-          this.drawOrchidLeaf(ctx, b, dpts, alpha);
+          // v0919 P1性能：成熟兰叶烘焙 sprite（在循环后一次 drawImage）；生长/枯败期实时画
+          if (!(this._leafSprite && this._leafSprite.ready)) {
+            this.drawOrchidLeaf(ctx, b, dpts, alpha);
+          }
         } else {
           this.drawGenericBranch(ctx, b, dpts, strokeColor, alpha, layer, sp, pts, partial);
         }
         ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+        const __leafCached = (sp.name === '竹' || sp.name === '兰') &&
+                             this._leafSprite && this._leafSprite.ready;
         if (b.hasLeaf && partial >= 0.8 && layer.detailAlpha > 0.05
-            && !(sp.name === '柳' && b.kind !== 'droop')) {
+            && !(sp.name === '柳' && b.kind !== 'droop')
+            && !__leafCached) {
           const tip = dpts[dpts.length-1];
           const lx = tip.x, ly = tip.y;
           const sway = Math.sin(time*0.002+b.id+this.seed)*0.15;
@@ -3002,10 +3099,113 @@ body.gallery-mode #toast { display:none !important; }
           }
         }
       }
+      // v0919 P1性能：成熟兰把静态叶烘焙为单张 sprite（竹已由全株 sprite 快路径在 draw 入口处理）
+      if (sp.name === '兰' && this.growth >= this.maxGrowth && !this.dying) {
+        this.buildLeafSprite('兰');
+        if (this._leafSprite && this._leafSprite.ready) {
+          const spr = this._leafSprite;
+          ctx.save();
+          ctx.globalAlpha = this.fade * layer.detailAlpha;
+          const swayDx = Math.sin((wind.gust||0)*3 + time*0.002 + this.seed) *
+            (wind.strength + wind.gust) * 5 * (wind.direction||1);
+          ctx.drawImage(spr.canvas, spr.ox + swayDx, spr.oy);
+          ctx.restore();
+        }
+      } else if (sp.name === '兰' && this.dying && this._leafSprite) {
+        this._leafSprite = null;
+      }
+      // 兰花在叶 sprite 之后绘制，保证花浮于叶上
       if (sp.name === '兰' && this.growth >= this.maxGrowth*0.8 && layer.detailAlpha > 0.1) {
         this.drawOrchidFlowers(ctx, time, this.fade*layer.detailAlpha);
       }
       ctx.globalAlpha = 1;
+    }
+    // v0919 P1性能：把成熟竹整株（全部枝干 + 叶）以生长完成、无风动的确定性形态烘焙到一张离屏画布。
+    // 做法：临时把 growth 置为 maxGrowth 并在离屏 ctx 上复用本类既有逐枝绘制（含叶），再还原。
+    buildBambooWholeSprite(layer) {
+      if (this._wholeSprite && (this._wholeSprite.ready || this._wholeSprite.empty)) return;
+      // 边界：遍历全部枝点 + 叶伸达范围
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      for (const b of this.branches) {
+        if (!b.points) continue;
+        for (const pt of b.points) {
+          minX=Math.min(minX,pt.x);maxX=Math.max(maxX,pt.x);
+          minY=Math.min(minY,pt.y);maxY=Math.max(maxY,pt.y);
+        }
+      }
+      const reach=90; minX-=reach;maxX+=reach;minY-=reach;maxY+=reach;
+      const w=Math.ceil(maxX-minX),h=Math.ceil(maxY-minY);
+      if (w<4||h<4||w>4096||h>4096){this._wholeSprite={ready:false,empty:true};return;}
+      const c=document.createElement('canvas');
+      c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);
+      const cctx=c.getContext('2d');
+      cctx.setTransform(dpr,0,0,dpr,0,0);
+      cctx.translate(-minX,-minY);
+      // 备份并临时锁定生长完成态，绘制后恢复（不影响主循环对象状态）
+      const savedGrowth=this.growth;
+      this.growth=this.maxGrowth;
+      this._leafSprite=null;  // 强制走逐枝实时绘制路径
+      this._bakingWhole=true;
+      try {
+        // 直接复用 draw：其内部坐标为 plant 本地坐标，cctx 已平移到 sprite 原点
+        this.draw(cctx, {strength:0,gust:0,direction:1}, 0, layer);
+      } finally {
+        this.growth=savedGrowth;
+        this._leafSprite=null;
+        this._bakingWhole=false;
+      }
+      this._wholeSprite={canvas:c,ox:minX,oy:minY,ready:true};
+    }
+    // v0919 P1性能：以 alpha=1、无摆动的确定性参数烘焙叶的本征形态到单张离屏画布，
+    // 每帧仅一次 drawImage；风摆以整体平移近似（竹 sway 系数0.15、兰叶风摆位移仅数像素）。
+    buildLeafSprite(kind) {
+      if (this._leafSprite && (this._leafSprite.ready || this._leafSprite.empty)) return;
+      if (this._leafSprite && this._leafSprite.baking) return;
+      // 收集需要烘焙的叶几何锚点
+      const items = [];
+      for (const b of this.branches) {
+        if (!b.points || b.points.length < 2) continue;
+        if (kind === '竹') {
+          if (!b.hasLeaf) continue;
+          items.push({ kind:'bamboo', b:b, x:b.points[b.points.length-1].x, y:b.points[b.points.length-1].y });
+        } else { // 兰：整条 leaf 分支都要画，用其原始 pts（无风动）
+          if (b.kind !== 'leaf') continue;
+          items.push({ kind:'orchid', b:b });
+        }
+      }
+      if (!items.length) { this._leafSprite = { ready:false, empty:true }; return; }
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      if (kind === '竹') {
+        for (const it of items) {
+          const reach=80;
+          minX=Math.min(minX,it.x-reach);maxX=Math.max(maxX,it.x+reach);
+          minY=Math.min(minY,it.y-reach);maxY=Math.max(maxY,it.y+reach);
+        }
+      } else {
+        for (const it of items) for (const pt of it.b.points) {
+          minX=Math.min(minX,pt.x);maxX=Math.max(maxX,pt.x);
+          minY=Math.min(minY,pt.y);maxY=Math.max(maxY,pt.y);
+        }
+        const pad2=14; minX-=pad2;maxX+=pad2;minY-=pad2;maxY+=pad2;
+      }
+      const pad = 8;
+      if (kind==='竹'){ minX-=pad;minY-=pad;maxX+=pad;maxY+=pad; }
+      const w=Math.ceil(maxX-minX),h=Math.ceil(maxY-minY);
+      if (w<4||h<4||w>4096||h>4096){this._leafSprite={ready:false,empty:true};return;}
+      const c=document.createElement('canvas');
+      c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);
+      const cctx=c.getContext('2d');
+      cctx.setTransform(dpr,0,0,dpr,0,0);
+      cctx.translate(-minX,-minY);
+      for (const it of items) {
+        if (it.kind==='bamboo') {
+          this.drawBambooLeaves(cctx, it.b, it.x, it.y, 0, 1.0, 1.0);
+        } else {
+          // 兰叶：用无风动的原始 points（作为 dpts），alpha=1
+          this.drawOrchidLeaf(cctx, it.b, it.b.points, 1.0);
+        }
+      }
+      this._leafSprite={canvas:c,ox:minX,oy:minY,ready:true};
     }
     drawBambooTwig(ctx, b, dpts, alpha, layer) {
       // v11.2: brushPath铺贴笔道 + v11.1三段宽度曲线/老新枝分化/加强钉头/鼠尾延伸
@@ -4460,8 +4660,9 @@ body.gallery-mode #toast { display:none !important; }
     const dt = Math.min((now - lastTime)/1000, 0.05);
     lastTime = now;
     updateWind(dt, now);
-    if (paperCanvas && paperW === W && paperH === H) {
-      ctx.drawImage(paperCanvas, 0, 0, W, H);
+    if (paperCanvas) {
+      const pat = ctx.createPattern(paperCanvas, 'repeat');
+      ctx.save(); ctx.fillStyle = pat; ctx.fillRect(0, 0, W, H); ctx.restore();
     } else {
       ctx.fillStyle = INK.paper;
       ctx.fillRect(0, 0, W, H);
@@ -4578,6 +4779,7 @@ body.gallery-mode #toast { display:none !important; }
       lastShichen = sc;
       dom.timeDisplay.textContent = sc;
     }
+    noteFrameForScale(now);
     rafId = requestAnimationFrame(loop);
   }
   function resize() {
@@ -4604,11 +4806,27 @@ body.gallery-mode #toast { display:none !important; }
       createPaperTexture();
       firstResize = false;
     } else {
+      // v0919：纸纹 tile 化后无需重算；vignette 极廉价，直接重建
       if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(function() {
-        createPaperTexture();
-        buildVignette();
-      }, 200);
+      resizeTimer = setTimeout(buildVignette, 200);
+    }
+    applyMobileBar();
+  }
+  // v0919 P0移动端：窄屏把 11 键植物栏拆成双行（植物 7 + 操作 4），全部常驻可见
+  function applyMobileBar() {
+    const bar = document.getElementById('plantBar');
+    if (!bar) return;
+    const undo = document.getElementById('btn-undo');
+    let brk = document.getElementById('barRowBreak');
+    if (window.innerWidth <= 640) {
+      if (!brk && undo) {
+        brk = document.createElement('div');
+        brk.id = 'barRowBreak';
+        brk.className = 'bar-row-break';
+        bar.insertBefore(brk, undo);
+      }
+    } else if (brk) {
+      brk.remove();
     }
   }
   window.addEventListener('resize', resize);

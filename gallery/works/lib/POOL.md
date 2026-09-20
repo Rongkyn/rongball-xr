@@ -72,6 +72,7 @@
 | 踏雪三件套（递归枝干/遮罩像素积雪/粒子飘落） | 程序化植物形态+积雪累积+氛围粒子 | `ta-xue.html` | 下一件植物或季节主题作品出现时提取 |
 | 响应式方画框（CSS `--frame: min(92vw,704px,72dvh)` + canvas 100% 缩放 + 窄屏媒体查询） | 固定方形画布在手机/横屏完整入屏不改物理坐标 | `ting-mo.html` v0918 | candidate：待第二件方形作品（残荷/墨洇）移动端打磨时提取为 ui-layout 片段 |
 | 触屏清纸手势（长按 650ms + 位移>12px 取消 + contextmenu 拦截 + `pointer:coarse` 提示切换） | 移动浏览器 dblclick 不可靠时的等效"重开"原语 | `ting-mo.html` v0918 | candidate：与上同期提取；注意须与作品自身 pointerdown 共存（capture 阶段挂） |
+| 自适应性能降档器（运行时画像 `perfProfile` + 滑动窗口 FPS 监控 + 低于阈值降级/回升迟滞防抖） | 高密度粒子/植株场景保帧率：关落叶、减风动刷新、降细节，按设备内存/CPU 核心/移动端给初档 | `ink-garden.html` v0919 | candidate：仅墨园 1 件，待第二件高负载实时作品复用时提取为 perf-governor 片段；降级项须可平滑过渡避免视觉跳变 |
 
 ## 四、规划中（研究线输血）
 

@@ -1,0 +1,171 @@
+{
+  "shape": "mobile",
+  "checks": [
+    {
+      "name": "IIFE/CommandBus 15s 内就绪",
+      "pass": true,
+      "evidence": {
+        "readyMs": 5004
+      }
+    },
+    {
+      "name": "交互不依赖字体表加载完成",
+      "pass": true,
+      "evidence": {
+        "readyState": "complete"
+      }
+    },
+    {
+      "name": "canvas backing store 已 resize（非300x150）",
+      "pass": true,
+      "evidence": {
+        "cdim": [
+          585,
+          1266,
+          2
+        ],
+        "vp": [
+          390,
+          844
+        ]
+      }
+    },
+    {
+      "name": "无横向溢出",
+      "pass": true,
+      "evidence": {
+        "scrollW": 390,
+        "vw": 390,
+        "overflowX": false
+      }
+    },
+    {
+      "name": "starter 自动栽种 3 株",
+      "pass": true,
+      "evidence": {
+        "count": 3
+      }
+    },
+    {
+      "name": "点击栽种 +1",
+      "pass": true,
+      "evidence": {
+        "before": 3,
+        "after": 4
+      }
+    },
+    {
+      "name": "稳态 FPS >= 30（自适应降档后）",
+      "pass": true,
+      "evidence": {
+        "fps": 38.6
+      }
+    },
+    {
+      "name": "移动端植物栏 11 键全部入屏",
+      "pass": true,
+      "evidence": {
+        "total": 11,
+        "visible": 11,
+        "twoRow": true,
+        "barH": 100,
+        "barBottom": 12,
+        "canScroll": false
+      }
+    },
+    {
+      "name": "植物栏双行结构",
+      "pass": true,
+      "evidence": {
+        "total": 11,
+        "visible": 11,
+        "twoRow": true,
+        "barH": 100,
+        "barBottom": 12,
+        "canScroll": false
+      }
+    },
+    {
+      "name": "植物栏无需横滑",
+      "pass": true,
+      "evidence": {
+        "total": 11,
+        "visible": 11,
+        "twoRow": true,
+        "barH": 100,
+        "barBottom": 12,
+        "canScroll": false
+      }
+    },
+    {
+      "name": "印章不与双行栏重叠",
+      "pass": true,
+      "evidence": {
+        "sealBottom": 728,
+        "barTop": 732,
+        "overlap": false,
+        "sealRight": 378,
+        "vw": 390
+      }
+    },
+    {
+      "name": "提示语不折行（或栽种后已隐藏）",
+      "pass": true,
+      "evidence": {
+        "hidden": true,
+        "ok": true
+      }
+    },
+    {
+      "name": "调风按钮响应",
+      "pass": true,
+      "evidence": {
+        "strengthBefore": 0.17091126834707748
+      }
+    },
+    {
+      "name": "清园两击确认生效",
+      "pass": true,
+      "evidence": {
+        "before": 4,
+        "after": 0,
+        "armed": true
+      }
+    },
+    {
+      "name": "无真实 JS 错误",
+      "pass": true,
+      "evidence": {
+        "errors": []
+      }
+    }
+  ],
+  "ts": "2026-09-20T06:52:35.590Z",
+  "readyMs": 5004,
+  "viewport": {
+    "w": 390,
+    "h": 844,
+    "innerW": 390,
+    "innerH": 844,
+    "dpr": 2
+  },
+  "fps": 38.6,
+  "mobileBar": {
+    "total": 11,
+    "visible": 11,
+    "twoRow": true,
+    "barH": 100,
+    "barBottom": 12,
+    "canScroll": false
+  },
+  "fontRequests": [
+    {
+      "ms": 755,
+      "done": true,
+      "blocked": false
+    }
+  ],
+  "passCount": 15,
+  "total": 15,
+  "shot": "ig_verify_mobile.png"
+}

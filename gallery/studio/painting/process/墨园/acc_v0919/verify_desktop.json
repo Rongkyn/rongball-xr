@@ -1,0 +1,116 @@
+{
+  "shape": "desktop",
+  "checks": [
+    {
+      "name": "IIFE/CommandBus 15s 内就绪",
+      "pass": true,
+      "evidence": {
+        "readyMs": 5814
+      }
+    },
+    {
+      "name": "交互不依赖字体表加载完成",
+      "pass": true,
+      "evidence": {
+        "readyState": "complete"
+      }
+    },
+    {
+      "name": "canvas backing store 已 resize（非300x150）",
+      "pass": true,
+      "evidence": {
+        "cdim": [
+          1280,
+          721,
+          1
+        ],
+        "vp": [
+          1280,
+          721
+        ]
+      }
+    },
+    {
+      "name": "无横向溢出",
+      "pass": true,
+      "evidence": {
+        "scrollW": 1280,
+        "vw": 1280,
+        "overflowX": false
+      }
+    },
+    {
+      "name": "starter 自动栽种 3 株",
+      "pass": true,
+      "evidence": {
+        "count": 3
+      }
+    },
+    {
+      "name": "点击栽种 +1",
+      "pass": true,
+      "evidence": {
+        "before": 3,
+        "after": 4
+      }
+    },
+    {
+      "name": "稳态 FPS >= 30（自适应降档后）",
+      "pass": true,
+      "evidence": {
+        "fps": 60.2
+      }
+    },
+    {
+      "name": "桌面植物栏单行且无换行注入",
+      "pass": true,
+      "evidence": {
+        "h": 56,
+        "brk": false
+      }
+    },
+    {
+      "name": "调风按钮响应",
+      "pass": true,
+      "evidence": {
+        "strengthBefore": 0.19463496620116746
+      }
+    },
+    {
+      "name": "清园两击确认生效",
+      "pass": true,
+      "evidence": {
+        "before": 4,
+        "after": 0,
+        "armed": true
+      }
+    },
+    {
+      "name": "无真实 JS 错误",
+      "pass": true,
+      "evidence": {
+        "errors": []
+      }
+    }
+  ],
+  "ts": "2026-09-20T06:54:12.660Z",
+  "readyMs": 5814,
+  "viewport": {
+    "w": 1280,
+    "h": 721,
+    "innerW": 1280,
+    "innerH": 721,
+    "dpr": 1
+  },
+  "fps": 60.2,
+  "fontRequests": [
+    {
+      "ms": 7985,
+      "done": true,
+      "blocked": false
+    }
+  ],
+  "passCount": 11,
+  "total": 11,
+  "shot": "ig_verify_desktop.png"
+}
