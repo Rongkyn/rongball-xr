@@ -4782,7 +4782,12 @@ body.gallery-mode #toast { display:none !important; }
     noteFrameForScale(now);
     rafId = requestAnimationFrame(loop);
   }
-  function resize() {
+  // v0921 修移动端闪烁：resize 全量重设 canvas 会清空整屏；移动端地址栏收放/滚动
+  // 会在两三个高度间高频触发 resize，表现为整屏闪烁+植物位置整体跳。
+  // 对策：真正的重排（含重设画布、平移植物）统一防抖到 120ms 后执行，
+  // 期间地址栏抖动不产生任何重绘。
+  let relayoutTimer = null;
+  function performResize() {
     W = window.innerWidth;
     H = window.innerHeight;
     canvas.width = Math.round(W * dpr);
@@ -4805,12 +4810,14 @@ body.gallery-mode #toast { display:none !important; }
     if (firstResize) {
       createPaperTexture();
       firstResize = false;
-    } else {
-      // v0919：纸纹 tile 化后无需重算；vignette 极廉价，直接重建
-      if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(buildVignette, 200);
     }
     applyMobileBar();
+  }
+  function resize() {
+    // 首次（初始化）必须同步完成；后续 resize 一律防抖
+    if (firstResize) { performResize(); return; }
+    if (relayoutTimer) clearTimeout(relayoutTimer);
+    relayoutTimer = setTimeout(performResize, 120);
   }
   // v0919 P0移动端：窄屏把 11 键植物栏拆成双行（植物 7 + 操作 4），全部常驻可见
   function applyMobileBar() {
