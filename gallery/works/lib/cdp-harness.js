@@ -325,4 +325,10 @@ async function killAll(port) {
   } catch (e) { return 0; }
 }
 
+// v0921 避坑增补（残荷移动端基线首跑踩实）：
+// file:// URL 含【未编码中文路径】时 Page.navigate 静默失败——不抛错、不触发 error，
+// 页面停在 about:blank，viewport 显示假宽 980（移动模拟默认布局宽）、state 全 null。
+// 处方：传 file:// 前必须 'file://' + encodeURI(绝对路径)，再拼 query。
+// 症状识别：goto 后读 location.href === 'about:blank' / innerWidth 出现 980。
+
 module.exports = { launch, waitMs, killAll };

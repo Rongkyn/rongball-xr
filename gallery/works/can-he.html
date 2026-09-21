@@ -6,6 +6,7 @@
 <title>残荷 · Can He</title>
 <!-- uses: lib/audio-lib.js v1.1（master 总线出声口；雨声组为作品内联自定义声部） -->
 <!-- 系列第十一件：残荷听雨。超疏水珠模型（钉扎-合并-滚动-聚洼-弯茎倾泻）+ 雨生命周期状态机 -->
+<!-- v0921（2026-09-21）移动端深磨：诗移左侧净空（右侧诗区被荷叶占满，倾泻后不可读）+hint单行 +竖屏纵向分布拉长；不动桌面 -->
 <!-- v3（2026-09-12）：倾泻水流重写——上粗下细半透明水带（深影+亮面双层）+ 沿线流动珠串 + 落点溅水花；泻落珠与水带共用落点 -->
 <!-- v2（2026-09-11）：倾泻时刻补「看得见的水流」——叶缘泻流淡色水带（主带+细分叉，跟踪弯茎叶缘）+ 落点持续涟漪；泻落珠略放大 -->
 <style>
@@ -136,6 +137,47 @@
     padding-top: 60px;
     width: 1.3em;
   }
+
+  /* v0921 移动端深磨：竖长屏里荷叶占满宽度，桌面的右侧诗区不再净空——
+     0912 的 m390 只验功能流程没验诗的可读性，倾泻后诗压在荷叶上几乎不可读。
+     移动端诗移到左侧（标题下方净空），仍按 row-reverse 从右往左成列；
+     hint 改单行不断字（原宽幅 letter-spacing 在 390 屏被挤成两行且与荷梗重叠）。 */
+  @media (pointer:coarse), (max-width: 560px) {
+    #poem {
+      right: auto; left: 5%;
+      top: 12%;
+      gap: 16px;
+    }
+    /* 淡纸衬板：荷叶/水珠位置随种子变化，诗区不能假设净空（m42 实测叶缘侵入）。
+       纸色从中心到边缘渐隐，边缘不生硬；opacity 随 #poem.show 一起淡入。 */
+    #poem::before {
+      content: '';
+      position: absolute;
+      left: -40px; right: -60px; top: -40px; bottom: -44px;
+      z-index: -1;
+      background: radial-gradient(ellipse 72% 66% at 42% 34%,
+        rgba(235, 230, 216, 0.95) 0%,
+        rgba(235, 230, 216, 0.82) 48%,
+        rgba(235, 230, 216, 0.32) 74%,
+        rgba(235, 230, 216, 0) 100%);
+      opacity: 0; transition: opacity 4s ease;
+      pointer-events: none;
+    }
+    #poem.show::before { opacity: 1; }
+    #poem .attrib { padding-top: 36px; }
+    .hint {
+      white-space: nowrap;
+      font-size: 11px;
+      letter-spacing: 4px;
+      bottom: 22px;
+    }
+  }
+  /* 矮手机（≤700 高，如 iPhone SE 一代）：诗贴标题下方，给荷叶让出中段；hint 抬到安全区 */
+  @media (pointer:coarse) and (max-height: 700px), (max-width: 560px) and (max-height: 700px) {
+    #poem { top: 10%; gap: 12px; }
+    #poem .line, #poem .attrib { font-size: 24px; }
+    .hint { bottom: 14px; font-size: 10px; letter-spacing: 3px; }
+  }
 </style>
 </head>
 <body>
@@ -185,6 +227,9 @@
 
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   let W = 0, H = 0;
+  // v0921：竖长移动屏纵向构图因子——桌面/横屏 1.0；手机竖屏把纵向分布区间向下拉长，
+  // 避免荷叶全挤在上半截、下半屏大面积空白。桌面横宽比下保持 1.0 不动。
+  const VY = a => Math.min(0.99, a * (H > W * 1.35 ? 1.28 : 1));
 
   // ---------- 全局状态 ----------
   let frame = 0;
@@ -233,8 +278,8 @@
 
     for (let i = 0; i < nStems; i++){
       const bx = xs[i];
-      const by = H * RR(0.82, 0.97);            // 梗没入水下处
-      const topY = H * RR(0.18, 0.56);
+      const by = H * VY(RR(0.82, 0.97));          // 梗没入水下处
+      const topY = H * VY(RR(0.18, 0.56));
       const kink = R() < 0.45;                   // 折梗
       const stem = {
         bx, by, topY,
@@ -518,7 +563,7 @@
       const ex0 = lf.cx + Math.cos(lf.tilt) * lf.rx * 0.96;
       const ey0 = lf.cy + Math.sin(lf.tilt) * lf.ry * 0.96;
       lf.pourIx = ex0 + Math.cos(lf.tilt) * RR(6, 18);
-      lf.pourIy = ey0 + RR(100, 140);
+      lf.pourIy = Math.min(H - 6, ey0 + RR(100, 140) * (H > W * 1.35 ? 1.25 : 1));
       lf.pourStartT = frame;
     }
     if (lf.pouring){
@@ -581,7 +626,7 @@
       // 环境细雨
       const rate = rainLevel * 5.5;
       if (R() < rate * dt * 3){
-        spawnRainAt(W * RR(0.06, 0.78), H * RR(0.16, 0.82), 1, 10);
+        spawnRainAt(W * RR(0.06, 0.78), H * VY(RR(0.16, 0.82)), 1, 10);
       }
     }
 
@@ -1097,7 +1142,11 @@
       if (n++ >= AUTO){ clearInterval(timer); return; }
       initAudio();
       rainLevel = Math.min(2, rainLevel + 0.9);
-      spawnRainAt(W * RR(0.12, 0.7), H * RR(0.25, 0.7), 6, 55);
+      // v0921：auto 雨瞄准最大盛水叶中心（spread 缩到 0.4 叶宽内），
+      // 保证验收链路确定性喂满触发倾泻；此前随机落点偶发喂不满 → waitFor 超时。
+      let tgt = leaves[0];
+      for (const lf of leaves){ if (lf.rx * lf.ry > tgt.rx * tgt.ry) tgt = lf; }
+      spawnRainAt(tgt.cx, tgt.cy, 6, Math.max(8, tgt.rx * 0.4));
     }, FAST ? 350 : 1100);
   }
 
