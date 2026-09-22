@@ -50,8 +50,16 @@
     animation: hintFade 10s ease 2.5s forwards;
   }
   @media (max-width: 480px) {
-    .hint { font-size: 11px; letter-spacing: 3px; bottom: 26px; }
+    .hint {
+      font-size: 11px; letter-spacing: 3px; bottom: 26px;
+      max-width: calc(100vw - 24px); box-sizing: border-box;
+      white-space: normal; text-align: center; line-height: 1.7;
+    }
+    .seal { bottom: 76px; }
     #poem { left: 7%; top: 19%; font-size: 17px; }
+  }
+  @media (max-width: 340px) {
+    .hint { font-size: 10px; letter-spacing: 1px; max-width: calc(100vw - 20px); }
   }
   @keyframes hintFade {
     0% { opacity: 0; }
@@ -79,6 +87,12 @@
     transition: opacity 2.5s ease;
   }
   .seal.show { opacity: 0.85; }
+
+  /* 横屏矮视口：底部空间紧张，印章抬到 hint 上方并略缩小（须置于 .seal 基础规则之后，否则同级特异性被覆盖） */
+  @media (max-height: 430px) {
+    .seal { bottom: 48px; width: 32px; height: 32px; font-size: 12px; }
+  }
+
 
   .btn {
     position: fixed;
@@ -183,7 +197,16 @@
     cv.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   }
-  window.addEventListener('resize', resize);
+  let _resizeT = null, _lastSize = [0, 0];
+  function performResize() {
+    if (window.innerWidth === _lastSize[0] && window.innerHeight === _lastSize[1]) return;
+    _lastSize = [window.innerWidth, window.innerHeight];
+    resize();
+  }
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeT);
+    _resizeT = setTimeout(performResize, 120);
+  });
   resize();
 
   /* ============================ 音频 ============================ */

@@ -109,3 +109,21 @@
 
 ### C. 验收钩子的确定性落点
 - auto/验收自动触发的事件（如自动雨）应**瞄准确定性目标**（如最大盛水叶中心、spread 收至 0.4 目标宽内），不要随机撒全屏——否则偶发喂不满触发条件导致 waitFor 超时 flake。
+
+---
+
+## 2026-09-22 回流（桂雨 / 月波 v0922 移动端深磨）
+
+### D. resize 防抖（120ms + 尺寸不变跳过）——三件实锤，提取条件已达
+- 移动端地址栏收放 / 页面滚动会高频触发 `resize`，直接做画布重排会整屏清空闪 + 景物跳变（墨园 0922 首修；桂雨/月波 0922 同款复现）。
+- 处方（三处同源）：`setTimeout(performResize,120)` 防抖；`performResize` 先比 `innerWidth/innerHeight`，与上次相同直接 return；首次初始化保持同步。
+- 已在 ink-garden / gui-yu / yue-bo 三件各自实现 → **达"重复实现直接提取"标准**，下次触碰任一实时画布作品时提取为 `lib/resize-debounce.js`（约 10 行），三件改为引用。
+
+### E. 底部浮层栈（hint / 印章分层）——双件 candidate
+- 固定在底部角落的两个浮层（居中 hint、右下角印章）在竖屏会纵向区间重叠，横屏矮视口更严重。
+- 处方：窄屏把印章抬到 hint 之上（`bottom:76px`，按 hint 实际高度预留净空）；横屏矮视口（`max-height:430px`）印章缩小并上抬；二者都是 fixed 定位，按"底栏分层"排布而非左右避让。
+- 踩坑：响应式覆盖块必须置于基础规则**之后**（同特异性源码后者胜，见 harness 避坑#18b）。
+- candidate：桂雨/月波 2 件同款，提取时与 resize-debounce 一起做 ui-floating-stack 片段。
+
+### F. 触摸合成事件 pointerType 口径
+- 验收脚本合成 pointer 事件驱动 touch 路由时，`pointerType:'touch'` 才与真机等价；`tap()` 默认 mouse 双派在部分只按触摸语义分流的旧作上不等价（0922 月波点位实测）。记入 harness 避坑#18，不单独入池。

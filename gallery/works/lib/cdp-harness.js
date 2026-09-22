@@ -37,6 +37,15 @@
  *     'Uncaught' 自动重试最多 3 次（断言均为幂等只读探测）。验收遇无规律 'Uncaught' 先怀疑本坑，
  *     换端口重开验证，勿误判作品。
  *
+ * 18. IIFE 闭包变量 q 不可见 + 媒体查询被后置同特异性规则覆盖（0922 桂雨/月波深磨实锤）：
+ *     (a) 作品整体包在 (function(){...})() 里时，let/const 是函数内闭包变量，q() 里裸名也
+ *     ReferenceError——不要怀疑 harness 串台，验收只走 #state 镜像（必要时让作品侧补镜像字段）；
+ *     (b) @media 块若写在同选择器基础规则【之前】，同特异性下源码后者胜，media 声明静默失效
+ *     （matchMedia 报 true、getComputedStyle 仍是基础值）。响应式覆盖块必须置于基础规则之后，
+ *     或提升特异性。排查口径：matchMedia(...).matches===true 但 computed 值没变 → 先看源码顺序。
+ *     另：移动端 touch 验收若用合成事件，pointerType 写 'touch'；tap() 的 mouse 双派在部分
+ *     touch-only 路由的旧作上不等价真机。
+ *
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});
