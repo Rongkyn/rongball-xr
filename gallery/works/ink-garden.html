@@ -428,6 +428,7 @@ body.gallery-mode #toast { display:none !important; }
   <div id="barFade"></div>
 </div>
 
+<!-- uses: lib/resize-debounce.js v1.0（v0923 接入） -->
 <script>
 (function() {
   'use strict';
@@ -442,6 +443,7 @@ body.gallery-mode #toast { display:none !important; }
   // （无头/低端 GPU 在 dpr2 大画布光栅化成本高，真机 GPU 通常可满帧维持 dpr2）。
   const dprMax = Math.min(window.devicePixelRatio || 1, 2);
   let dpr = dprMax;
+  let _rd = null;   // resize-debounce 句柄，performResize 定义后赋值（前置声明供 applyRenderScale 引用）
   let __fpsFrames = 0, __fpsWindowStart = 0, __downgradeLevel = 0;
   const RS_LEVELS = [dprMax, Math.min(dprMax, 1.5), 1];
   function applyRenderScale(level) {
@@ -449,7 +451,7 @@ body.gallery-mode #toast { display:none !important; }
     if (vignetteCanvas) vignetteCanvas = null;
     // 已烘焙的叶 sprite 按旧 dpr 生成，降采样后需按新 dpr 重建（避免放大模糊）
     for (const pl of plants) { if (pl._leafSprite) pl._leafSprite = null; if (pl._wholeSprite) pl._wholeSprite = null; }
-    resize();
+    _rd.flush();
   }
   function noteFrameForScale(now) {
     if (__fpsWindowStart === 0) __fpsWindowStart = now;
@@ -1146,7 +1148,6 @@ body.gallery-mode #toast { display:none !important; }
   // tile 本身按 dpr 超采样，平铺在已 setTransform(dpr) 的主 ctx 上，清晰度与旧全屏版一致。
   const PAPER_TILE = 256;
   let paperCanvas = null, paperW = 0, paperH = 0;
-  let resizeTimer = null, firstResize = true;
   function createPaperTexture() {
     if (paperCanvas) return;  // tile 只生成一次，与屏幕尺寸无关
     const ts = Math.round(PAPER_TILE * dpr);
@@ -4782,11 +4783,9 @@ body.gallery-mode #toast { display:none !important; }
     noteFrameForScale(now);
     rafId = requestAnimationFrame(loop);
   }
-  // v0921 修移动端闪烁：resize 全量重设 canvas 会清空整屏；移动端地址栏收放/滚动
-  // 会在两三个高度间高频触发 resize，表现为整屏闪烁+植物位置整体跳。
-  // 对策：真正的重排（含重设画布、平移植物）统一防抖到 120ms 后执行，
-  // 期间地址栏抖动不产生任何重绘。
-  let relayoutTimer = null;
+  // v0923 起防抖编排引用 lib/resize-debounce.js v1.0（原内联 relayoutTimer 已提取）；
+  // 首次同步（createPaperTexture 必须在首帧完成），后续防抖 120ms，尺寸未变跳过。
+  let firstResize = true;
   function performResize() {
     W = window.innerWidth;
     H = window.innerHeight;
@@ -4813,12 +4812,8 @@ body.gallery-mode #toast { display:none !important; }
     }
     applyMobileBar();
   }
-  function resize() {
-    // 首次（初始化）必须同步完成；后续 resize 一律防抖
-    if (firstResize) { performResize(); return; }
-    if (relayoutTimer) clearTimeout(relayoutTimer);
-    relayoutTimer = setTimeout(performResize, 120);
-  }
+  _rd = window.resizeDebounce.createResizeDebounce(performResize, { wait: 120 });
+  _rd.trigger();
   // v0919 P0移动端：窄屏把 11 键植物栏拆成双行（植物 7 + 操作 4），全部常驻可见
   function applyMobileBar() {
     const bar = document.getElementById('plantBar');
@@ -4836,7 +4831,7 @@ body.gallery-mode #toast { display:none !important; }
       brk.remove();
     }
   }
-  window.addEventListener('resize', resize);
+  // resize 监听已由 resize-debounce 在 _rd 创建时接管
   document.addEventListener('visibilitychange', function() {
     if (document.hidden) {
       pressRing.active = false;
@@ -4989,7 +4984,7 @@ body.gallery-mode #toast { display:none !important; }
   sealCv.height = Math.round(64 * dpr);
   sealCv.style.width = '64px'; sealCv.style.height = '64px';
   sealCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  resize();
+  _rd.flush();
   drawSeal();
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(function(){ drawSeal(); });

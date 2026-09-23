@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- uses: lib/resize-debounce.js v1.0（v0923 接入） -->
 <title>墨洇 · Ink Bleed</title>
 <style>
+  :root{
+    /* 画框边长：默认 704；随屏宽收缩；矮屏按高度收缩。min(92vw,704px,72dvh) 保证横屏手机完整可见 */
+    --frame: min(92vw, 704px, 72dvh);
+  }
+  @supports not (height: 1dvh){ :root{ --frame: min(92vw, 704px, 72vh); } }
   html,body{margin:0;padding:0;height:100%;}
   body{
     background:#e8e2d2;
@@ -15,7 +21,7 @@
     overflow:hidden;
   }
   header{
-    width:704px;display:flex;align-items:baseline;justify-content:space-between;
+    width:var(--frame);display:flex;align-items:baseline;justify-content:space-between;
     margin-bottom:14px;
   }
   h1{
@@ -24,12 +30,12 @@
   }
   .sub{font-size:12px;letter-spacing:3px;color:#8a8172;}
   .frame{
-    position:relative;width:704px;height:704px;
+    position:relative;width:var(--frame);height:var(--frame);
     background:#f3eee1;
     box-shadow:0 1px 2px rgba(60,50,30,.18),0 12px 40px rgba(60,50,30,.22),inset 0 0 60px rgba(120,105,75,.10);
     border:1px solid rgba(120,105,75,.25);
   }
-  canvas#paper,canvas#ink{position:absolute;left:0;top:0;width:704px;height:704px;display:block;}
+  canvas#paper,canvas#ink{position:absolute;left:0;top:0;width:100%;height:100%;display:block;}
   canvas#ink{touch-action:none;cursor:crosshair;}
   .seal{
     position:absolute;right:18px;bottom:16px;width:44px;height:44px;
@@ -43,10 +49,34 @@
   }
   .seal.done{opacity:.92;}
   footer{
-    width:704px;display:flex;justify-content:space-between;margin-top:12px;
+    width:var(--frame);display:flex;justify-content:space-between;align-items:center;
+    gap:12px;margin-top:12px;
     font-size:12px;letter-spacing:2px;color:#8a8172;
   }
   #state{transition:color .8s;}
+  .hint-touch{display:none;}
+  @media (pointer:coarse){ .hint-desk{display:none;} .hint-touch{display:inline;} }
+
+  /* ===== 窄屏手机：顶/底压缩，画框给更多屏占 ===== */
+  @media (max-width:560px){
+    body{justify-content:flex-start;padding:max(10px, env(safe-area-inset-top)) 0 max(10px, env(safe-area-inset-bottom));}
+    :root{ --frame: min(94vw, 62dvh); }
+    h1{font-size:26px;letter-spacing:8px;}
+    .sub{font-size:10px;letter-spacing:2px;}
+    header{margin-bottom:9px;}
+    footer{flex-wrap:wrap;justify-content:center;gap:4px 14px;margin-top:9px;font-size:11px;text-align:center;}
+    footer>div:first-child{width:100%;order:2;}
+    footer>div:last-child{order:1;}
+  }
+  /* ===== 超矮屏（手机横屏）：标题页脚压缩，画框按高度走 ===== */
+  @media (max-height:430px){
+    :root{ --frame: min(94vw, 86dvh); }
+    h1{font-size:22px;letter-spacing:6px;}
+    .sub{display:none;}
+    header{margin-bottom:5px;}
+    footer{margin-top:5px;font-size:10px;}
+    .seal{width:34px;height:34px;font-size:15px;line-height:17px;right:12px;bottom:10px;}
+  }
 </style>
 </head>
 <body>
@@ -60,10 +90,13 @@
   <div class="seal" id="seal">绒<br>球</div>
 </div>
 <footer>
-  <div>点落一团墨 · 拖扫行笔 · 双击清纸</div>
-  <div id="state">研墨…</div>
+  <div><span class="hint-desk">点落一团墨 · 拖扫行笔 · 双击清纸</span><span class="hint-touch">点落墨 · 拖扫行笔 · 长按清纸</span></div>
+  <div id="stateLabel">研墨…</div>
 </footer>
+<!-- 验收镜像：JSON 状态，harness 读取；视觉上隐藏 -->
+<div id="state" style="position:fixed;bottom:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;z-index:-1;">{}</div>
 
+<script src="lib/resize-debounce.js"></script>
 <script>
 'use strict';
 /* ================= 墨洇 · 纯扩散+毛细模型 =================
@@ -72,15 +105,15 @@
    水痕线：湿锋处蒸发快→色素被"丢下"(tide line)
    毛细挂墨：色素只在水足处迁移，水干即定
 ========================================================= */
-const N = 320;                 // 模拟网格
+const N = 220;                 // 模拟网格（物理网格，与 CSS 画框尺寸解耦）
 const STEPS = 8;               // 每帧模拟步
 const D_W = 0.38;              // 水扩散率
-const EVAP = 2.8e-5;           // 水蒸发/吸附衰减
+const EVAP_BASE = 2.8e-5;      // 水蒸发/吸附衰减（基准）
 const D_P = 0.40;              // 水中色素最大扩散率
 const MOB_LO = 0.008, MOB_HI = 0.09;   // 色素迁移水量门槛区间
-const ADS = 0.0032;            // 基础吸附率
+const ADS_BASE = 0.0032;       // 基础吸附率（基准）
 const ADS_FRONT = 0.100;       // 湿锋吸附加成(水痕线)
-const ADS_DRY = 0.05;          // 水干急速挂墨
+const ADS_DRY_BASE = 0.05;    // 水干急速挂墨（基准）
 const W_DRY = 0.012;
 const ADVEC = 0.5;             // 色素随水流平流(咖啡环机制→水痕线)
 const ADVEC_W = 0.45;          // 平流水量闸门：只在薄水(蒸发前沿)发力
@@ -152,53 +185,52 @@ function step(){
   }
   totalWater = tw;
 
-  // 2. 色素迁移（毛细挂墨：水足才行）+ 沉积（锋线加成）
-  lap9(P,LB);
+  // 2+3. 色素迁移 + 沉积 + 平流（合并为单次遍历；干区 p≈0 快速跳过）
+  lap9(P,LB);   // 色素 Laplacian，供下方扩散迁移
   for(let y=1;y<N-1;y++){
     const r=y*N;
     for(let x=1;x<N-1;x++){
       const i=r+x;
       const w = W[i];
       let p = P[i];
-      // 迁移率 ramp
-      let m = (w-MOB_LO)/(MOB_HI-MOB_LO);
-      if(m<0)m=0; else if(m>1)m=1;
-      if(m>0 && p>0){
-        p += D_P*m*(0.75+0.5*F2[i])*LB[i];   // 色素前锋随纤维通道破形
-        if(p<0)p=0;
+      if(p>0){
+        // 迁移率 ramp
+        let m = (w-MOB_LO)/(MOB_HI-MOB_LO);
+        if(m<0)m=0; else if(m>1)m=1;
+        if(m>0){
+          p += D_P*m*(0.75+0.5*F2[i])*LB[i];   // 色素前锋随纤维通道破形
+          if(p<0)p=0;
+        }
+        // 锋线检测：水梯度 + 水量低位（tide line 物理）
+        const g = Math.abs(W[i+1]-W[i-1]) + Math.abs(W[i+N]-W[i-N]);
+        let tide = g*32; if(tide>1)tide=1;
+        const dwt=(w-0.05)/0.055; tide *= Math.max(0, 1-dwt*dwt);  // 窄带峰值在w≈0.05·钉线处
+        // 沉积（沿纤维丝挂墨）
+        let rate = ADS*(0.55+FIB_ADS*F[i])*(0.82+0.36*F2[i]) + ADS_FRONT*tide;
+        if(w<W_DRY) rate += ADS_DRY;
+        let dep = p*rate;
+        if(dep>p)dep=p;
+        if(dep>0){ S[i]+=dep; p-=dep; }
+        P[i]=p;
       }
-      // 锋线检测：水梯度 + 水量低位（tide line 物理）
-      const g = Math.abs(W[i+1]-W[i-1]) + Math.abs(W[i+N]-W[i-N]);
-      let tide = g*32; if(tide>1)tide=1;
-      const dwt=(w-0.05)/0.055; tide *= Math.max(0, 1-dwt*dwt);  // 窄带峰值在w≈0.05·钉线处
-      // 沉积（沿纤维丝挂墨）
-      let rate = ADS*(0.55+FIB_ADS*F[i])*(0.82+0.36*F2[i]) + ADS_FRONT*tide;
-      if(w<W_DRY) rate += ADS_DRY;
-      let dep = p*rate;
-      if(dep>p)dep=p;
-      if(dep>0){ S[i]+=dep; p-=dep; }
-      P[i]=p;
-    }
-  }
-
-  // 3. 平流：色素随水流向湿锋（咖啡环→水痕线的物理源）
-  for(let y=1;y<N-1;y++){
-    const r=y*N;
-    for(let x=1;x<N-1;x++){
-      const i=r+x;
+      // 3. 平流：色素随水流向湿锋（咖啡环→水痕线的物理源）；双侧皆无墨/无薄水时跳过
       // 右邻（水量闸门：厚水处无平流，防止抽空墨芯）
-      let j=i+1, dW=W[i]-W[j];
-      let gate=(ADVEC_W-0.5*(W[i]+W[j]))*2.2; if(gate<0)gate=0; else if(gate>1)gate=1;
-      if(gate>0){
-        if(dW>0){ let a=P[i]*ADVEC*dW*gate; const cap=P[i]*0.25; if(a>cap)a=cap; if(a>0){P[i]-=a;P[j]+=a;} }
-        else    { let a=P[j]*ADVEC*(-dW)*gate; const cap=P[j]*0.25; if(a>cap)a=cap; if(a>0){P[j]-=a;P[i]+=a;} }
+      let j=i+1, dW=w-W[j];
+      if(p>0 || P[j]>0){
+        let gate=(ADVEC_W-0.5*(w+W[j]))*2.2; if(gate<0)gate=0; else if(gate>1)gate=1;
+        if(gate>0){
+          if(dW>0){ let a=P[i]*ADVEC*dW*gate; const cap=P[i]*0.25; if(a>cap)a=cap; if(a>0){P[i]-=a;P[j]+=a;} }
+          else    { let a=P[j]*ADVEC*(-dW)*gate; const cap=P[j]*0.25; if(a>cap)a=cap; if(a>0){P[j]-=a;P[i]+=a;} }
+        }
       }
       // 下邻
-      j=i+N; dW=W[i]-W[j];
-      gate=(ADVEC_W-0.5*(W[i]+W[j]))*2.2; if(gate<0)gate=0; else if(gate>1)gate=1;
-      if(gate>0){
-        if(dW>0){ let a=P[i]*ADVEC*dW*gate; const cap=P[i]*0.25; if(a>cap)a=cap; if(a>0){P[i]-=a;P[j]+=a;} }
-        else    { let a=P[j]*ADVEC*(-dW)*gate; const cap=P[j]*0.25; if(a>cap)a=cap; if(a>0){P[j]-=a;P[i]+=a;} }
+      j=i+N; dW=w-W[j];
+      if(p>0 || P[j]>0){
+        let gate=(ADVEC_W-0.5*(w+W[j]))*2.2; if(gate<0)gate=0; else if(gate>1)gate=1;
+        if(gate>0){
+          if(dW>0){ let a=P[i]*ADVEC*dW*gate; const cap=P[i]*0.25; if(a>cap)a=cap; if(a>0){P[i]-=a;P[j]+=a;} }
+          else    { let a=P[j]*ADVEC*(-dW)*gate; const cap=P[j]*0.25; if(a>cap)a=cap; if(a>0){P[j]-=a;P[i]+=a;} }
+        }
       }
     }
   }
@@ -283,16 +315,36 @@ function render(){
 })();
 
 /* ---------- 主循环 ---------- */
-const stateEl=document.getElementById('state');
+const stateEl=document.getElementById('stateLabel');
+const stateMirror=document.getElementById('state');
 const sealEl=document.getElementById('seal');
-let alive=true, idleFrames=0, dried=false;
+const params = new URLSearchParams(location.search);
+const FAST = params.has('fast');
+/* fast 时间缩放（0923 实测定型）：干涸由蒸发/沉积的时间率主导，扩散 8 子步已收敛。
+   多子步会让每帧计算倍增、在低帧率设备上墙钟加速被吃没（实测 32 子步仍 6fps）；
+   故 fast 保持 8 子步，只把蒸发/吸附「速率」整体 ×FAST_K——零额外计算负担，干涸一致快。 */
+const FAST_K = FAST ? 200 : 1;
+const EVAP = EVAP_BASE * FAST_K;
+const ADS = ADS_BASE * FAST_K;
+const ADS_DRY = ADS_DRY_BASE * FAST_K;
+const STEP_MULT = 1;
+let alive=true, idleFrames=0, dried=false, dropCount=0;
 
+function mirror(){
+  stateMirror.textContent = JSON.stringify({
+    alive: alive, dried: dried, tw: +totalWater.toFixed(3),
+    drops: dropCount, ts: Date.now()
+  });
+}
+
+let loopRunning=false;
+function kick(){ if(!loopRunning){ loopRunning=true; requestAnimationFrame(frame); } }
 function frame(){
   if(alive){
-    for(let k=0;k<STEPS;k++) step();
+    for(let k=0;k<STEPS*STEP_MULT;k++) step();
     if(totalWater<0.4){
       idleFrames++;
-      if(idleFrames>90 && !dried){
+      if(idleFrames>(FAST?24:90) && !dried){
         dried=true; alive=false;
         stateEl.textContent='水尽墨定';
         stateEl.style.color='#5c5244';
@@ -304,13 +356,24 @@ function frame(){
     }
   }
   render();
-  requestAnimationFrame(frame);
+  mirror();
+  // 干涸后停循环省电；新滴经 revive()→kick() 唤醒
+  if(alive){ requestAnimationFrame(frame); }
+  else { loopRunning=false; }
 }
 
 function revive(){
   if(!alive){ alive=true; }
   if(dried){ dried=false; sealEl.classList.remove('done'); }
   idleFrames=0;
+  kick();
+}
+
+/* ---------- 清纸 ---------- */
+function clearPaper(){
+  W.fill(0);P.fill(0);S.fill(0);
+  dropCount=0;
+  revive(); stateEl.textContent='研墨…'; stateEl.style.color='#8a8172';
 }
 
 /* ---------- 交互 ---------- */
@@ -323,7 +386,7 @@ inkCv.addEventListener('pointerdown', e=>{
   e.preventDefault();
   drawing=true; try{ inkCv.setPointerCapture(e.pointerId); }catch(_){} 
   const [gx,gy]=toGrid(e);
-  drop(gx,gy,14,3.6,1.6);
+  drop(gx,gy,14,3.6,1.6); dropCount++;
   lastP=[gx,gy]; revive();
 });
 inkCv.addEventListener('pointermove', e=>{
@@ -338,14 +401,42 @@ inkCv.addEventListener('pointermove', e=>{
   lastP=[gx,gy]; revive();
 });
 addEventListener('pointerup', ()=>{ drawing=false; });
-inkCv.addEventListener('dblclick', ()=>{
-  W.fill(0);P.fill(0);S.fill(0);
-  revive(); stateEl.textContent='研墨…';
+inkCv.addEventListener('dblclick', clearPaper);
+
+/* ---- v0923 移动端手感：长按 650ms 清纸（移动浏览器 dblclick 不可靠），拖动超过 12px 取消 ----
+   capture 阶段挂载，与作品自身 pointerdown 共存；长按是独立定时器，落墨不受影响 */
+let pressTimer=null, pressStart=null;
+inkCv.addEventListener('pointerdown', ev=>{
+  pressStart=[ev.clientX, ev.clientY];
+  clearTimeout(pressTimer);
+  pressTimer=setTimeout(()=>{ pressTimer=null; clearPaper(); }, 650);
+}, true);
+inkCv.addEventListener('pointermove', e=>{
+  if(pressStart && Math.hypot(e.clientX-pressStart[0], e.clientY-pressStart[1])>12){
+    clearTimeout(pressTimer); pressTimer=null;
+  }
+}, true);
+addEventListener('pointerup', ()=>{ clearTimeout(pressTimer); pressTimer=null; }, true);
+/* 屏蔽长按画布弹系统菜单/放大镜 */
+inkCv.addEventListener('contextmenu', e=>e.preventDefault());
+
+/* ---- v0923 resize：物理网格 N×N 与 CSS 画框解耦，尺寸变化不需要重排物理；
+   接入 resize-debounce 作防御性收口（尺寸未变跳过） ---- */
+if(window.resizeDebounce){
+  window.resizeDebounce.createResizeDebounce(function(){
+    // 无像素级重排需求；留位给未来 dpr 相关处理
+  }, { wait: 120 });
+}
+
+/* ---- v0923 切后台省电：rAF 自动停之外，回前台主动 revive ---- */
+document.addEventListener('visibilitychange', ()=>{
+  if(!document.hidden) revive();
 });
 
-/* ---------- 开场一滴 ---------- */
-setTimeout(()=>{ drop(N*0.5, N*0.45, 16, 4.5, 1.8); revive(); }, 700);
-requestAnimationFrame(frame);
+/* ---------- 开场一滴（fast 模式立即落，不等 700ms） ---------- */
+function openingDrop(){ drop(N*0.5, N*0.45, 16, 4.5, 1.8); dropCount++; revive(); }
+if(FAST){ openingDrop(); } else { setTimeout(openingDrop, 700); }
+kick();
 </script>
 </body>
 </html>
