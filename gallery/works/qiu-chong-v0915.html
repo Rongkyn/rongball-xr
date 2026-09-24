@@ -145,6 +145,7 @@
 <div class="seal" id="seal">绒球</div>
 <div id="state"></div>
 
+<script src="lib/resize-debounce.js"></script>
 <script>
 (function () {
   'use strict';
@@ -173,6 +174,10 @@
   let W = 0, H = 0, DPR = 1;
 
   function resize() {
+    // v0924 零尺寸守卫：页面解析早期 / 某些 headless 时序 innerWidth/Height 可能为 0，
+    // 此时重排会让「步长=W/常数」的循环（drawGround）陷入死循环，也会产生退化渐变。
+    // 跳过本次，真实尺寸到达后的下一次 resize 会补上。
+    if (window.innerWidth <= 0 || window.innerHeight <= 0) return;
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth; H = window.innerHeight;
     cv.width = Math.floor(W * DPR);
@@ -181,8 +186,13 @@
     cv.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   }
-  window.addEventListener('resize', resize);
-  resize();
+  // v0924：resize 防抖。移动端地址栏收放/旋转高频触发 resize，避免画布重排抖动；
+  // createResizeDebounce 首次 trigger 同步执行（替代旧 resize()），尺寸未变则跳过。
+  if (window.resizeDebounce) {
+    window.resizeDebounce.createResizeDebounce(resize, { wait: 120 });
+  } else {
+    window.addEventListener('resize', resize); resize();
+  }
 
   /* ============================ 音频 ============================ */
   let AC = null, master = null, ambientGain = null;
@@ -574,7 +584,7 @@
     ctx.fillStyle = 'rgba(18,23,30,0.82)';
     ctx.beginPath();
     ctx.moveTo(0, GROUND() - H * 0.035);
-    for (let x = 0; x <= W; x += W / 14) {
+    for (let x = 0; x <= W; x += Math.max(1, W / 14)) {  // 步长下限防 W=0 死循环
       ctx.lineTo(x, GROUND() - H * 0.035 + Math.sin(x * 0.011) * H * 0.008 - 4);
     }
     ctx.lineTo(W, H); ctx.lineTo(0, H);

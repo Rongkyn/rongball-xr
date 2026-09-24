@@ -1,0 +1,26 @@
+[
+  {
+    "nC": 4,
+    "pans": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "chirps": 23,
+    "realErrors": [],
+    "allErrors": []
+  },
+  {
+    "nC": 4,
+    "pans": [
+      null,
+      null,
+      null,
+      null
+    ],
+    "chirps": 22,
+    "realErrors": [],
+    "allErrors": []
+  }
+]

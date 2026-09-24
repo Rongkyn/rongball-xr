@@ -155,6 +155,7 @@
 </div>
 
 <script src="lib/audio-lib.js"></script>
+<script src="lib/resize-debounce.js"></script>
 <script>
 (function(){
   'use strict';
@@ -985,7 +986,13 @@
     wind.gusts = []; wind.drag = 0; wind.t = 0;
     buildPaperTex(); buildReeds(); buildGrass();
   }
-  window.addEventListener('resize', resize);
+  // v0924：resize 防抖。旋转/地址栏收放高频触发时，避免纸纹 + 芦苇全量重建风暴；
+  // 初始化已由下方 resize() 同步完成，故 immediate:false；尺寸未变 perform 自动跳过。
+  if (window.resizeDebounce) {
+    window.resizeDebounce.createResizeDebounce(resize, { wait: 120, immediate: false });
+  } else {
+    window.addEventListener('resize', resize);
+  }
 
   // ---------- 主循环 ----------
   let lastNow = performance.now();

@@ -1,0 +1,20 @@
+{
+  "before": {
+    "poem": true,
+    "reeds": 122,
+    "shed": 1133
+  },
+  "immediate": {
+    "poem": true,
+    "reeds": 122,
+    "shed": 1133
+  },
+  "after": {
+    "poem": true,
+    "reeds": 130,
+    "shed": 1133
+  },
+  "debounceWorked": true,
+  "progressKept": true,
+  "errors": []
+}

@@ -1,0 +1,194 @@
+{
+  "芦花": {
+    "vp": {
+      "w": 390,
+      "h": 844,
+      "innerW": 390,
+      "innerH": 844,
+      "dpr": 2
+    },
+    "st0": {
+      "t": 12.75,
+      "gusts": 0,
+      "seeds": 0,
+      "totalShed": 0,
+      "peakTheta": 0.026,
+      "birds": 0,
+      "poem": false,
+      "reeds": 122
+    },
+    "stAfterTouch": {
+      "t": 16.05,
+      "gusts": 0,
+      "seeds": 151,
+      "totalShed": 2136,
+      "peakTheta": 0.478,
+      "birds": 1,
+      "poem": true,
+      "reeds": 122
+    },
+    "landscape": {
+      "vw": 844,
+      "css": {
+        "w": 844,
+        "h": 390
+      },
+      "back": {
+        "w": 1688,
+        "h": 780
+      }
+    },
+    "landscapeOK": true,
+    "resizeBurst": {
+      "sent": 8
+    },
+    "stAfterBurst": {
+      "t": 24.85,
+      "gusts": 0,
+      "seeds": 0,
+      "totalShed": 2136,
+      "peakTheta": 0.024,
+      "birds": 1,
+      "poem": true,
+      "reeds": 130
+    },
+    "burstBroken": false,
+    "stBack": {
+      "t": 27.4,
+      "gusts": 0,
+      "seeds": 0,
+      "totalShed": 2136,
+      "peakTheta": 0.041,
+      "birds": 0,
+      "poem": true,
+      "reeds": 122
+    },
+    "overflow": {
+      "scrollW": 390,
+      "visW": 390,
+      "bodyScrollW": 390
+    },
+    "noHOverflow": true,
+    "errors": []
+  },
+  "秋虫": {
+    "vp": {
+      "w": 390,
+      "h": 844,
+      "innerW": 390,
+      "innerH": 844,
+      "dpr": 2
+    },
+    "st0": {
+      "t": 4.3,
+      "nC": 4,
+      "nF": 3,
+      "hushed": 0,
+      "singing": 4,
+      "settled": true,
+      "poemShown": false,
+      "dropFired": false,
+      "audio": false,
+      "cover": 0.37,
+      "chirps": 21,
+      "replies": 10,
+      "trials": 0,
+      "hushes": 0,
+      "pans": [
+        -0.03,
+        0.3,
+        0.5,
+        0.8
+      ]
+    },
+    "stAfterTouch": {
+      "t": 5.32,
+      "nC": 4,
+      "nF": 3,
+      "hushed": 3,
+      "singing": 1,
+      "settled": true,
+      "poemShown": false,
+      "dropFired": false,
+      "audio": true,
+      "cover": 0.37,
+      "chirps": 22,
+      "replies": 10,
+      "trials": 0,
+      "hushes": 5,
+      "pans": [
+        -0.03,
+        0.3,
+        0.5,
+        0.8
+      ]
+    },
+    "landscape": {
+      "vw": 844,
+      "css": {
+        "w": 844,
+        "h": 390
+      },
+      "back": {
+        "w": 1688,
+        "h": 780
+      }
+    },
+    "landscapeOK": true,
+    "resizeBurst": {
+      "sent": 8
+    },
+    "stAfterBurst": {
+      "t": 8.17,
+      "nC": 4,
+      "nF": 3,
+      "hushed": 0,
+      "singing": 4,
+      "settled": true,
+      "poemShown": true,
+      "dropFired": true,
+      "audio": true,
+      "cover": 0.36,
+      "chirps": 34,
+      "replies": 16,
+      "trials": 1,
+      "hushes": 5,
+      "pans": [
+        -0.03,
+        0.3,
+        0.5,
+        0.8
+      ]
+    },
+    "burstBroken": false,
+    "stBack": {
+      "t": 9,
+      "nC": 4,
+      "nF": 3,
+      "hushed": 0,
+      "singing": 4,
+      "settled": true,
+      "poemShown": true,
+      "dropFired": true,
+      "audio": true,
+      "cover": 0.36,
+      "chirps": 41,
+      "replies": 18,
+      "trials": 1,
+      "hushes": 5,
+      "pans": [
+        -0.03,
+        0.3,
+        0.5,
+        0.8
+      ]
+    },
+    "overflow": {
+      "scrollW": 390,
+      "visW": 390,
+      "bodyScrollW": 390
+    },
+    "noHOverflow": true,
+    "errors": []
+  }
+}

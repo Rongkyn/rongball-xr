@@ -117,7 +117,12 @@
 ### D. resize 防抖（120ms + 尺寸不变跳过）——三件实锤，提取条件已达
 - 移动端地址栏收放 / 页面滚动会高频触发 `resize`，直接做画布重排会整屏清空闪 + 景物跳变（墨园 0922 首修；桂雨/月波 0922 同款复现）。
 - 处方（三处同源）：`setTimeout(performResize,120)` 防抖；`performResize` 先比 `innerWidth/innerHeight`，与上次相同直接 return；首次初始化保持同步。
-- 已在 ink-garden / gui-yu / yue-bo 三件各自实现 → **达"重复实现直接提取"标准**，下次触碰任一实时画布作品时提取为 `lib/resize-debounce.js`（约 10 行），三件改为引用。
+- 已在 ink-garden / gui-yu / yue-bo 三件各自实现 → **已提取 `lib/resize-debounce.js`（0923，selected）**，墨园/桂雨/月波/墨洇接入；0924 扩用到芦花/秋虫（库内 7 件实时画布件全部接入）。
+
+### D2. 零尺寸守卫 + 除法步长兜底（0924 秋虫 P0 实锤）
+- 页面解析早期 / 部分 headless 时序，`window.innerWidth/innerHeight` 可能为 0（mobile override 前后、about:blank 默认布局 980 等口径都会出现）。
+- 两类致命写法：① `resize` 里直接用 0 尺寸建 backing store / 渐变（退化）；② **`for(x=0;x<=W;x+=W/k)` 步长 `0/k=0` → 同步死循环**，`readyState` 永停 "loading"，表现为导航不返回（极似 harness/CDP 挂）。
+- 处方：resize 开头 `if(innerWidth<=0||innerHeight<=0) return;`（真实尺寸到达的下一次 resize 补上）；一切「尺寸/常量」作循环步长处写 `Math.max(1, W/k)`。排查口径：`Page.navigate` 已返回但 readyState 恒 loading → 先查同步脚本里的除法步长循环。
 
 ### E. 底部浮层栈（hint / 印章分层）——双件 candidate
 - 固定在底部角落的两个浮层（居中 hint、右下角印章）在竖屏会纵向区间重叠，横屏矮视口更严重。

@@ -46,6 +46,11 @@
  *     另：移动端 touch 验收若用合成事件，pointerType 写 'touch'；tap() 的 mouse 双派在部分
  *     touch-only 路由的旧作上不等价真机。
  *
+ * 19. goto/navigate 不返回 != CDP 挂（0924 秋虫实锤）：页面解析早期 innerWidth/innerHeight
+ *     可能为 0，作品脚本里 `for(x=0;x<=W;x+=W/k)` 步长 0/k=0 → 同步死循环，readyState
+ *     恒 'loading'，Page.navigate 其实已正常返回。误判成 harness/端口问题会白做一堆对照。
+ *     排查：navigate 返回后轮询 document.readyState，恒 loading 即去查同步脚本的「除法步长」
+ *     循环；处方见 POOL.md §D2（resize 零尺寸守卫 + 步长 Math.max(1,…)）。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});

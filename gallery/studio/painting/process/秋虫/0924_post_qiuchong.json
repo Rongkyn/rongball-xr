@@ -1,0 +1,76 @@
+{
+  "ready0": "complete",
+  "st0": {
+    "t": 3.75,
+    "nC": 4,
+    "nF": 3,
+    "hushed": 0,
+    "singing": 4,
+    "settled": true,
+    "poemShown": false,
+    "dropFired": false,
+    "audio": false,
+    "cover": 0.37,
+    "chirps": 18,
+    "replies": 0,
+    "trials": 0,
+    "hushes": 0,
+    "pans": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "stTouch": {
+    "t": 4.57,
+    "nC": 4,
+    "nF": 3,
+    "hushed": 0,
+    "singing": 4,
+    "settled": true,
+    "poemShown": false,
+    "dropFired": false,
+    "audio": true,
+    "cover": 0.37,
+    "chirps": 23,
+    "replies": 0,
+    "trials": 0,
+    "hushes": 0,
+    "pans": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "before": "390x844",
+  "immediate": "390x844",
+  "after": "1688x692",
+  "debounceWorked": true,
+  "stBack": {
+    "t": 5.68,
+    "nC": 4,
+    "nF": 3,
+    "hushed": 0,
+    "singing": 4,
+    "settled": true,
+    "poemShown": false,
+    "dropFired": false,
+    "audio": true,
+    "cover": 0.37,
+    "chirps": 30,
+    "replies": 0,
+    "trials": 0,
+    "hushes": 0,
+    "pans": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "errors": [
+    "EXC:Uncaught"
+  ]
+}
