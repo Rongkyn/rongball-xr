@@ -132,3 +132,38 @@
 
 ### F. 触摸合成事件 pointerType 口径
 - 验收脚本合成 pointer 事件驱动 touch 路由时，`pointerType:'touch'` 才与真机等价；`tap()` 默认 mouse 双派在部分只按触摸语义分流的旧作上不等价（0922 月波点位实测）。记入 harness 避坑#18，不单独入池。
+
+---
+
+## 2026-09-25 回流（芦花 / 秋虫 横屏布局深磨）
+
+### G. 横屏布局因子（LANDSCAPE 三件套）——双件实锤，candidate
+- 横屏（`W > H`，典型 844x390）下，凡「数量按 W、高度按 H」的生成式场景都会出两类病：
+  ① 数量随宽膨胀、细元素密集成林；② 主体高度随矮缩短、只占画面下半、顶部空。芦花（数量+株高）
+  与秋虫（地平线+草高）同款复现。
+- 处方（三件套）：
+  1. `LANDSCAPE = W > H`（resize 内设置）；
+  2. **密度按有效画幅** `span = min(W, H*2.2)`，数量/丛宽都用 span，宽屏不翻倍；
+  3. **竖向尺寸补偿**：株高/草高横屏乘系数（芦花 1.32、秋虫 1.55，按主体类型取），地平线横屏下移
+     （秋虫 GROUND 0.74H→0.82H），再以 `min(..., H*0.96)` 封顶防出界。
+- candidate：芦花/秋虫 2 件；第 3 件同款出现时提取 `lib/landscape-layout.js`（span + 尺寸补偿两函数）。
+
+### H. resize 必须「重建场景」而非只改画布（旋转正确性）
+- 秋虫 resize 原先只 `W/H=innerWidth; backing store 重设`，**不重建**草丛/虫/萤——运行时旋转后
+  位置停留在旧朝向，与新 LANDSCAPE 因子叠加必错。
+- 处方：resize 末尾「仅在已有场景时」调用 rebuild（首帧由启动序列完成，避免重复）。
+- 判据：凡生成式坐标（clump/actor 存绝对 x,y 的）resize 后都要重建；只做 DPR/画布缩放不算响应旋转。
+
+### I. Array.from 回调参数顺序 + ASI（JS 语言坑，跨件踩中即致命）
+- `Array.from({length:n}, (ci) => ...)` 的首参是**元素值**（空槽为 undefined），**index 在第二参**。
+  误把首参当 index → `((undefined+0.5)/n)*W = NaN` → 坐标 NaN → gradient/arc 非有限报错，
+  表现为「EXC:Uncaught」但画面部分正常、极难一眼定位。正解 `(_el, ci) => ...`。
+- 叠加 ASI：箭头函数表达式换行后以 `+ x(...)` 起行会被解析为独立语句、箭头返回 undefined。
+  用**块体 `{ const base=...; return base + x(...); }`** 一并规避。
+- 排查口径：JSON.stringify 会把 NaN 显示成 `null`，排查时直接打原始数组 / `Number.isFinite`，勿被误导。
+
+### J. 硬弹簧显式积分的稳定域（健壮性加固，非本次 NaN 真根因）
+- 弹簧 `omega += (torque - k*theta - damp*omega)*dt` 显式积分，稳定步长约 `2/sqrt(k)`；k≈21 时
+  h≈0.44 是无阻尼理论值，FAST(SPEED=3)+大扭矩会逼近边界。
+- 处方（芦花 stepReeds）：按 `ceil(dt/0.0085)` 子步进 + 末尾有限性兜底与 theta/omega 合理域 clamp。
+  属防御性加固；真遇到 NaN 仍应先查生成期数据（本次真根因是 I，不是物理）。

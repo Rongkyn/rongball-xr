@@ -189,7 +189,7 @@
   // ---------- 画布 ----------
   const cvs = document.getElementById('scene');
   const ctx = cvs.getContext('2d');
-  let W = 0, H = 0, DPR = 1, HORIZON = 0;
+  let W = 0, H = 0, DPR = 1, HORIZON = 0, LANDSCAPE = false;
 
   // ---------- 风场 ----------
   // 环境微风：两个低频叠加，永不完全静止
@@ -245,16 +245,31 @@
   let reeds = [];
   function buildReeds(){
     reeds = [];
+    // v0925：横屏密度按「有效画幅」clamp(W,H) 计，避免宽屏数量翻倍细棍成林；
+    // 高度以 H 为基但横屏系数上调，穗顶抬到画面 0.52~0.70 高度，与远岸洲渚衔接。
+    const span = LANDSCAPE ? Math.min(W, H * 2.2) : W;
+    const hBoost = LANDSCAPE ? 1.32 : 1;
     const layers = [
-      { n: Math.round(clamp(W / 26, 30, 46)), depthMin: 0.00, depthMax: 0.42, hMin: 0.34, hMax: 0.58 },
-      { n: Math.round(clamp(W / 20, 40, 62)), depthMin: 0.42, depthMax: 0.72, hMin: 0.24, hMax: 0.40 },
-      { n: Math.round(clamp(W / 15, 52, 80)), depthMin: 0.72, depthMax: 1.00, hMin: 0.16, hMax: 0.28 }
+      { n: Math.round(clamp(span / 26, 30, 46)), depthMin: 0.00, depthMax: 0.42, hMin: 0.34 * hBoost, hMax: 0.58 * hBoost },
+      { n: Math.round(clamp(span / 20, 40, 62)), depthMin: 0.42, depthMax: 0.72, hMin: 0.24 * hBoost, hMax: 0.40 * hBoost },
+      { n: Math.round(clamp(span / 15, 52, 80)), depthMin: 0.72, depthMax: 1.00, hMin: 0.16 * hBoost, hMax: 0.28 * hBoost }
     ];
     for (let li = 0; li < 3; li++){
       const L = layers[li];
       // 远景聚成几簇（洲渚芦丛），近景均匀些
-      const nCluster = li === 2 ? 6 : li === 1 ? 5 : 0;
-      const centers = nCluster ? Array.from({length: nCluster}, () => rand(-0.02, 1.02) * W) : null;
+      let nCluster = li === 2 ? 6 : li === 1 ? 5 : 0;
+      // v0925 横屏：簇数+2 且均布全宽（含中区），消除「两侧挤满、中缝孤杆」
+      if (LANDSCAPE && nCluster) nCluster += 2;
+      // v0925：横屏簇均布全宽（+2 簇，含中区）；竖屏沿用随机定位的洲渚聚簇。
+      // 注意 Array.from 回调首参是元素值（此处 undefined），index 在第二参——写成 ci 会得 undefined。
+      let centers = nCluster
+        ? Array.from({length: nCluster}, (_el, ci) => {
+            const base = LANDSCAPE
+              ? ((ci + 0.5) / nCluster) * W
+              : rand(-0.02, 1.02) * W;
+            return base + grand(-W * 0.02, W * 0.02);
+          })
+        : null;
       for (let i = 0; i < L.n; i++){
         const depth = rand(L.depthMin, L.depthMax);
         const baseX = centers
@@ -263,7 +278,7 @@
         // 近景基线在画面底缘，远景基线抬到滩涂线
         const groundLift = depth * (H * 0.05);
         const baseY = H - rand(0, 10) - groundLift * 0.35;
-        const h = rand(L.hMin, L.hMax) * H * (1 - depth * 0.25);
+        const h = Math.min(rand(L.hMin, L.hMax) * H * (1 - depth * 0.25), H * 0.96);
         const w0 = li === 0 ? rand(1.7, 2.7) : li === 1 ? rand(1.1, 1.7) : rand(0.7, 1.1);
         const hue = rng();
         reeds.push({
@@ -448,15 +463,29 @@
 
   // ---------- 物理 ----------
   function stepReeds(dt){
+    // v0925：硬弹簧（k≈15~21）在大风矩 + 大 dt 下显式积分会失稳发散
+    // （横屏株高上调后 torque 增大，实测 theta→NaN、穗尖坐标非有限）。
+    // 按每步时长子步进，子步 dt≤0.0085 落在稳定域；末尾再做有限性兜底。
+    const sub = Math.max(1, Math.ceil(dt / 0.0085));
+    const sdt = dt / sub;
     for (const r of reeds){
       // 风力矩：高处茎受风面大（∝ 1.1 - depth），柔度随高
       const tip = stemPoints(r, 6)[6];
       const wF = windAt(tip.x, wind.t);
       const flex = 0.85 + r.h / H;                 // 高株更柔
       const torque = wF * flex * 14.5 * (1 - r.depth * 0.4);
-      const acc = torque - r.k * r.theta - r.damp * r.omega;
-      r.omega += acc * dt;
-      r.theta += r.omega * dt;
+      for (let si = 0; si < sub; si++){
+        const acc = torque - r.k * r.theta - r.damp * r.omega;
+        r.omega += acc * sdt;
+        r.theta += r.omega * sdt;
+      }
+      // 兜底：极端阵风下仍越界则夹紧到物理合理域，杜绝 NaN 进绘制
+      if (!Number.isFinite(r.theta) || !Number.isFinite(r.omega)) {
+        r.theta = 0; r.omega = 0;
+      } else {
+        r.theta = clamp(r.theta, -0.6, 0.6);
+        r.omega = clamp(r.omega, -3, 3);
+      }
       // 散絮：风够强、穗在迎风波前中
       const strong = Math.abs(wF);
       if (strong > 0.55 && r.plumeFull > 0.5){
@@ -978,6 +1007,9 @@
     cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     HORIZON = H * 0.40;
+    // v0925：横屏（宽>高，典型 844x390）芦苇不能再按 W 定数量、按 H 定高度——
+    // 否则数量随宽膨胀、茎秆随矮缩短，画面下半塞满细棍、上半空、簇还挤两侧。
+    LANDSCAPE = W > H;
     buildPaperTex();
     buildReeds(); buildGrass();
   }

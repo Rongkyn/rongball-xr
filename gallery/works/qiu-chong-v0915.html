@@ -171,7 +171,7 @@
 
   const cv = document.getElementById('scene');
   const ctx = cv.getContext('2d');
-  let W = 0, H = 0, DPR = 1;
+  let W = 0, H = 0, DPR = 1, LANDSCAPE = false;
 
   function resize() {
     // v0924 零尺寸守卫：页面解析早期 / 某些 headless 时序 innerWidth/Height 可能为 0，
@@ -185,6 +185,10 @@
     cv.style.width = W + 'px';
     cv.style.height = H + 'px';
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    // v0925：横屏标记。GROUND 下移留出纵向草坡，草丛高度改由 LANDSCAPE 系数补偿。
+    LANDSCAPE = W > H;
+    // v0925：旋转后重建场景（初始由启动序列完成，这里仅在已有场景时重建）。
+    if (clumps.length) rebuild();
   }
   // v0924：resize 防抖。移动端地址栏收放/旋转高频触发 resize，避免画布重排抖动；
   // createResizeDebounce 首次 trigger 同步执行（替代旧 resize()），尺寸未变则跳过。
@@ -282,7 +286,8 @@
   }
 
   /* ============================ 场景生成 ============================ */
-  const GROUND = () => H * 0.74;
+  // v0925：横屏地平线压到 0.82H（竖屏 0.74），草坡纵向展开，不再挤成底部一条
+  const GROUND = () => LANDSCAPE ? H * 0.82 : H * 0.74;
   const MOON = { x: () => W * 0.76, y: () => H * 0.16, r: () => Math.min(W, H) * 0.058 };
 
   // 阶石面颗粒（仅在 resize 后首次生成时保持稳定；用确定性序列防闪烁）
@@ -305,14 +310,18 @@
   const clumps = [];
   function buildClumps() {
     clumps.length = 0;
-    const n = 4 + Math.floor(rnd() * 2);   // 4~5 丛，留空地
+    // v0925：横屏 5~6 丛（有效宽 min(W,H*2.2) 控密度），竖屏维持 4~5
+    const span = LANDSCAPE ? Math.min(W, H * 2.2) : W;
+    const n = 4 + Math.floor(rnd() * 2) + (LANDSCAPE ? 1 : 0);
+    // 横屏草高补偿 1.55：H 矮但坡地抬高后，穗尖仍能读到
+    const hB = LANDSCAPE ? 1.55 : 1;
     for (let i = 0; i < n; i++) {
       const depth = lerp(0.25, 1.0, i / Math.max(1, n - 1)) * (0.9 + rnd() * 0.2);
       const blades = [];
       // 草丛避开左下阶石（x<0.27W 的近地区域留给卧石）
       const cx = lerp(W * 0.30, W * 0.96, (i + 0.5 + (rnd() - 0.5) * 0.3) / n);
-      const cw = lerp(W * 0.14, W * 0.28, depth);
-      const baseH = lerp(H * 0.06, H * 0.28, clamp(depth, 0, 1));
+      const cw = lerp(span * 0.14, span * 0.28, depth);
+      const baseH = lerp(H * 0.06, H * 0.28, clamp(depth, 0, 1)) * hB;
       const bn = Math.floor(lerp(12, 30, clamp(depth, 0, 1)));
       const lean = (rnd() - 0.5) * 0.55;
       for (let j = 0; j < bn; j++) {

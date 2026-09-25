@@ -165,8 +165,9 @@ async function launch(o) {
     await send('Page.enable'); await send('Runtime.enable'); await send('Log.enable');
 
     if (o.mobile) {
+      // 0925：mobile 视口尺寸可由 o.width/o.height 覆盖（默认 390x844），用于横屏/矮屏场景
       await send('Emulation.setDeviceMetricsOverride', {
-        width: 390, height: 844, deviceScaleFactor: 2, mobile: true,
+        width: o.width || 390, height: o.height || 844, deviceScaleFactor: 2, mobile: true,
       });
       // 避坑#13（0918 听墨）：setDeviceMetricsOverride 只改视口，不改 pointer/hover 媒体特性，
       // @media (pointer:coarse) 仍判为 fine，导致触屏专属 UI（长按提示等）不出现。
@@ -316,7 +317,7 @@ async function launch(o) {
   const kill = async () => { try { chrome.kill(); } catch (e) {} };
 
   return { send, q, shot, goto, tap, drag, waitFor, state, pixelRatio, pixels, viewport, realErrors,
-           get errors() { return errors; }, kill, chrome };
+           get errors() { return errors; }, kill, chrome, get ws() { return client; } };
 }
 
 /**
