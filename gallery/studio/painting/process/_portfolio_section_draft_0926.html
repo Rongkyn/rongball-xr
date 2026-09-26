@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>水墨互动系列 · 作品集板块草稿 0926</title>
+<style>
+  :root{
+    --bg:#fafaf9; --card:#ffffff; --ink:#1c1c1e; --ink-2:#55555a; --ink-3:#8a8a8f;
+    --line:#e6e4e0; --accent:#3f5b8c; --accent-soft:#eef2f8;
+    --tag-bg:#f2f1ee; --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.75;
+    font-size:16px; letter-spacing:.01em;
+  }
+  .wrap{max-width:860px; margin:0 auto; padding:0 20px;}
+
+  .draft-note{background:#fff8e6; border:1px solid #f0e0b0; border-radius:10px; padding:14px 18px; margin:28px 0 0; font-size:13px; color:#7a6530;}
+  .draft-note strong{color:#5c4c1e;}
+
+  section{padding:48px 0 8px;}
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:8px; flex-wrap:wrap;}
+  .sec-no{font-size:13px; color:var(--ink-3); font-variant-numeric:tabular-nums;}
+  .sec-head h2{font-size:26px; font-weight:700;}
+  .sec-tag{font-size:12px; color:var(--accent); background:var(--accent-soft); border-radius:999px; padding:3px 12px;}
+  .sec-lead{font-size:15px; color:var(--ink-2); margin:10px 0 24px; max-width:680px;}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:28px 26px; margin-bottom:20px;}
+  .card h3{font-size:19px; font-weight:700; margin-bottom:4px;}
+  .card h3 .en{font-size:14px; color:var(--ink-3); font-weight:400; margin-left:8px;}
+  .card .role{font-size:13px; color:var(--ink-3); margin-bottom:16px;}
+
+  .block{margin-bottom:16px;}
+  .block:last-child{margin-bottom:0;}
+  .block .b-title{font-size:13px; font-weight:700; color:var(--accent); letter-spacing:.08em; margin-bottom:6px;}
+  .block p, .block li{font-size:15px; color:var(--ink-2);}
+  .block ul{padding-left:20px;}
+  .block li{margin-bottom:5px;}
+
+  .tags{margin-top:18px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  .tag{font-size:12.5px; color:var(--ink-2); background:var(--tag-bg); border-radius:999px; padding:4px 12px;}
+  .live{font-size:13px; margin-left:auto;}
+
+  .ph{
+    border:1.5px dashed #cfccc5; border-radius:10px; background:#f7f6f3;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    color:var(--ink-3); font-size:13px; line-height:1.6; padding:18px;
+  }
+  .ph-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;}
+  .ph-grid .ph{aspect-ratio:4/3;}
+  @media (max-width:560px){ .ph-grid{grid-template-columns:1fr;} .live{margin-left:0;width:100%;}}
+
+  .mini-list{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:4px;}
+  @media (max-width:560px){ .mini-list{grid-template-columns:1fr;} }
+  .mini{border:1px solid var(--line); border-radius:10px; padding:16px 18px; background:var(--card);}
+  .mini h4{font-size:15px; margin-bottom:2px;}
+  .mini h4 .en{font-size:12px; color:var(--ink-3); font-weight:400; margin-left:6px;}
+  .mini p{font-size:13px; color:var(--ink-2); margin:6px 0 10px;}
+  .mini .tag{font-size:11.5px; padding:2px 10px;}
+
+  a{color:var(--accent); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+
+  .ver{font-size:12px; color:#b9b7b1; text-align:center; padding:24px 0 40px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="draft-note">
+    <strong>板块草稿 · 2026-09-26 创作时间</strong>　待主人审：①本板块是否作为正式作品集第 04 板块 ②三件强候选卡片的叙事措辞 ③其余四件是否展开为完整卡片。图片位待实机截图/录屏回填；文字事实源＝各件 notes 与过程档。
+  </div>
+
+  <!-- ========== 板块四：水墨互动系列 ========== -->
+  <section id="ink-series">
+    <div class="sec-head">
+      <span class="sec-no">04</span>
+      <h2>水墨互动系列</h2>
+      <span class="sec-tag">创意编码 · 生成艺术 / 程序化音频</span>
+    </div>
+    <p class="sec-lead">以宣纸为底、代码为墨：2026 年夏起独立创作的 20 余件浏览器互动水墨作品中，持续迭代打磨出 7 件候选。每件都从一个东方母题出发（雨、风、月、虫声），用生成式机制把母题变成可玩的过程，并在移动端与桌面双端验证。这个系列让我以创作者身份，完整走过「审美判断 → 机制设计 → 物理/音频实现 → 多版迭代」的闭环。</p>
+
+    <!-- 强候选 1：墨园 -->
+    <div class="card">
+      <h3>墨园<span class="en">Ink Garden</span></h3>
+      <div class="role">个人项目 · 设计与开发独立完成 ｜ v1→v12 → v0919/0920 性能/移动端深磨</div>
+
+      <div class="ph-grid">
+        <div class="ph">图片位：六类草木成园全景<br>（实机截图，待回填）</div>
+        <div class="ph">图片位：单株递归分形特写<br>（竹/松枝叶节点，待回填）</div>
+      </div>
+
+      <div style="height:18px"></div>
+
+      <div class="block">
+        <div class="b-title">背景 · 为什么做</div>
+        <p>生成艺术常陷入两种极端：纯随机图像只产生一次性的「好看」，预设动画则每一次观看都相同。我想做一座真正「生成」的园子：每次入园都不一样，但草木的生长遵循可解释的规则。</p>
+      </div>
+      <div class="block">
+        <div class="b-title">我的角色</div>
+        <p>个人项目，独立完成设计与全部代码；作品历经十余版迭代，0919/0920 完成性能与移动端深磨。</p>
+      </div>
+      <div class="block">
+        <div class="b-title">做法 · 怎么做的</div>
+        <ul>
+          <li>递归分形生成竹、松、柳、梅、兰、枯木六类植物，枝叶逐节抽长；每株由种子驱动，同一种子复现同一植株。</li>
+          <li>完整交互循环：点击生長、右键/长按移除单株、随缘成林、一键清园；枝叶受风场影响轻摆，偶有落叶。</li>
+          <li>运行时画像加滑动窗口 FPS 监控驱动自适应降档：帧率低时依次关落叶、减风动、降细节，回升经迟滞防抖恢复，避免跳变。</li>
+        </ul>
+      </div>
+      <div class="block">
+        <div class="b-title">成果</div>
+        <ul>
+          <li>桌面 11/11、移动 15/15 CDP 验收通过；单文件约 203KB（gzip 约 62KB），零外部依赖、离线可开。</li>
+          <li>产出跨作品复用候选：自适应性能降档器、笔刷引擎。</li>
+        </ul>
+      </div>
+      <div class="tags">
+        <span class="tag">递归分形</span><span class="tag">种子随机</span>
+        <span class="tag">自适应性能</span><span class="tag">移动端</span>
+        <a class="live" href="../../../works/ink-garden.html">🔗 进入作品（挂廊相对路径，合入时改）→</a>
+      </div>
+    </div>
+
+    <!-- 强候选 2：残荷 -->
+    <div class="card">
+      <h3>残荷<span class="en">Can He</span></h3>
+      <div class="role">个人项目 · 独立完成 ｜ v1 视觉→v2 物理闭环→v3/v4 泻流重写（0910–0912）→ v0921 移动端</div>
+
+      <div class="ph-grid">
+        <div class="ph">图片位：弯茎倾泻瞬间（四层水带）<br>（实机截图，待回填）</div>
+        <div class="ph">图片位：超疏水珠聚洼特写<br>（待回填）</div>
+      </div>
+
+      <div style="height:18px"></div>
+
+      <div class="block">
+        <div class="b-title">背景 · 为什么做</div>
+        <p>秋日残荷的美在枯的线条与活的圆点的对比。我想做一场「会完成」的雨：雨珠聚多了叶柄弯腰、一串水泻进塘里，雨会停、池面会平。命门判断：弯腰倾泻是全场高潮，必须值得等；雨声是主体，不是背景音。</p>
+      </div>
+      <div class="block">
+        <div class="b-title">做法 · 怎么做的</div>
+        <ul>
+          <li>自建超疏水珠模型：成核→合并→滚动（接触角滞后）→叶心聚洼→过临界弯茎倾泻→阻尼弹回。</li>
+          <li>雨生命周期状态机：tap 阵雨 / drag 雨带 / 环境雨渐衰自停。</li>
+          <li>泻流可读性两版失败后定为四层水带结构，水带、泻落珠、涟漪共用物理锚点，保证击水对齐。</li>
+          <li>移动端诗移左侧净空加保证性纸衬板（可读性不依赖随机构图），竖屏纵向分布因子防下半空白。</li>
+        </ul>
+      </div>
+      <div class="block">
+        <div class="b-title">成果</div>
+        <ul>
+          <li>移动 3 种子+桌面回归 29/29 CDP PASS（两跑稳定），390×667 与 844×390 边界入屏零错误。</li>
+          <li>沉淀跨件原则：保证性浮层净空、竖屏 VY 因子、验收确定性落点。</li>
+        </ul>
+      </div>
+      <div class="tags">
+        <span class="tag">超疏水珠模型</span><span class="tag">泻流物理</span>
+        <span class="tag">保证性净空</span><span class="tag">移动端</span>
+        <a class="live" href="../../../works/can-he.html">🔗 进入作品 →</a>
+      </div>
+    </div>
+
+    <!-- 强候选 3：听墨 -->
+    <div class="card">
+      <h3>听墨<span class="en">Ting Mo</span></h3>
+      <div class="role">个人项目 · 独立完成 ｜ 共享音频库 audio-lib 首个 dogfood 场景，v1.0→v1.1 双环</div>
+
+      <div class="ph-grid">
+        <div class="ph">图片位：墨洇锋线与耳语声化<br>（待回填）</div>
+        <div class="ph">图片位：墨定铃响+印章亮起同帧<br>（待回填）</div>
+      </div>
+
+      <div style="height:18px"></div>
+
+      <div class="block">
+        <div class="b-title">背景 · 为什么做</div>
+        <p>前作墨洇只让墨被看见。我提出一个问题：一滴墨洇开的过程能否被「听见」，而且声音必须从模拟状态生长、不是配乐？</p>
+      </div>
+      <div class="block">
+        <div class="b-title">做法 · 怎么做的</div>
+        <ul>
+          <li>五声对五态：落墨软噗、行笔摩擦颗粒、洇散锋线耳语、清纸研墨刮擦、墨定低铃。</li>
+          <li>锋线活动度 frontAcc 由每帧模拟细胞累计得出，标定曲线呈两相衰减，归一化驱动耳语；双层平滑保证环境声起伏永远慢于视觉事件。</li>
+          <li>零侵入嫁接：声音层只读状态加事件钩子；自动播放策略限制时静默降级并提示「声·待启」。</li>
+        </ul>
+      </div>
+      <div class="block">
+        <div class="b-title">成果</div>
+        <ul>
+          <li>双端 13 项 CDP 断言 PASS；五类声音事件、音频上下文状态机、干燥 e2e（单滴≈400s 全干铃响 1 次）全验证。</li>
+          <li>dogfood 促成 audio-lib v1.1（out() 总线出声口）；诚实扣分项：音色待实耳校验。</li>
+        </ul>
+      </div>
+      <div class="tags">
+        <span class="tag">过程声化</span><span class="tag">Web Audio</span>
+        <span class="tag">audio-lib dogfood</span><span class="tag">移动端</span>
+        <a class="live" href="../../../works/ting-mo.html">🔗 进入作品（建议戴耳机）→</a>
+      </div>
+    </div>
+
+    <!-- 其余四件：紧凑卡 -->
+    <div class="mini-list">
+      <div class="mini">
+        <h4>芦花<span class="en">Lu Hua</span></h4>
+        <p>阵风以行波波前拂过芦荡，白絮被撕散、飘满江天；凑够飞絮数《蒹葭》竖排淡入，风住玉磬收束。峰值穗弯 18–29°，v0925 五场景 10/10 CDP PASS。</p>
+        <span class="tag">行波风场</span><span class="tag">弹簧悬臂</span><span class="tag">横屏已磨</span>
+        <a style="font-size:12px;margin-left:8px;" href="../../../works/lu-hua.html">进入 →</a>
+      </div>
+      <div class="mini">
+        <h4>秋虫<span class="en">Qiu Chong</span></h4>
+        <p>听声辨位、点击鸣声来处分草觅虫；声像随虫位双耳移动。修零尺寸步长同步死循环 P0，resize 重建场景，v0925 10/10 CDP PASS。</p>
+        <span class="tag">空间声像</span><span class="tag">P0 死循环修复</span>
+        <a style="font-size:12px;margin-left:8px;" href="../../../works/qiu-chong-v0915.html">进入（戴耳机）→</a>
+      </div>
+      <div class="mini">
+        <h4>桂雨<span class="en">Gui Yu</span></h4>
+        <p>中秋件。点拖老桂、弹簧摇枝金桂如雨，阵风从全冠撕花，地面积成碎金。v0922 双件 40 项 CDP 断言全 PASS。发布去留待主人定。</p>
+        <span class="tag">弹簧物理</span><span class="tag">粒子预算</span><span class="tag">自有音频库</span>
+        <a style="font-size:12px;margin-left:8px;" href="../../../works/gui-yu.html">进入 →</a>
+      </div>
+      <div class="mini">
+        <h4>月波<span class="en">Yue Bo</span></h4>
+        <p>中秋件。点击江面月影碎成金鳞，风停水静后缓缓合拢，水波网格驱动「碎与圆」。v0922 CDP 全 PASS。发布去留待主人定。</p>
+        <span class="tag">水波模拟</span><span class="tag">光影愈合</span>
+        <a style="font-size:12px;margin-left:8px;" href="../../../works/yue-bo-v0916.html">进入 →</a>
+      </div>
+    </div>
+  </section>
+
+  <div class="ver">水墨互动系列板块草稿 · 2026-09-26 · 绒球创作时间 · 审过后拆入作品集_v0.1.html</div>
+
+</div>
+</body>
+</html>

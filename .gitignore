@@ -44,3 +44,7 @@ gallery/works/v12_p2_patch.py
 gallery/works/retest_bamboo.png
 gallery/works/v121_polish_test1.png
 _patches/
+
+# cdp-harness browser profiles
+**/acc*/acc*[dm]/
+**/acc*/acc*[dm]/**
