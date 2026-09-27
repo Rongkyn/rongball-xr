@@ -54,6 +54,8 @@
 | 模块 | 能力 | 状态 | 文档 |
 |------|------|------|------|
 | `audio-lib.js` | Web Audio 声音资产：KS 古琴拨弦、加法铃音、master 总线出声口 | `selected`（听墨 import 在用；墨韵/风铎为抽取来源、内嵌同源代码未改 import，不计入"在用"） | `README.md` |
+| `resize-debounce.js` | 窗口 resize 防抖 + 构造即自动首次尺寸化 | `validated`（墨园/桂雨/月波/秋虫/芦花/墨隐 6 件在用，0927 双端 42/42） | 模块头文档 |
+| `cdp-harness.js` | CDP 交互验收 harness（建连/goto/tap/drag/像素/错误） | `validated`（全部作品验收在用；0927 错误带 `[file:line]` 详情） | 模块头文档 |
 
 ## 二、重复实现实锤（优先提取）
 

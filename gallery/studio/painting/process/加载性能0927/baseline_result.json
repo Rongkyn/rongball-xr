@@ -1,0 +1,44 @@
+[
+ {
+  "tag": "ink-garden:d",
+  "raw": 216305,
+  "gz": 62852,
+  "complete": true,
+  "dcl": 585,
+  "load": 585,
+  "responseEnd": 341,
+  "fcp": 596,
+  "firstPaintMs": null,
+  "paintErr": null,
+  "externalCount": 1,
+  "external": [
+   "https://fonts.googleapis.com/css2"
+  ],
+  "jsErrors": [
+   "EXC:Uncaught",
+   "EXC:Uncaught"
+  ],
+  "resourceCount": 1
+ },
+ {
+  "tag": "ink-garden:m",
+  "raw": 216305,
+  "gz": 62852,
+  "complete": true,
+  "dcl": 550,
+  "load": 550,
+  "responseEnd": 433,
+  "fcp": 572,
+  "firstPaintMs": null,
+  "paintErr": null,
+  "externalCount": 1,
+  "external": [
+   "https://fonts.googleapis.com/css2"
+  ],
+  "jsErrors": [
+   "EXC:Uncaught",
+   "EXC:Uncaught"
+  ],
+  "resourceCount": 1
+ }
+]

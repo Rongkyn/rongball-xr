@@ -204,6 +204,7 @@
   }
   /* resize 防抖：v0923 起引用 lib/resize-debounce.js v1.0（原内联实现已提取）。
      首次 trigger 同步初始化；后续防抖 120ms；尺寸未变跳过 */
+  let gCols = 0, gRows = 0, gDep = null;  // v0927 修复 TDZ：首次 trigger→buildGround 前须已初始化
   const _rd = window.resizeDebounce.createResizeDebounce(resize, { wait: 120 });
   _rd.trigger();
 
@@ -451,7 +452,6 @@
   }
 
   /* ============================ 地面碎金沉积（固定网格，度量绘制同源） ============================ */
-  let gCols = 0, gRows = 0, gDep = null;
   function buildGround() {
     gCols = Math.max(80, Math.round(W / 9));
     gRows = 14;

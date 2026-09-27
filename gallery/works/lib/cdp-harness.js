@@ -34,8 +34,13 @@
  * 16. goto 重连不关旧 ws + CDP 长会话偶发（0920 墨园实锤）：表现为间歇
  *     __evalError:'Uncaught'（概率随在途请求增多升高，单条短表达式常复现不了），截图正常极似
  *     作品 bug。两道对策已落地：connect() 先关旧连接+removeAllListeners+释放旧 pending；q() 对
- *     'Uncaught' 自动重试最多 3 次（断言均为幂等只读探测）。验收遇无规律 'Uncaught' 先怀疑本坑，
- *     换端口重开验证，勿误判作品。
+ *     'Uncaught' 自动重试最多 3 次（断言均为幂等只读探测）。
+ *     v0927 重大修正：'Uncaught' 绝不等于'假阳性'。0923 墨园漏引 resize-debounce（createResizeDebounce
+ *     of undefined）、桂雨 gCols TDZ 两个致命加载回归都曾因'EXC:Uncaught 像坑#16'被连续放过。
+ *     判别法：真页面错误由 Runtime.exceptionThrown 抛出、exceptionDetails.url 指向作品文件且带
+ *     lineNumber/stack；eval 假阳性 url 为空。故 exceptionThrown 一律记 'EXC[file:line] msg'，
+ *     验收看到带文件名的 EXC 必须用 addScriptToEvaluateOnNewDocument 注入 error 监听抓 stack 定位，
+ *     禁止凭'干净复跑过'就结案。
  *
  * 18. IIFE 闭包变量 q 不可见 + 媒体查询被后置同特异性规则覆盖（0922 桂雨/月波深磨实锤）：
  *     (a) 作品整体包在 (function(){...})() 里时，let/const 是函数内闭包变量，q() 里裸名也
@@ -154,8 +159,17 @@ async function launch(o) {
       }
       if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error')
         errors.push(m.params.entry.text.slice(0, 300));
-      if (m.method === 'Runtime.exceptionThrown')
-        errors.push('EXC:' + (m.params.exceptionDetails && m.params.exceptionDetails.text || JSON.stringify(m.params.exceptionDetails || {}).slice(0, 200)));
+      if (m.method === 'Runtime.exceptionThrown') {
+        // v0927 修复坑#16 认识错误：必须带 message+line+stack，区分「真页面错误」与「CDP eval 假阳性」。
+        // 教训：此前只记 text='Uncaught'，0923 墨园漏引 resize-debounce、桂雨 gCols TDZ 两个致命加载
+        // 回归被当「CDP 假阳性」连续 3 次放过。真错误带 lineNumber 与 scriptId，假阳性为 evaluate 抛出，
+        // exceptionDetails.url 为空。
+        const ed = m.params.exceptionDetails || {};
+        const exc = ed.exception || {};
+        const msg = (exc.description || ed.text || 'Uncaught').split('\n')[0].slice(0, 220);
+        errors.push('EXC[' + (ed.url ? ed.url.split('/').pop() : 'eval') +
+          ':' + (ed.lineNumber != null ? ed.lineNumber + 1 : '?') + '] ' + msg);
+      }
     });
     send = (m, p = {}) => new Promise(res => {
       const id = ++msgId; pending.set(id, res);
@@ -180,8 +194,9 @@ async function launch(o) {
 
     const evaluateOnce = expr => send('Runtime.evaluate', { expression: expr, returnByValue: true, awaitPromise: true });
     q = async expr => {
-      // 避坑#16：CDP 长会话偶发 __evalError:'Uncaught'（多进程/重连时序，干净复现极难），
-      // 但断言表达式都是幂等只读探测，立即重试通常即 PASS。最多 3 次，仍失败才如实返回错误。
+      // 避坑#16（v0927 修正认识）：CDP evaluate 偶发瞬时 __evalError（重连时序），幂等只读探针可
+      // 立即重试；但重试只治「探针本身」的瞬时错，绝不能据此把页面真实报错当假阳性放过——
+      // 页面真实错误走 Runtime.exceptionThrown 入 errors 且带 [file:line]，以 realErrors() 断言。
       let r;
       for (let attempt = 0; attempt < 3; attempt++) {
         r = await evaluateOnce(expr);

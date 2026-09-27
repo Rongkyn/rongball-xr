@@ -172,6 +172,7 @@
   const cv = document.getElementById('scene');
   const ctx = cv.getContext('2d');
   let W = 0, H = 0, DPR = 1, LANDSCAPE = false;
+  let sceneReady = false;  // v0927：resize 首次 trigger 早于 clumps 声明，须防 TDZ
 
   function resize() {
     // v0924 零尺寸守卫：页面解析早期 / 某些 headless 时序 innerWidth/Height 可能为 0，
@@ -188,12 +189,16 @@
     // v0925：横屏标记。GROUND 下移留出纵向草坡，草丛高度改由 LANDSCAPE 系数补偿。
     LANDSCAPE = W > H;
     // v0925：旋转后重建场景（初始由启动序列完成，这里仅在已有场景时重建）。
-    if (clumps.length) rebuild();
+    if (sceneReady) rebuild();  // v0927：clumps 未初始化前不访问（TDZ）
   }
   // v0924：resize 防抖。移动端地址栏收放/旋转高频触发 resize，避免画布重排抖动；
   // createResizeDebounce 首次 trigger 同步执行（替代旧 resize()），尺寸未变则跳过。
   if (window.resizeDebounce) {
-    window.resizeDebounce.createResizeDebounce(resize, { wait: 120 });
+    // v0927 修复：createResizeDebounce 不会自动执行首次 resize，必须显式 trigger()
+    // （同步跑一次；headless 早期 innerWidth=0 时被零尺寸守卫跳过，真实尺寸后的 resize 事件补上）。
+    // 漏 trigger 时 canvas 停默认 300x150、全透明。
+    const _qcRD = window.resizeDebounce.createResizeDebounce(resize, { wait: 120 });
+    _qcRD.trigger();
   } else {
     window.addEventListener('resize', resize); resize();
   }
@@ -338,6 +343,7 @@
       clumps.push({ cx, cw, depth: clamp(depth, 0, 1), blades, lean, tw: 0 });
     }
     clumps.sort((a, b) => a.depth - b.depth);
+    sceneReady = true;  // v0927：场景就绪后 resize 才可 rebuild
   }
 
   // 蟋蟀（藏于丛中，不画形）；保证 ≥4 只
