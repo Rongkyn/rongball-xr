@@ -56,6 +56,7 @@
 | `audio-lib.js` | Web Audio 声音资产：KS 古琴拨弦、加法铃音、master 总线出声口 | `selected`（听墨 import 在用；墨韵/风铎为抽取来源、内嵌同源代码未改 import，不计入"在用"） | `README.md` |
 | `resize-debounce.js` | 窗口 resize 防抖 + 构造即自动首次尺寸化 | `validated`（墨园/桂雨/月波/秋虫/芦花/墨隐 6 件在用，0927 双端 42/42） | 模块头文档 |
 | `cdp-harness.js` | CDP 交互验收 harness（建连/goto/tap/drag/像素/错误） | `validated`（全部作品验收在用；0927 错误带 `[file:line]` 详情） | 模块头文档 |
+| `ui-floating-stack.css` | 底部浮层栈：hint 操作提示 + 角落印章 seal 的版式与分层（窄屏/矮视口响应式） | `validated`（桂雨/月波 2 件接入，0928 双端 56/56） | 模块头文档 |
 
 ## 二、重复实现实锤（优先提取）
 
@@ -130,7 +131,7 @@
 - 固定在底部角落的两个浮层（居中 hint、右下角印章）在竖屏会纵向区间重叠，横屏矮视口更严重。
 - 处方：窄屏把印章抬到 hint 之上（`bottom:76px`，按 hint 实际高度预留净空）；横屏矮视口（`max-height:430px`）印章缩小并上抬；二者都是 fixed 定位，按"底栏分层"排布而非左右避让。
 - 踩坑：响应式覆盖块必须置于基础规则**之后**（同特异性源码后者胜，见 harness 避坑#18b）。
-- candidate：桂雨/月波 2 件同款，提取时与 resize-debounce 一起做 ui-floating-stack 片段。
+- ~~candidate：桂雨/月波 2 件同款~~ → **已提取 `lib/ui-floating-stack.css`（0928，validated）**；提取时实测发现原双件媒体块写在基础规则之前，窄屏印章分层与 #poem 手机定位此前从未生效（见下方 §K）。
 
 ### F. 触摸合成事件 pointerType 口径
 - 验收脚本合成 pointer 事件驱动 touch 路由时，`pointerType:'touch'` 才与真机等价；`tap()` 默认 mouse 双派在部分只按触摸语义分流的旧作上不等价（0922 月波点位实测）。记入 harness 避坑#18，不单独入池。
@@ -169,3 +170,18 @@
   h≈0.44 是无阻尼理论值，FAST(SPEED=3)+大扭矩会逼近边界。
 - 处方（芦花 stepReeds）：按 `ceil(dt/0.0085)` 子步进 + 末尾有限性兜底与 theta/omega 合理域 clamp。
   属防御性加固；真遇到 NaN 仍应先查生成期数据（本次真根因是 I，不是物理）。
+
+## 2026-09-28 回流（ui-floating-stack 提取 · 桂雨/月波）
+
+### K. 外链 CSS 的 file:// 跨源规则读取 + 源码顺序坑的系统性危害
+- **K1 读不到 cssRules 不等于没加载**：file:// 下访问外部 `<link>` 样式表的
+  `document.styleSheets[i].cssRules` 会抛 "Cannot access rules"（跨源保护），但样式照常应用。
+  判定外链 CSS 是否加载生效 = `styleSheets` 中 href 命中文件名 + 元素 getComputedStyle 取到该片段专属样式；
+  不要依赖读 cssRules。
+- **K2（对坑#18b / §E 的实锤升级）**：源码顺序坑的真实危害是「整套手机版式静默失效」。
+  桂雨/月波把 `@media(max-width:480px)` 块（印章 bottom:76px + #poem 手机定位/17px）写在
+  `.seal` / `#poem` 基础规则之前，同特异性后者胜 → 竖屏手机 computed sealBottom=26px（与 hint 同底重叠）、
+  #poem font-size=24px/定位=桌面值，**这些响应式覆盖多日从未生效**，而 matchMedia 一直报 true。
+  铁律：响应式断言必须核对 getComputedStyle 实际值，禁只验 matchMedia / matchMedia 报 true ≠ 值已变。
+  已提取共享片段（基础规则在前、媒体块统一在后）系统性消除该顺序漂移；#poem 作品专属覆盖移至内联样式末尾。
+- 验收：acc0928/acceptance_0928.js，桂雨/月波各 28 项（4 视口 + show 交互）共 **56/56 PASS**，零 JS 错误。

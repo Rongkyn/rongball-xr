@@ -1,0 +1,92 @@
+/*
+ * ui-floating-stack.css — 底部浮层栈共享片段（2026-09-28 提取入池）
+ *
+ * 能力：固定在底部的「操作提示 hint + 角落印章 seal」两浮层的版式与分层。
+ *   - hint：底部居中、字距拉开的一行操作提示，淡入停留 10s 后淡出
+ *   - seal：右下角红色印章，初始透明，作品侧加 .show 亮起
+ *   - 窄屏（<=480px）：hint 收字距可换两行；印章抬到 hint 之上分层（bottom:76px）防纵向重叠
+ *   - 超窄屏（<=340px）：再收字距、限宽，保证提示完整入屏不截断
+ *   - 横屏矮视口（高 <=430px）：印章缩小并上抬（bottom:48px）
+ *
+ * 依赖（作品侧须已有，本片段不提供）：
+ *   - .ui { position:fixed; pointer-events:none; user-select:none; z-index:10; }（hint 挂 .ui）
+ *
+ * 用法：<link rel="stylesheet" href="lib/ui-floating-stack.css">（head 内）
+ *   作品侧 HTML：
+ *     <div class="ui hint">操作提示文字</div>
+ *     <div class="seal" id="seal">绒球</div>
+ *   亮印章：seal.classList.add('show')
+ *
+ * ★ 坑（2026-09-28 实测确认，见 BOARD 0928 / POOL §E）：
+ *   同特异性下源码后者胜。若把「窄屏 .seal{bottom:76px}」媒体块写在 .seal 基础规则之前，
+ *   基础规则 bottom:26px 会覆盖媒体值——竖屏手机印章上移从未生效、与 hint 同底重叠
+ *   （matchMedia 报 true 但 computed 仍是 26px，极易骗过断言）。本片段顺序：先基础、后媒体，
+ *   所有响应式覆盖块一律置于基础规则之后。
+ *
+ * 主题定制（可选）：覆盖以下自定义属性即可改配色，默认值见下。
+ *   --fs-hint-color / --fs-seal-bg / --fs-seal-color
+ *
+ * 来源：gui-yu.html 与 yue-bo-v0916.html 双件重复实现（2026-09-22），达提取标准。
+ * 状态：validated（提取后由桂雨/月波 2 件接入，0928 双端 CDP 验收）。
+ */
+
+/* ===== hint：底部居中操作提示 ===== */
+.hint {
+  bottom: 30px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  letter-spacing: 6px;
+  white-space: nowrap;
+  color: var(--fs-hint-color, #9aa0a4);
+  opacity: 0;
+  animation: hintFade 10s ease 2.5s forwards;
+}
+@keyframes hintFade {
+  0% { opacity: 0; }
+  12% { opacity: 0.55; }
+  70% { opacity: 0.55; }
+  100% { opacity: 0; }
+}
+
+/* ===== seal：右下角印章（基础规则，须在各媒体覆盖块之前） ===== */
+.seal {
+  position: fixed;
+  bottom: 26px; right: 30px;
+  z-index: 10;
+  pointer-events: none;
+  width: 38px; height: 38px;
+  background: var(--fs-seal-bg, rgba(176, 58, 42, 0.85));
+  color: var(--fs-seal-color, #e8e2d6);
+  font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+  transform: rotate(-4deg);
+  opacity: 0;
+  transition: opacity 2.5s ease;
+}
+.seal.show { opacity: 0.85; }
+
+/* ===== 响应式覆盖（全部置于基础规则之后） ===== */
+
+/* 竖屏手机：hint 收字距可换两行；印章抬到 hint 之上分层，避免同底重叠 */
+@media (max-width: 480px) {
+  .hint {
+    font-size: 11px; letter-spacing: 3px; bottom: 26px;
+    max-width: calc(100vw - 24px); box-sizing: border-box;
+    white-space: normal; text-align: center; line-height: 1.7;
+  }
+  .seal { bottom: 76px; }
+}
+
+/* 超窄屏：再收字距、限宽，保证提示完整入屏不截断 */
+@media (max-width: 340px) {
+  .hint { font-size: 10px; letter-spacing: 1px; max-width: calc(100vw - 20px); }
+}
+
+/* 横屏矮视口：底部空间紧张，印章抬到 hint 上方并略缩小 */
+@media (max-height: 430px) {
+  .seal { bottom: 48px; width: 32px; height: 32px; font-size: 12px; }
+}

@@ -7,6 +7,7 @@
 <!-- uses: lib/audio-lib.js v1.1 架构（master 总线/压缩/加法铃音 BELL_PARTIALS 同源；本作为单文件内联实现） -->
 <!-- 系列第十四件：月下庭院老桂。点树摇枝落金桂雨、点天阵风撕花、点地碎金涟漪，静置浮王建《十五夜望月》。秋分·中秋应景作 -->
 <meta name="color-scheme" content="dark">
+<link rel="stylesheet" href="lib/ui-floating-stack.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
@@ -38,61 +39,6 @@
     margin-top: 6px;
   }
   @keyframes fadeIn { to { opacity: 1; } }
-
-  .hint {
-    bottom: 30px; left: 50%;
-    transform: translateX(-50%);
-    font-size: 12px;
-    letter-spacing: 6px;
-    white-space: nowrap;
-    color: #9aa0a4;
-    opacity: 0;
-    animation: hintFade 10s ease 2.5s forwards;
-  }
-  @media (max-width: 480px) {
-    .hint {
-      font-size: 11px; letter-spacing: 3px; bottom: 26px;
-      max-width: calc(100vw - 24px); box-sizing: border-box;
-      white-space: normal; text-align: center; line-height: 1.7;
-    }
-    /* 印章上移到 hint 之上，避免与提示文字重叠（底栏分层） */
-    .seal { bottom: 76px; }
-    #poem { right: 6%; top: 21%; font-size: 17px; }
-  }
-  /* 320px 及更窄：进一步收字距，保证提示完整入屏不截断 */
-  @media (max-width: 340px) {
-    .hint { font-size: 10px; letter-spacing: 1px; max-width: calc(100vw - 20px); }
-  }
-  @keyframes hintFade {
-    0% { opacity: 0; }
-    12% { opacity: 0.55; }
-    70% { opacity: 0.55; }
-    100% { opacity: 0; }
-  }
-
-  .seal {
-    position: fixed;
-    bottom: 26px; right: 30px;
-    z-index: 10;
-    pointer-events: none;
-    width: 38px; height: 38px;
-    background: rgba(176, 58, 42, 0.85);
-    color: #e8e2d6;
-    font-family: "Songti SC", "Noto Serif SC", "STSong", serif;
-    font-weight: 700;
-    font-size: 14px;
-    line-height: 1;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 4px;
-    transform: rotate(-4deg);
-    opacity: 0;
-    transition: opacity 2.5s ease;
-  }
-  .seal.show { opacity: 0.85; }
-  /* 横屏矮视口：底部空间紧张，印章抬到 hint 上方并略缩小（须置于 .seal 基础规则之后，否则同级特异性被覆盖） */
-  @media (max-height: 430px) {
-    .seal { bottom: 48px; width: 32px; height: 32px; font-size: 12px; }
-  }
 
 
   .btn {
@@ -147,6 +93,10 @@
   #poem .attrib {
     font-size: 11px; letter-spacing: 2px;
     opacity: 0.6;
+  }
+  /* 移动端 #poem 定位覆盖（须置于基础 #poem 规则之后；0928 前此块写在基础规则之前、同特异性被覆盖，手机端从未生效） */
+  @media (max-width: 480px) {
+    #poem { right: 6%; top: 21%; font-size: 17px; }
   }
 </style>
 </head>
