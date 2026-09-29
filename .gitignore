@@ -48,3 +48,7 @@ _patches/
 # cdp-harness browser profiles
 **/acc*/acc*[dm]/
 **/acc*/acc*[dm]/**
+**/acc*/a[0-9]*/
+**/acc*/p[0-9]*/
+**/acc*/a[0-9]*/**
+**/acc*/p[0-9]*/**

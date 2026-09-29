@@ -185,3 +185,22 @@
   铁律：响应式断言必须核对 getComputedStyle 实际值，禁只验 matchMedia / matchMedia 报 true ≠ 值已变。
   已提取共享片段（基础规则在前、媒体块统一在后）系统性消除该顺序漂移；#poem 作品专属覆盖移至内联样式末尾。
 - 验收：acc0928/acceptance_0928.js，桂雨/月波各 28 项（4 视口 + show 交互）共 **56/56 PASS**，零 JS 错误。
+
+## 2026-09-29 回流（交互手感系统审计 · 6 件）
+
+### L. touch-action 必须挂在「接收手势的元素本体」——不继承，写在 body 上静默失效
+- **L1 现象**：can-he/lu-hua/gui-yu/yue-bo/qiu-chong 把 `touch-action:none` 写在 `html,body{}`、
+  ink-garden 写在 body，但 `getComputedStyle(canvas).touchAction` 实测全是 `auto`
+  （**touch-action 非可继承属性**）。仅 ting-mo 一开始写在 `canvas#ink` 上正确。
+- **L2 真机后果**：canvas 上拖动类手势被浏览器滚动/缩放仲裁先于页面劫持、pointermove 被打断
+  （各件 pointermove 也均未 preventDefault）。合成 PointerEvent 无法复现此层（JS 派发 4/4 正常），
+  必须以 `getComputedStyle` 实际值 + 标准判定。
+- **L3 处方（标准正解，最小改动）**：声明加到 canvas 本体
+  `canvas{ … touch-action:none; }`；顺带补桌面 `cursor:crosshair`（原 5 件 cursor=auto 无可点暗示）。
+- **L4 手感验收口径（新增维度）**：①先读各件触发条件、按真实热区选点（gui-yu 树冠 y≈0.30、
+  yue-bo 水面 y≈0.75、qiu-chong 草地带 y≈0.72；统一点位必漏→假阴性）；②先读交互模型再写断言
+  （ink-garden 是点按种兰非自由画笔、按钮 #btn-clear）；③boot 后 innerWidth 未稳定时 canvas 短暂为
+  默认 300x150，健康探针用 waitFor 等 backing 与视口尺寸一致；④连续密集 launch 多实例会串台（坑#8/#16）：
+  端口错开 + kill 冷却 + 不健康换 profile 重开。
+- **harness 本体增强**：`drag(sel, pts, {pointerType:'touch'})` 支持真触摸拖动（默认 mouse 向后兼容）。
+- 验收：acc0929/acceptance_0929.js，6 件 × 移动+桌面共 **12/12 PASS**，零 JS 错误。

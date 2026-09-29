@@ -254,18 +254,26 @@ async function launch(o) {
     return [r.left,r.top,r.width,r.height];
   })()`);
   };
-  /** 拖动：点序列（CSS 像素，相对元素），自动按 70ms 间隔派 pointermove。 */
-  const drag = async (sel, pts) => q(`(function(){
+  /**
+   * 拖动：点序列（CSS 像素，相对元素），自动按 70ms 间隔派 pointermove。
+   * opts.pointerType：'mouse'（默认，向后兼容）| 'touch'（pointerId=2、pointerType:'touch'、
+   *                   带触摸宽高压/force）。0929 交互手感验收：触摸拖动须显式传 {pointerType:'touch'}。
+   */
+  const drag = async (sel, pts, opts = {}) => q(`(function(){
     var c=document.querySelector(${JSON.stringify(sel)});
     var r=c.getBoundingClientRect();
     var pts=${JSON.stringify(pts)};
+    var pt=${JSON.stringify(opts.pointerType || 'mouse')};
+    var pid=pt==='touch'?2:1;
+    var base={bubbles:true,cancelable:true,pointerId:pid,pointerType:pt,button:0};
+    if(pt==='touch'){base.width=20;base.height=20;base.pressure=0.5;base.isPrimary=true;}
     pts.forEach(function(p,i){
       var type = i===0?'pointerdown':'pointermove';
-      c.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,clientX:r.left+p[0],clientY:r.top+p[1],pointerId:1,pointerType:'mouse',button:0,buttons:1}));
+      c.dispatchEvent(new PointerEvent(type,Object.assign({},base,{clientX:r.left+p[0],clientY:r.top+p[1],buttons:1})));
     });
     var last=pts[pts.length-1];
-    c.dispatchEvent(new PointerEvent('pointerup',{bubbles:true,cancelable:true,clientX:r.left+last[0],clientY:r.top+last[1],pointerId:1,pointerType:'mouse',button:0}));
-    return 'dragged'+pts.length;
+    c.dispatchEvent(new PointerEvent('pointerup',Object.assign({},base,{clientX:r.left+last[0],clientY:r.top+last[1],buttons:0,pressure:pt==='touch'?0:0})));
+    return 'dragged'+pts.length+':'+pt;
   })()`);
   /** 轮询等待断言（坑#2：禁固定 sleep 断言物理）。predExpr 为 JS 表达式，真值即通过。 */
   const waitFor = async (predExpr, opts = {}) => {

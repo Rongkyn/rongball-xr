@@ -1,0 +1,189 @@
+{
+  "date": "2026-09-29",
+  "dimension": "interaction-feel",
+  "total": 12,
+  "pass": 12,
+  "fail": 0,
+  "results": [
+    {
+      "tag": "ink-garden",
+      "view": "mobile",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "ink-garden",
+      "view": "desktop",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "can-he",
+      "view": "mobile",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": false,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "can-he",
+      "view": "desktop",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "lu-hua",
+      "view": "mobile",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "lu-hua",
+      "view": "desktop",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "gui-yu",
+      "view": "mobile",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "gui-yu",
+      "view": "desktop",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": false,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "yue-bo",
+      "view": "mobile",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "yue-bo",
+      "view": "desktop",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "qiu-chong",
+      "view": "mobile",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    },
+    {
+      "tag": "qiu-chong",
+      "view": "desktop",
+      "pass": true,
+      "asserts": {
+        "touchActionNone": true,
+        "cursorCrosshair": true,
+        "canvasInScreen": true,
+        "coordMapConsistent": true
+      },
+      "touchResponds": true,
+      "mouseResponds": true,
+      "clear": true,
+      "realErrors": []
+    }
+  ]
+}
