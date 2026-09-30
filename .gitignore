@@ -52,3 +52,7 @@ _patches/
 **/acc*/p[0-9]*/
 **/acc*/a[0-9]*/**
 **/acc*/p[0-9]*/**
+**/acc*/out/
+**/acc*/out/**
+**/acc*/ws/
+**/acc*/ws/**

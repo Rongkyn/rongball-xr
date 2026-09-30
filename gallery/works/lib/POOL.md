@@ -53,10 +53,10 @@
 
 | 模块 | 能力 | 状态 | 文档 |
 |------|------|------|------|
-| `audio-lib.js` | Web Audio 声音资产：KS 古琴拨弦、加法铃音、master 总线出声口 | `selected`（听墨 import 在用；墨韵/风铎为抽取来源、内嵌同源代码未改 import，不计入"在用"） | `README.md` |
-| `resize-debounce.js` | 窗口 resize 防抖 + 构造即自动首次尺寸化 | `validated`（墨园/桂雨/月波/秋虫/芦花/墨隐 6 件在用，0927 双端 42/42） | 模块头文档 |
+| `audio-lib.js` | Web Audio 声音资产：KS 古琴拨弦、加法铃音、master 总线出声口 | `validated`（真 import 4 件：听墨/残荷/芦花/风铎；另有桂雨/月波/秋虫 3 件内联同源代码未改 import，按 dogfood 证据补记；0930 体检复核） | `README.md` |
+| `resize-debounce.js` | 窗口 resize 防抖 + 构造即自动首次尺寸化 | `validated`（真 script 引用 6 件：墨园/桂雨/月波/秋虫/芦花/墨洇，0927 双端 42/42；0930 复核 L3 采用注释齐全） | 模块头文档 |
 | `cdp-harness.js` | CDP 交互验收 harness（建连/goto/tap/drag/像素/错误） | `validated`（全部作品验收在用；0927 错误带 `[file:line]` 详情） | 模块头文档 |
-| `ui-floating-stack.css` | 底部浮层栈：hint 操作提示 + 角落印章 seal 的版式与分层（窄屏/矮视口响应式） | `validated`（桂雨/月波 2 件接入，0928 双端 56/56） | 模块头文档 |
+| `ui-floating-stack.css` | 底部浮层栈：hint 操作提示 + 角落印章 seal 的版式与分层（窄屏/矮视口响应式） | `validated`（桂雨/月波 2 件接入，0928 双端 56/56；0930 补 L3 采用注释） | 模块头文档 |
 
 ## 二、重复实现实锤（优先提取）
 
@@ -94,6 +94,7 @@
 - **资产管理员角色**由绒球每周复盘日程（周日）承担：检查候选是否达提取条件、L3 采用记录是否齐全、版本是否过期、清单是否与实际一致。
 - 体检记录：20260830 首次体检——audio-lib 状态由 validated 修正为 selected（实际仅听墨 1 件 import）；踏雪三件套维持 candidate（无第二使用作品，触发规则如此）；noise-lib/season-lib 重复实锤仍待触碰山水作品时提取。
 - 20260918 听墨移动端深磨：新增两条候选（响应式方画框 / 触屏长按清纸），均为单一来源，按"第二件复用才提取"留 candidate；audio-lib 采用情况无变化（仍 selected）。
+- **20260930 采用记录体检（账实核对）**：扫全部 works 真实引用后修正三处账实不符——①resize-debounce 实际 6 件真 script 引用（gui-yu/ink-garden/lu-hua/mo-yin/qiu-chong/yue-bo），原总账把「墨洇」误写成「墨隐」，已纠正；6 件 L3 采用注释补齐并统一标 v1.1（ink-garden/mo-yin 原标 v1.0，库 0927 已升 v1.1）。②audio-lib 实际 4 件真 import（ting-mo/can-he/lu-hua/tai-hen），另有 gui-yu/yue-bo/qiu-chong 3 件内联同源代码；4 件真 import 达 validated 口径（旧总账仅认听墨 1 件、标 selected，系墨韵早期来源被误算），状态升 validated 并在表格注明。③ui-floating-stack 2 件接入（gui-yu/yue-bo）补 L3 采用注释。noise-lib/season-lib 重复实锤仍按触发规则待触碰山水作品时提取，本次不提前。
 - 本池随 rongball-room 仓库公开，取用请注明来源。
 
 *维护者：绒球 🧶 ｜ 分层模型致谢 AIOS Project Asset Intelligence*
