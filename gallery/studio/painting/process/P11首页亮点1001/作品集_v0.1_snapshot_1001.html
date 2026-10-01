@@ -1,0 +1,293 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>灵 · 作品集 | VR × AIGC × Agent</title>
+<style>
+  :root{
+    --bg:#fafaf9; --card:#ffffff; --ink:#1c1c1e; --ink-2:#55555a; --ink-3:#8a8a8f;
+    --line:#e6e4e0; --accent:#3f5b8c; --accent-soft:#eef2f8;
+    --tag-bg:#f2f1ee; --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.75;
+    font-size:16px; letter-spacing:.01em;
+  }
+  .wrap{max-width:860px; margin:0 auto; padding:0 20px;}
+
+  /* Hero */
+  header.hero{padding:72px 0 40px; border-bottom:1px solid var(--line);}
+  .hero .kicker{font-size:13px; color:var(--accent); letter-spacing:.25em; text-transform:uppercase; margin-bottom:14px;}
+  .hero h1{font-size:34px; line-height:1.3; font-weight:700; margin-bottom:16px;}
+  .hero .sub{font-size:17px; color:var(--ink-2); max-width:640px;}
+  .hero .meta{margin-top:22px; font-size:14px; color:var(--ink-3);}
+  .hero .meta span{display:inline-block; margin-right:18px;}
+
+  /* Stats */
+  .stats{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:36px 0 8px;}
+  .stat{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:20px 14px; text-align:center;}
+  .stat .num{font-size:26px; font-weight:700; color:var(--accent); line-height:1.2;}
+  .stat .lbl{font-size:13px; color:var(--ink-3); margin-top:6px;}
+
+  /* Sections */
+  section{padding:56px 0 8px;}
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:8px; flex-wrap:wrap;}
+  .sec-no{font-size:13px; color:var(--ink-3); font-variant-numeric:tabular-nums;}
+  .sec-head h2{font-size:26px; font-weight:700;}
+  .sec-tag{font-size:12px; color:var(--accent); background:var(--accent-soft); border-radius:999px; padding:3px 12px;}
+  .sec-lead{font-size:15px; color:var(--ink-2); margin:10px 0 24px; max-width:680px;}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:28px 26px; margin-bottom:20px;}
+  .card h3{font-size:19px; font-weight:700; margin-bottom:4px;}
+  .card .role{font-size:13px; color:var(--ink-3); margin-bottom:16px;}
+
+  .block{margin-bottom:16px;}
+  .block:last-child{margin-bottom:0;}
+  .block .b-title{font-size:13px; font-weight:700; color:var(--accent); letter-spacing:.08em; margin-bottom:6px;}
+  .block p, .block li{font-size:15px; color:var(--ink-2);}
+  .block ul{padding-left:20px;}
+  .block li{margin-bottom:5px;}
+
+  .tags{margin-top:18px; display:flex; flex-wrap:wrap; gap:8px;}
+  .tag{font-size:12.5px; color:var(--ink-2); background:var(--tag-bg); border-radius:999px; padding:4px 12px;}
+
+  /* Image placeholders */
+  .ph{
+    border:1.5px dashed #cfccc5; border-radius:10px; background:#f7f6f3;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    color:var(--ink-3); font-size:13px; line-height:1.6; padding:18px;
+  }
+  .ph-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;}
+  .ph-grid .ph{aspect-ratio:4/3;}
+  .ph-wide{aspect-ratio:16/9; margin-top:16px;}
+  @media (max-width:560px){ .ph-grid{grid-template-columns:1fr;} }
+
+  /* Style lines */
+  .styles{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px;}
+  @media (max-width:560px){ .styles{grid-template-columns:1fr;} }
+  .style-item{border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--bg);}
+  .style-item .ph{border:none; border-radius:0; aspect-ratio:4/3;}
+  .style-item .s-name{padding:10px 14px; font-size:14px; font-weight:600;}
+  .style-item .s-desc{padding:0 14px 12px; font-size:12.5px; color:var(--ink-3);}
+
+  .data-strip{display:flex; gap:24px; flex-wrap:wrap; background:var(--accent-soft); border-radius:10px; padding:16px 20px; margin:16px 0;}
+  .data-strip .d .n{font-size:22px; font-weight:700; color:var(--accent);}
+  .data-strip .d .t{font-size:12.5px; color:var(--ink-2);}
+
+  a{color:var(--accent); text-decoration:none; word-break:break-all;}
+  a:hover{text-decoration:underline;}
+  .ext-link{font-size:14px; margin-top:10px; display:inline-block;}
+
+  /* Footer */
+  footer{margin-top:64px; border-top:1px solid var(--line); padding:44px 0 64px;}
+  footer h2{font-size:20px; margin-bottom:14px;}
+  footer p{font-size:15px; color:var(--ink-2); max-width:640px; margin-bottom:12px;}
+  .contact{font-size:14px; color:var(--ink-3); margin-top:18px;}
+  .ver{font-size:12px; color:#b9b7b1; text-align:center; padding:24px 0 40px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ========== HERO ========== -->
+  <header class="hero">
+    <div class="kicker">Portfolio · 2026 秋</div>
+    <h1>在 VR 空间、AIGC 创作流<br>与 Agent 原型之间，做"能开始创作"的工具和内容</h1>
+    <p class="sub">上海大学 × 格拉斯哥艺术学院（GSA）联合培养硕士，严肃游戏与 VR 方向。研究如何降低创作门槛，也亲手做内容、做原型——VR 空间音频创作工具、即梦平台 1.9 万获赞创作者、Coze 重度用户。</p>
+    <div class="meta">
+      <span>📍 上海 · 2026 年 11 月可入职日常实习</span>
+      <span>✉️ 【待补：邮箱】</span>
+      <span>📞 【待补：电话】</span>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="num">1.9万</div><div class="lbl">即梦获赞 · 粉丝 497</div></div>
+      <div class="stat"><div class="num">7 章</div><div class="lbl">硕士论文已定稿</div></div>
+      <div class="stat"><div class="num">20 件</div><div class="lbl">在线可玩生成艺术原型</div></div>
+    </div>
+  </header>
+
+  <!-- ========== 板块一：VR Soundscape ========== -->
+  <section id="vr">
+    <div class="sec-head">
+      <span class="sec-no">01</span>
+      <h2>Spatial Studio: Soundscape(VR)</h2>
+      <span class="sec-tag">VR / 空间交互 · 硕士毕设</span>
+    </div>
+    <p class="sec-lead">一个 VR 空间内的 AI 辅助空间音频创作工具：让没有专业声音制作经验的人，置身声音空间中，用身体行动直接组织、试听和调整声音。</p>
+
+    <div class="card">
+      <h3>VR 空间声景创作原型</h3>
+      <div class="role">硕士毕业项目 · 独立完成研究、设计、开发与论文 ｜ Unity 6.3 + Pico</div>
+
+      <div class="ph ph-wide">图片占位：毕设 Demo 视频 / 头显内创作场景全景<br>（待主人回国后 Pico 投屏录屏，剪 60–90s）</div>
+      <div class="ph-grid">
+        <div class="ph">图片占位：声音对象在三维空间中的可视化场景</div>
+        <div class="ph">图片占位：手柄抓取/放置声源的交互画面</div>
+      </div>
+
+      <div style="height:22px"></div>
+
+      <div class="block">
+        <div class="b-title">背景 · 为什么做</div>
+        <p>有声音创作意愿的人往往卡在第一步：在传统 DAW 工作流里，必须先把"让水声退到远处、让鸟在树上鸣叫"这样的想法翻译成轨道、声像和参数，才能听到结果。学习工具和格式转换占用了本可用于创作的注意力，许多声音想法因此停在未实现状态。</p>
+      </div>
+      <div class="block">
+        <div class="b-title">我的角色</div>
+        <p>个人硕士毕设，独立完成研究问题定义、VR 原型设计与开发、参与者创作任务设计与论文写作；论文 7 章已定稿。</p>
+      </div>
+      <div class="block">
+        <div class="b-title">做法 · 怎么做的</div>
+        <ul>
+          <li>基于 <strong>Unity 6.3 + XR Interaction Toolkit + Pico SDK</strong>，在 Pico 头显上构建可实际体验的 VR 创作原型，全程 <strong>AI 辅助编码（Cursor）</strong>，独立完成调试与架构重构；</li>
+          <li>工程上搭建 25 个 Assembly Definition 的分层模块化架构（Domain / Interaction / Presentation / Flow / Services），含 EditMode / PlayMode 测试；</li>
+          <li>核心设计：声音材料以<strong>可见、可抓取的场景对象</strong>进入三维空间——空间化建立声音的位置/方向/距离关系，可视化呈现场景与声源，对象化把声音组织为可组合的创作单元，直接操作 + 即时试听连成完整创作循环；</li>
+          <li>设计有界的参与者创作任务，结合参与者表述、过程观察与创作结果做质性分析。<em>（测试人数与关键发现：待补）</em></li>
+        </ul>
+      </div>
+      <div class="block">
+        <div class="b-title">成果</div>
+        <ul>
+          <li>完成可在 Pico 设备上运行体验的 VR 空间音频创作原型，并形成"降低创作门槛"的设计机制论证；</li>
+          <li>研究焦点落在创作早期阶段：VR 作为形成、尝试和修改空间声景的创作环境，帮助创作者<strong>在不确定要做什么时就能动手尝试，在不熟悉怎么实现时就能听到结果</strong>。</li>
+        </ul>
+      </div>
+      <div class="tags">
+        <span class="tag">Unity 6.3</span><span class="tag">C#</span>
+        <span class="tag">XR Interaction Toolkit</span><span class="tag">Pico SDK / OpenXR</span>
+        <span class="tag">空间音频</span><span class="tag">VR 交互设计</span>
+        <span class="tag">AI 辅助编码</span><span class="tag">质性用户研究</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 板块二：即梦 AIGC ========== -->
+  <section id="jimeng">
+    <div class="sec-head">
+      <span class="sec-no">02</span>
+      <h2>即梦 AIGC 创作 ·「神与光」</h2>
+      <span class="sec-tag">AIGC 内容生态 · 平台创作者</span>
+    </div>
+    <p class="sec-lead">在即梦（字节跳动 AIGC 创作平台）持续进行风格化图像/视频创作，沉淀四条个人风格线与可复用的提示词方法论——以创作者身份，理解 AIGC 工具的真实工作流与痛点。</p>
+
+    <div class="card">
+      <h3>创作者「神与光」</h3>
+      <div class="role">独立运营 ｜ 风格设定 · 提示词工程 · 成片迭代</div>
+
+      <div class="data-strip">
+        <div class="d"><div class="n">497</div><div class="t">粉丝</div></div>
+        <div class="d"><div class="n">1.9万</div><div class="t">累计获赞</div></div>
+        <div class="d"><div class="n">4</div><div class="t">条风格线</div></div>
+      </div>
+      <p style="font-size:13px;color:var(--ink-3);">数据为 2026-09 口径，投递前更新为最新截图。</p>
+
+      <div class="ph ph-wide" style="margin-top:16px;">图片占位：即梦主页数据页截图（粉丝 / 获赞 / 作品墙）</div>
+
+      <div style="height:22px"></div>
+
+      <div class="block">
+        <div class="b-title">四条风格线</div>
+        <p>在持续创作中沉淀出可复用、可延展的风格方法论，而非单张出图：</p>
+      </div>
+      <div class="styles">
+        <div class="style-item">
+          <div class="ph">作品占位：水墨莫奈<br>代表作 2–3 件</div>
+          <div class="s-name">水墨 × 莫奈</div>
+          <div class="s-desc">东方水墨笔法与印象派光色的融合</div>
+        </div>
+        <div class="style-item">
+          <div class="ph">作品占位：敦煌穆夏<br>代表作 2–3 件</div>
+          <div class="s-name">敦煌 × 穆夏</div>
+          <div class="s-desc">敦煌壁画色彩与新艺术运动装饰线条</div>
+        </div>
+        <div class="style-item">
+          <div class="ph">作品占位：矢量工笔<br>代表作 2–3 件</div>
+          <div class="s-name">矢量工笔</div>
+          <div class="s-desc">工笔花鸟的当代矢量语言转译</div>
+        </div>
+        <div class="style-item">
+          <div class="ph">作品占位：全栈设计系统<br>代表作 2–3 件</div>
+          <div class="s-name">全栈设计系统</div>
+          <div class="s-desc">以 AIGC 流程支撑的完整视觉体系</div>
+        </div>
+      </div>
+
+      <div style="height:22px"></div>
+
+      <div class="block">
+        <div class="b-title">做法与成果</div>
+        <ul>
+          <li>独立完成选题、提示词工程、风格设定、分镜与成片迭代的完整内容生产闭环；</li>
+          <li>累计 <strong>497 粉丝、1.9 万获赞</strong>，形成跨风格的提示词库与创作方法论；</li>
+          <li>作为高频使用者，对 AIGC 创作工具的门槛、迭代节奏与创作者痛点有第一手体会——<em>这也是我想做 AIGC 创作工具的原因</em>。</li>
+        </ul>
+        <p style="font-size:13px;color:var(--ink-3);margin-top:8px;">（代表作清单与单条爆款数据：待主人标记后补充）</p>
+      </div>
+
+      <a class="ext-link" href="https://jimeng.jianying.com/s/D4LOVhTvpRU/" target="_blank" rel="noopener">🔗 即梦创作主页：jimeng.jianying.com/s/D4LOVhTvpRU/</a>
+    </div>
+  </section>
+
+  <!-- ========== 板块三：Coze Agent ========== -->
+  <section id="agent">
+    <div class="sec-head">
+      <span class="sec-no">03</span>
+      <h2>Coze Agent · Vibe Coding</h2>
+      <span class="sec-tag">Agent 工作流 · 快速原型</span>
+    </div>
+    <p class="sec-lead">Coze（扣子）重度用户：把想法用自然语言拆成工作流、编排多个专职 Agent 协作，快速做出能用的原型——从"我有个想法"到"它跑起来了"，通常只需要一个晚上。</p>
+
+    <div class="card">
+      <h3>旅行动态导游系统</h3>
+      <div class="role">独立设计与搭建 ｜ Coze 多 Agent 工作流</div>
+      <div class="ph ph-wide">图片占位：导游系统对话演示 / 行程生成界面截图</div>
+      <div style="height:18px"></div>
+      <div class="block">
+        <div class="b-title">背景与做法</div>
+        <p>旅行中需要随行程动态变化的导游：基于位置、时间与情境实时组织信息，而非静态攻略。以 Coze 工作流编排信息检索、内容生成与推送环节，做成可实际使用的原型。<em>（功能细节与使用数据：待补）</em></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>多 Agent 协作工作流</h3>
+      <div class="role">工作流设计 · 任务编排 · 调试迭代</div>
+      <div class="ph-grid">
+        <div class="ph">图片占位：多 Agent 工作流编排画布截图</div>
+        <div class="ph">图片占位：Agent 实际产出案例（调研/内容/交付）</div>
+      </div>
+      <div style="height:18px"></div>
+      <div class="block">
+        <div class="b-title">做法与成果</div>
+        <ul>
+          <li>把复杂任务拆给多个专职 Agent 协作完成（信息调研、内容生产、文件交付等），设计任务分发与结果校验机制；</li>
+          <li>实践"自然语言需求 → 可运行原型"的完整闭环，擅长用 AI 工具链快速验证产品想法；</li>
+          <li><em>（具体项目名、架构图与演示录屏：待补）</em></li>
+        </ul>
+      </div>
+      <div class="tags">
+        <span class="tag">Coze 工作流</span><span class="tag">多 Agent 编排</span>
+        <span class="tag">Vibe Coding</span><span class="tag">Cursor</span>
+        <span class="tag">快速原型</span><span class="tag">产品思维</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer>
+    <h2>关于我</h2>
+    <p>我横跨"技术实现—交互设计—内容创作"三个位面：用 Unity 做出能戴上去体验的 VR 原型，在即梦做出近两万获赞的内容，也用 Agent 工作流把一个个想法变成真的能用的东西。硕士研究教我从创作者的视角理解"门槛"——好的工具让人在还不确定要做什么时，就敢开始。</p>
+    <p>目标方向：<strong>AIGC 创作工具/内容生态</strong>（首选）、VR/XR 内容策划与交互设计、游戏策划。2026 年 11 月前后可在上海入职日常实习。</p>
+    <div class="contact">
+      ✉️ 邮箱：【待补】　｜　📞 电话：【待补】　｜　🎨 即梦：<a href="https://jimeng.jianying.com/s/D4LOVhTvpRU/" target="_blank" rel="noopener">神与光</a>　｜　🐙 GitHub：【待补】
+    </div>
+  </footer>
+
+  <div class="ver">作品集 v0.1 · 2026-10-01 更新（P11 首页数据亮点：论文章数勘误 6→7、补原型数量）· 视觉终版待拍板 · 图片位待素材填充</div>
+
+</div>
+</body>
+</html>
