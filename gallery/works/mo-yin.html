@@ -254,12 +254,38 @@ function drop(gx,gy,rad,wAmt,pAmt){
   }
 }
 
-/* ---------- 渲染 ---------- */
+/* ---------- 渲染（v1002：物理离屏 220 → 显示 backing 按 CSS 尺寸×DPR，平滑放大去块状） ---------- */
 const inkCv = document.getElementById('ink');
 const ictx = inkCv.getContext('2d');
-inkCv.width=N; inkCv.height=N;
-const img = ictx.createImageData(N,N);
+/* 物理在离屏 canvas（220）上 putImageData；可见 inkCv backing 按真实显示尺寸×DPR 设置，
+   再 drawImage 平滑放大——0926 水墨 canvas 件清晰度方案，墨洇 1002 补欠账。 */
+const simCv = document.createElement('canvas');
+simCv.width=N; simCv.height=N;
+const simCtx = simCv.getContext('2d');
+const img = simCtx.createImageData(N,N);
 const px = img.data;
+
+/* 同步可见 backing 到「显示CSS尺寸 × min(DPR,2)」；尺寸未变跳过。
+   重设 backing 会清空画布，立即把当前物理帧重画上去，避免 resize 期间闪空。 */
+let inkBackingCSS=0, maxDpr=1;
+function syncInkBacking(){
+  const rect = inkCv.getBoundingClientRect();
+  const css = Math.round(rect.width);
+  if(!css) return;                              // 零尺寸守卫（库坑：解析早期）
+  /* 缓存观测到的最大 DPR（上限2）：移动模拟/真机上 resize 可能伴随瞬时 dpr=1（CDP metrics
+     重放实锤），若当真会把 retina backing 降成 css×1 发糊。真机 DPR 只高不低，取最大稳健。 */
+  const curDpr = window.devicePixelRatio||1;
+  if(curDpr>maxDpr) maxDpr=curDpr;
+  const dpr = Math.min(maxDpr, 2);
+  const backing = Math.round(css*dpr);
+  if(css===inkBackingCSS && inkCv.width===backing) return;
+  inkBackingCSS=css;
+  inkCv.width=backing; inkCv.height=backing;
+  ictx.imageSmoothingEnabled=true;
+  ictx.imageSmoothingQuality='high';
+  ictx.clearRect(0,0,backing,backing);
+  ictx.drawImage(simCv,0,0,backing,backing);
+}
 
 function render(){
   for(let i=0;i<N*N;i++){
@@ -280,7 +306,8 @@ function render(){
     const a = Math.max(t*246, sheen*255);
     px[o]=r; px[o+1]=g; px[o+2]=b; px[o+3]=a>255?255:a;
   }
-  ictx.putImageData(img,0,0);
+  simCtx.putImageData(img,0,0);              // 物理帧先上离屏 220
+  ictx.drawImage(simCv,0,0,inkCv.width,inkCv.height);  // 平滑放大到显示 backing
 }
 
 /* ---------- 宣纸底（一次性） ---------- */
@@ -328,7 +355,7 @@ const EVAP = EVAP_BASE * FAST_K;
 const ADS = ADS_BASE * FAST_K;
 const ADS_DRY = ADS_DRY_BASE * FAST_K;
 const STEP_MULT = 1;
-let alive=true, idleFrames=0, dried=false, dropCount=0;
+let alive=true, idleFrames=0, dried=false, dropCount=0, peakWater=0;
 
 function mirror(){
   stateMirror.textContent = JSON.stringify({
@@ -342,6 +369,7 @@ function kick(){ if(!loopRunning){ loopRunning=true; requestAnimationFrame(frame
 function frame(){
   if(alive){
     for(let k=0;k<STEPS*STEP_MULT;k++) step();
+    if(totalWater>peakWater) peakWater=totalWater;   // 本回合水量峰值（叙事阈值的相对基准）
     if(totalWater<0.4){
       idleFrames++;
       if(idleFrames>(FAST?24:90) && !dried){
@@ -352,7 +380,15 @@ function frame(){
       }
     } else {
       idleFrames=0;
-      if(!dried){ stateEl.textContent='洇散中…'; stateEl.style.color='#8a8172'; }
+    }
+    /* 四段式叙事（起·研墨→承·洇散中→转·墨色沉定→合·水尽墨定）：
+       「转」以峰值水量的 8% 为阈——水锋收束、扩散让位沉定；相对峰值，快慢/大小滴自适应。 */
+    if(alive && !dried){
+      if(peakWater>0 && totalWater < peakWater*0.08){
+        stateEl.textContent='墨色沉定…'; stateEl.style.color='#6f6656';
+      } else if(totalWater>=0.4){
+        stateEl.textContent='洇散中…'; stateEl.style.color='#8a8172';
+      }
     }
   }
   render();
@@ -364,7 +400,7 @@ function frame(){
 
 function revive(){
   if(!alive){ alive=true; }
-  if(dried){ dried=false; sealEl.classList.remove('done'); }
+  if(dried){ dried=false; sealEl.classList.remove('done'); peakWater=0; }
   idleFrames=0;
   kick();
 }
@@ -372,7 +408,7 @@ function revive(){
 /* ---------- 清纸 ---------- */
 function clearPaper(){
   W.fill(0);P.fill(0);S.fill(0);
-  dropCount=0;
+  dropCount=0; peakWater=0;
   revive(); stateEl.textContent='研墨…'; stateEl.style.color='#8a8172';
 }
 
@@ -420,13 +456,15 @@ addEventListener('pointerup', ()=>{ clearTimeout(pressTimer); pressTimer=null; }
 /* 屏蔽长按画布弹系统菜单/放大镜 */
 inkCv.addEventListener('contextmenu', e=>e.preventDefault());
 
-/* ---- v0923 resize：物理网格 N×N 与 CSS 画框解耦，尺寸变化不需要重排物理；
-   接入 resize-debounce 作防御性收口（尺寸未变跳过） ---- */
+/* ---- v1002 resize：物理网格 N×N 与 CSS 画框解耦；尺寸变化时只同步显示 backing 的 DPR/尺寸，
+   不重排物理（resize-debounce v1.1 构造即同步首次，正好完成首帧 backing 初始化） ---- */
 if(window.resizeDebounce){
   window.resizeDebounce.createResizeDebounce(function(){
-    // 无像素级重排需求；留位给未来 dpr 相关处理
-  }, { wait: 120 });
-}
+    syncInkBacking();
+  }, { wait: 120,
+       size: function(){ return [Math.round(inkCv.getBoundingClientRect().width),
+                                 Math.round(window.devicePixelRatio||1)]; } });
+} else { syncInkBacking(); }   // 库漏引兜底：至少把 backing 从默认 300 校正
 
 /* ---- v0923 切后台省电：rAF 自动停之外，回前台主动 revive ---- */
 document.addEventListener('visibilitychange', ()=>{

@@ -56,6 +56,12 @@
  *     恒 'loading'，Page.navigate 其实已正常返回。误判成 harness/端口问题会白做一堆对照。
  *     排查：navigate 返回后轮询 document.readyState，恒 loading 即去查同步脚本的「除法步长」
  *     循环；处方见 POOL.md §D2（resize 零尺寸守卫 + 步长 Math.max(1,…)）。
+ * 20. 移动模拟 resize 伴随瞬时 devicePixelRatio=1（1002 墨洇实锤）：setDeviceMetricsOverride
+ *     (dpr=2) 后，页面加载完成时 Chrome/CDP 会补发一次 resize，该回调里读 devicePixelRatio
+ *     竟短暂为 1（metrics/触摸模拟重放所致）。作品若在 resize 里用「当前 dpr」重设 backing，
+ *     会把正确的 css×2 retina backing 错误降成 css×1 → 墨缘/画面发糊。判别：load 时刻 backing
+ *     正确、数百 ms 后被重置且当时 dpr=1。处方在作品侧：缓存「观测到的最大 DPR（上限2）」，
+ *     resize 只升不降（真机 DPR 不会因地址栏收放变 1）；勿用瞬时 dpr 直接重设画布。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});

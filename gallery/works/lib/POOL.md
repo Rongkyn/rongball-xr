@@ -128,6 +128,11 @@
 - 两类致命写法：① `resize` 里直接用 0 尺寸建 backing store / 渐变（退化）；② **`for(x=0;x<=W;x+=W/k)` 步长 `0/k=0` → 同步死循环**，`readyState` 永停 "loading"，表现为导航不返回（极似 harness/CDP 挂）。
 - 处方：resize 开头 `if(innerWidth<=0||innerHeight<=0) return;`（真实尺寸到达的下一次 resize 补上）；一切「尺寸/常量」作循环步长处写 `Math.max(1, W/k)`。排查口径：`Page.navigate` 已返回但 readyState 恒 loading → 先查同步脚本里的除法步长循环。
 
+### D3. backing 的 DPR 用「观测最大值」，不信 resize 瞬时 dpr=1（1002 墨洇实锤，candidate）
+- 症状：移动模拟（真机同理的 CDP 重放时序）加载后 Chrome 补发一次 resize，该回调里 `devicePixelRatio` 短暂读成 1；resize 若用「当前 dpr」重设 backing，会把正确的 css×2 retina 画布降成 css×1 → 墨缘/画面发糊。load 时刻正确、数百 ms 后被重置是判别要点（详见 harness 避坑#20）。
+- 处方：作品侧缓存 `maxDpr`，每次 resize `if(devicePixelRatio>maxDpr) maxDpr=devicePixelRatio`，backing 用 `css × Math.min(maxDpr,2)`——只升不降（真机 DPR 不会因地址栏收放变 1）。
+- 状态：墨洇 1 件实锤 → candidate；第 2 件同款（resize 里 backing 被 dpr=1 降档）出现时，连同 D/D2 一并评估提取 `lib/canvas-backing.js`（零尺寸守卫 + maxDpr + backing 同步三件套）。
+
 ### E. 底部浮层栈（hint / 印章分层）——双件 candidate
 - 固定在底部角落的两个浮层（居中 hint、右下角印章）在竖屏会纵向区间重叠，横屏矮视口更严重。
 - 处方：窄屏把印章抬到 hint 之上（`bottom:76px`，按 hint 实际高度预留净空）；横屏矮视口（`max-height:430px`）印章缩小并上抬；二者都是 fixed 定位，按"底栏分层"排布而非左右避让。
