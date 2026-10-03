@@ -281,7 +281,12 @@ async function launch(o) {
     c.dispatchEvent(new PointerEvent('pointerup',Object.assign({},base,{clientX:r.left+last[0],clientY:r.top+last[1],buttons:0,pressure:pt==='touch'?0:0})));
     return 'dragged'+pts.length+':'+pt;
   })()`);
-  /** 轮询等待断言（坑#2：禁固定 sleep 断言物理）。predExpr 为 JS 表达式，真值即通过。 */
+  /** 轮询等待断言（坑#2：禁固定 sleep 断言物理）。predExpr 为 JS 表达式，真值即通过。
+   *  坑#21（冻结闸口1004·can-he 实锤）：验证「手势触发某指标」时，禁在手势后固定延时读 #state
+   *       镜像——①can-he 镜像每 10 帧才刷一次，手势后立即读拿到手势前旧帧（误报未响应）；
+   *       ②fast=1 下雨 rainLevel 按 dt×3 快速衰减（τ≈1.4s），读太晚又回到 0（同样误报）。
+   *       正确做法：手势后 waitFor「镜像字段离开手势前值」，在 ~1200ms 窗口内轮询，让「刷帧延迟」
+   *       与「快速衰减」两头都能命中。默认 300ms 粒度在窗口内即可抓到变化。 */
   const waitFor = async (predExpr, opts = {}) => {
     const timeout = opts.timeout || 15000;
     const t0 = Date.now();

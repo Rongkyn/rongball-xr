@@ -1,0 +1,586 @@
+{
+  "date": "2026-10-04",
+  "dimension": "freeze-gate",
+  "total": 16,
+  "pass": 16,
+  "fail": 0,
+  "results": [
+    {
+      "tag": "ink-garden",
+      "view": "mobile",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "",
+        "geom": {
+          "w": 390,
+          "h": 844,
+          "left": 0,
+          "top": 0,
+          "vw": 390,
+          "vh": 844,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "beforePx": 183304,
+          "afterPx": 257141
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "ink-garden",
+      "view": "desktop",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "",
+        "geom": {
+          "w": 1280,
+          "h": 577,
+          "left": 0,
+          "top": 0,
+          "vw": 1280,
+          "vh": 577,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "beforePx": 121767,
+          "afterPx": 127461
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "can-he",
+      "view": "mobile",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"frame\":110,\"rain\":0,\"drops\":0,\"beads\":0,\"pool\":0,\"pouring\"",
+        "geom": {
+          "w": 390,
+          "h": 844,
+          "left": 0,
+          "top": 0,
+          "vw": 390,
+          "vh": 844,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 0.517
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "can-he",
+      "view": "desktop",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"frame\":110,\"rain\":0,\"drops\":0,\"beads\":0,\"pool\":0,\"pouring\"",
+        "geom": {
+          "w": 1280,
+          "h": 577,
+          "left": 0,
+          "top": 0,
+          "vw": 1280,
+          "vh": 577,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 0.482
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "lu-hua",
+      "view": "mobile",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"t\":5.93,\"gusts\":0,\"seeds\":0,\"totalShed\":0,\"peakTheta\":0.06",
+        "geom": {
+          "w": 390,
+          "h": 844,
+          "left": 0,
+          "top": 0,
+          "vw": 390,
+          "vh": 844,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 2
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "lu-hua",
+      "view": "desktop",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"t\":5.57,\"gusts\":0,\"seeds\":0,\"totalShed\":0,\"peakTheta\":0.07",
+        "geom": {
+          "w": 1280,
+          "h": 577,
+          "left": 0,
+          "top": 0,
+          "vw": 1280,
+          "vh": 577,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 3
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "gui-yu",
+      "view": "mobile",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"t\":1.93,\"nPetal\":0,\"spawned\":0,\"groundGold\":0,\"shake\":0,\"g",
+        "geom": {
+          "w": 390,
+          "h": 844,
+          "left": 0,
+          "top": 0,
+          "vw": 390,
+          "vh": 844,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 0.244
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "gui-yu",
+      "view": "desktop",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"t\":1.81,\"nPetal\":0,\"spawned\":0,\"groundGold\":0,\"shake\":0,\"g",
+        "geom": {
+          "w": 1280,
+          "h": 577,
+          "left": 0,
+          "top": 0,
+          "vw": 1280,
+          "vh": 577,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 0.122
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "yue-bo",
+      "view": "mobile",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"t\":2.07,\"nRipple\":0,\"shard\":0,\"maxShard\":0,\"gust\":0,\"cover",
+        "geom": {
+          "w": 390,
+          "h": 844,
+          "left": 0,
+          "top": 0,
+          "vw": 390,
+          "vh": 844,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 2
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "yue-bo",
+      "view": "desktop",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"t\":1.8,\"nRipple\":0,\"shard\":0,\"maxShard\":0,\"gust\":0,\"cover\"",
+        "geom": {
+          "w": 1280,
+          "h": 577,
+          "left": 0,
+          "top": 0,
+          "vw": 1280,
+          "vh": 577,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 2
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "qiu-chong",
+      "view": "mobile",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"t\":2.06,\"nC\":4,\"nF\":3,\"hushed\":0,\"singing\":4,\"settled\":tru",
+        "geom": {
+          "w": 390,
+          "h": 844,
+          "left": 0,
+          "top": 0,
+          "vw": 390,
+          "vh": 844,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 2
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "qiu-chong",
+      "view": "desktop",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"t\":1.81,\"nC\":5,\"nF\":3,\"hushed\":0,\"singing\":5,\"settled\":tru",
+        "geom": {
+          "w": 1280,
+          "h": 577,
+          "left": 0,
+          "top": 0,
+          "vw": 1280,
+          "vh": 577,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 0,
+          "after": 2
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "ting-mo",
+      "view": "mobile",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "洇散中…",
+        "geom": {
+          "w": 367,
+          "h": 367,
+          "left": 12,
+          "top": 55,
+          "vw": 390,
+          "vh": 844,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "beforePx": 2253,
+          "afterPx": 7940,
+          "state": "洇散中…"
+        },
+        "afterClear": {
+          "state": "研墨…",
+          "px": 0
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "ting-mo",
+      "view": "desktop",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "洇散中…",
+        "geom": {
+          "w": 415,
+          "h": 415,
+          "left": 432,
+          "top": 73,
+          "vw": 1280,
+          "vh": 577,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "beforePx": 2253,
+          "afterPx": 7898,
+          "state": "洇散中…"
+        },
+        "afterClear": {
+          "state": "研墨…",
+          "px": 0
+        },
+        "clearInfo": "clicked"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "mo-yin",
+      "view": "mobile",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"alive\":true,\"dried\":false,\"tw\":68.187,\"drops\":1,\"ts\":17910",
+        "geom": {
+          "w": 367,
+          "h": 367,
+          "left": 12,
+          "top": 55,
+          "vw": 390,
+          "vh": 844,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 68.187,
+          "after": 10800.235
+        },
+        "afterClear": {
+          "tw": 0
+        },
+        "clearInfo": "longpress"
+      },
+      "realErrors": []
+    },
+    {
+      "tag": "mo-yin",
+      "view": "desktop",
+      "pass": true,
+      "checks": {
+        "backingHealthy": true,
+        "loadedComplete": true,
+        "canvasInScreen": true,
+        "noOverflow": true,
+        "touchActionNone": true,
+        "gestureResponds": true,
+        "clearOk": true,
+        "zeroErrors": true
+      },
+      "detail": {
+        "stateAtLoad": "{\"alive\":true,\"dried\":false,\"tw\":68.187,\"drops\":1,\"ts\":17910",
+        "geom": {
+          "w": 418,
+          "h": 418,
+          "left": 431,
+          "top": 97,
+          "vw": 1280,
+          "vh": 581,
+          "overflowX": false,
+          "overflowY": false
+        },
+        "touchAction": "none",
+        "gesture": {
+          "before": 68.187,
+          "after": 10263.984
+        },
+        "dblInfo": "dbl",
+        "afterClear": {
+          "tw": 0
+        },
+        "clearInfo": "dblclick"
+      },
+      "realErrors": []
+    }
+  ]
+}
