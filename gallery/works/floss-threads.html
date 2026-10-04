@@ -10,10 +10,10 @@ html,body{width:100%;height:100%;overflow:hidden}
 body{
   background:#0d0b14;
   font-family:'Noto Serif SC','Songti SC','STSong','Georgia',serif;
-  user-select:none;-webkit-user-select:none;touch-action:none;
+  user-select:none;-webkit-user-select:none;
   cursor:crosshair;
 }
-canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;touch-action:none}
 
 .title-overlay{
   position:fixed;top:0;left:0;right:0;bottom:0;
@@ -104,10 +104,13 @@ canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
 // ========== Canvas Setup ==========
 var canvas = document.getElementById('c');
 var ctx = canvas.getContext('2d');
-var W, H, DPR;
+var W, H, DPR, maxDpr = Math.min(window.devicePixelRatio || 1, 2);
 
 function resize(){
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  // DPR 用观测最大值（只升不降）：移动模拟/真机重放 resize 时瞬时 dpr=1 会把 retina backing 降糊（避坑#20）
+  var dprNow = Math.min(window.devicePixelRatio || 1, 2);
+  if(dprNow > maxDpr) maxDpr = dprNow;
+  DPR = maxDpr;
   W = window.innerWidth;
   H = window.innerHeight;
   canvas.width = W * DPR;

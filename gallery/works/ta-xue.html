@@ -24,10 +24,19 @@
   }
   .sub{font-size:12px;letter-spacing:3px;color:#8a8172;}
   .frame{
-    position:relative;width:704px;height:704px;
+    position:relative;width:704px;height:704px;flex:0 0 auto;
     background:#f1ebdd;
     box-shadow:0 1px 2px rgba(60,50,30,.18),0 12px 40px rgba(60,50,30,.22),inset 0 0 60px rgba(120,105,75,.10);
     border:1px solid rgba(120,105,75,.25);
+    /* 立轴整体等比缩小入屏（所有视口；矮宽桌面同样需要；物理坐标不变，pointer 经 rect 换算天然正确） */
+    transform:scale(var(--ax));transform-origin:top center;
+    margin-bottom:calc(704px*(var(--ax) - 1));
+  }
+  /* 小屏微调 */
+  @media (max-width:760px){
+    header{width:94vw;margin-bottom:8px;}
+    h1{font-size:24px;letter-spacing:7px;}
+    footer{width:94vw;}
   }
   canvas#scene{position:absolute;left:0;top:0;width:704px;height:704px;display:block;touch-action:none;cursor:crosshair;}
   .seal{
@@ -398,6 +407,15 @@ document.getElementById("snd").addEventListener("click", e=>{
 
 /* ---------- 交互 ---------- */
 let wind = 0.6;
+/* 立轴缩放入屏：按视口宽/高可用空间算等比系数（704 画 + header/footer 余量） */
+function fitAxis(){
+  const availW = Math.min(window.innerWidth*0.96, 704);
+  const availH = window.innerHeight - 110;  // header/footer 约 110px
+  const k = Math.min(availW/704, availH/704, 1);
+  document.documentElement.style.setProperty('--ax', k.toFixed(4));
+}
+fitAxis();
+window.addEventListener('resize', fitAxis);
 document.getElementById("wind").addEventListener("input", e=>{ wind = parseFloat(e.target.value); });
 cv.addEventListener("pointermove", e=>{
   // 鼠标轻推：横向位置微调瞬时风

@@ -56,3 +56,10 @@ _patches/
 **/acc*/out/**
 **/acc*/ws/
 **/acc*/ws/**
+**/acc*/dbg-*/
+**/acc*/dbg-*/**
+**/acc*/sm1005[md]-*/
+**/acc*/sm1005[md]-*/**
+
+# one-off debug probes (1005)
+gallery/studio/painting/acc1005/_dbg_*.js

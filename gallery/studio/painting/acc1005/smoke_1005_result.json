@@ -1,0 +1,206 @@
+[
+  {
+    "tag": "floss-threads",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 780,
+        "h": 1688
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "left": 0,
+        "top": 0,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "pluck": {
+        "before": 373,
+        "after": 8316
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "floss-threads",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "left": 0,
+        "top": 0,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "pluck": {
+        "before": 74,
+        "after": 75
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ta-xue",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 704,
+        "h": 704
+      },
+      "geom": {
+        "w": 374,
+        "h": 374,
+        "left": 8,
+        "top": 238,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "wind": 2
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ta-xue",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 704,
+        "h": 704
+      },
+      "geom": {
+        "w": 471,
+        "h": 471,
+        "left": 405,
+        "top": 69,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "wind": 2
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "tian-deng",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 780,
+        "h": 1688
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "left": 0,
+        "top": 0,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "auto": {
+        "released": 1,
+        "stateHead": "{\"r\":1,\"aloft\":1,\"star\":0,\"hist\":0,\"storeTotal\":0,\"wishes\":0,\"starsStored\":0,\"ma"
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "tian-deng",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "left": 0,
+        "top": 0,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "auto": {
+        "released": 1,
+        "stateHead": "{\"r\":1,\"aloft\":1,\"star\":0,\"hist\":0,\"storeTotal\":0,\"wishes\":0,\"starsStored\":0,\"ma"
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  }
+]

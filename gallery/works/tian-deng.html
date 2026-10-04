@@ -563,8 +563,12 @@ function buildReeds(){
   reeds.push(mk(W*0.895 + R()*W*0.05));
 }
 
+let maxDpr = Math.min(window.devicePixelRatio||1, 2);
 function resize(){
-  const DPR = Math.min(window.devicePixelRatio||1, 2);
+  // DPR 用观测最大值（只升不降）：移动模拟/真机重放 resize 时瞬时 dpr=1 会把 retina backing 降糊（避坑#20）
+  const dprNow = Math.min(window.devicePixelRatio||1, 2);
+  if(dprNow > maxDpr) maxDpr = dprNow;
+  const DPR = maxDpr;
   W = window.innerWidth; H = window.innerHeight;
   cvs.width = Math.round(W*DPR); cvs.height = Math.round(H*DPR);
   cvs.style.width = W+'px'; cvs.style.height = H+'px';

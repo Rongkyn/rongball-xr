@@ -62,6 +62,16 @@
  *     会把正确的 css×2 retina backing 错误降成 css×1 → 墨缘/画面发糊。判别：load 时刻 backing
  *     正确、数百 ms 后被重置且当时 dpr=1。处方在作品侧：缓存「观测到的最大 DPR（上限2）」，
  *     resize 只升不降（真机 DPR 不会因地址栏收放变 1）；勿用瞬时 dpr 直接重设画布。
+ * 22. 响应式缩放只写进窄屏媒体查询 = 矮宽桌面漏网（1005 踏雪实锤）：704 立轴等比缩放规则
+ *     原只在 @media (max-width:760px) 内；桌面端窗口矮（headless 1280×581、笔记本全屏网页）
+ *     立轴纵向溢出 123px，手机与宽桌面两个极端都绿、中间态裸奔。等比入屏类规则放媒体查询外
+ *     （对所有视口生效），媒体查询只留字号/页边等窄屏增量。排查口径：geom.top<0 或 rect 高
+ *     >visualViewport.height 即判溢出，双视口（390×844 + 1280×720）必须都过。
+ *     同批两条伴生教训：(a) canvas 触摸手势必须在 canvas 自身 touch-action:none，只设 body 不
+ *     够（命中元素值决定手势归属）；(b) headless 里 readyState 可能因阻塞式 Google Fonts <link>
+ *     长时间停在 interactive（字体网从沙箱可达性不稳，load 事件被拖 30s+），加载完成断言要接
+ *     受 interactive + 画布就位，别把「等 load」当成挂死；作品侧字体 <link> 宜加 media 交换或
+ *     系统字体兜底。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});

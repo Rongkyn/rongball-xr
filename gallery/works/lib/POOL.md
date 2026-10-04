@@ -228,3 +228,18 @@
 ### N. 手势后读镜像禁固定延时（harness 避坑#21）
 - can-he 镜像每 10 帧才刷一次（手势后立即读=旧帧，误报未响应）；fast=1 下 rainLevel 按 dt×3 快衰
   （τ≈1.4s，读太晚归 0，也误报）。正确口径：手势后 waitFor「镜像字段离开手势前值」，~1200ms 窗口轮询。
+
+## 2026-10-05 回流（绒丝/踏雪/天灯 冻结前体检 · 过程档补档）
+
+### O. D3 第 2/3 件实锤 → 已提取 `lib/canvas-backing.js`
+- floss-threads、tian-deng 两件 resize 里「当前 dpr」重设 backing，移动模拟下 backing 被降成 css×1（1005 冒烟实测 backing 390×844、应为 780×1688）。连同墨洇共 3 件 → §D+D2+D3 提取条件达成。
+- **已提取 `lib/canvas-backing.js`（selected）**：零尺寸守卫 + maxDpr 只升不降 + backing/变换同步三件套。
+- floss-threads/tian-deng 本次按最小改动直接内联修复（未引入 require/构建链，两件均为单文件 HTML）；后续接入构建或大改时换库，不为此返工。
+- 复跑冒烟：`acc1005/smoke_1005.js` 三件 × 双视口 **6/6 PASS**，零真实 JS 错误。
+
+### O2. 等比入屏规则禁囚于窄屏媒体查询（harness 避坑#22）
+- ta-xue 立轴缩放只在 `@media(max-width:760px)` 生效，矮宽桌面（1280×581）纵向溢出 123px。处方：入屏缩放放媒体查询外，媒体查询只留窄屏增量。判据固化为「geom.top≥0 且 rect 高 ≤ visualViewport.height」双视口必过。
+- 同批回流：floss canvas 本体补 touch-action（§L 同型，body 上的不算）；headless 阻塞字体 <link> 拖 load 的口径（接受 interactive+画布就位）。
+
+### O3. 过程档欠账清零
+- 绒丝/踏雪/天灯三件 process 档补齐：`process/件名/{intent,iteration-log}.md`，v1–v4 按作品 notes 回填，1005 修复记为 v5。
