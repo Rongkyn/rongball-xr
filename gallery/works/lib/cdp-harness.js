@@ -283,12 +283,19 @@ async function launch(o) {
     var pid=pt==='touch'?2:1;
     var base={bubbles:true,cancelable:true,pointerId:pid,pointerType:pt,button:0};
     if(pt==='touch'){base.width=20;base.height=20;base.pressure=0.5;base.isPrimary=true;}
+    // 1006: opts.mouse!==false 同步派 mouse 事件——早期作品(ink-particles)只监听 mousemove/mousedown，
+    //       单派 pointer 拖动静默（同 tap §15 双派逻辑）
+    var useMouse = o.mouse!==false;
     pts.forEach(function(p,i){
       var type = i===0?'pointerdown':'pointermove';
       c.dispatchEvent(new PointerEvent(type,Object.assign({},base,{clientX:r.left+p[0],clientY:r.top+p[1],buttons:1})));
+      if(useMouse) c.dispatchEvent(new MouseEvent(i===0?'mousedown':'mousemove',
+        {bubbles:true,cancelable:true,clientX:r.left+p[0],clientY:r.top+p[1],button:0,buttons:1}));
     });
     var last=pts[pts.length-1];
     c.dispatchEvent(new PointerEvent('pointerup',Object.assign({},base,{clientX:r.left+last[0],clientY:r.top+last[1],buttons:0,pressure:pt==='touch'?0:0})));
+    if(useMouse) c.dispatchEvent(new MouseEvent('mouseup',
+      {bubbles:true,cancelable:true,clientX:r.left+last[0],clientY:r.top+last[1],button:0,buttons:0}));
     return 'dragged'+pts.length+':'+pt;
   })()`);
   /** 轮询等待断言（坑#2：禁固定 sleep 断言物理）。predExpr 为 JS 表达式，真值即通过。
@@ -357,10 +364,70 @@ async function launch(o) {
    * 过滤良性噪声后的错误（避坑#9）：剔除 headless 无音频硬件告警；
    * errors 仍保留全量。作品断言用 (await s.realErrors()).length===0。
    */
-  const realErrors = async () => errors.filter(e => !/AudioContext encountered an error from the audio device|WebAudio renderer/i.test(e));
+  const realErrors = async () => errors.filter(e => !/AudioContext encountered an error from the audio device|WebAudio renderer/i.test(e)
+    && !/^(Failed to load resource: net::ERR_SOCKET_NOT_CONNECTED|ERR_INTERNET_DISCONNECTED|ERR_NAME_NOT_RESOLVED)/.test(e.trim()));
   const kill = async () => { try { chrome.kill(); } catch (e) {} };
 
-  return { send, q, shot, goto, tap, drag, waitFor, state, pixelRatio, pixels, viewport, realErrors,
+  /**
+   * 派发真实键盘按键（CDP Input 层，非合成 KeyboardEvent）。
+   * 避坑#23（1006 ink-2048 实锤）：window/document 上 dispatchEvent(new KeyboardEvent(...))
+   * 与真实按键不等价——在 window 上派发的事件不经 document 的捕获/冒泡监听
+   * （document 处于 window 的事件传播路径上但反向派发不经过它），且 isTrusted=false。
+   * 验证键盘游戏必须用本方法。opts: {code:'ArrowLeft'|'a'|'Space'|..., windowsVirtualKeyCode}
+   */
+  const key = async (code, opts = {}) => {
+    const MAP = {
+      ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40,
+      Space: 32, Enter: 13, Escape: 27, Tab: 9, Backspace: 8,
+      a: 65, d: 68, w: 87, s: 83,
+    };
+    const vk = opts.windowsVirtualKeyCode || MAP[code];
+    if (vk == null) throw new Error('key(): 未知键 ' + code + '，传 windowsVirtualKeyCode');
+    await send('Input.dispatchKeyEvent', {
+      type: 'keyDown', windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk,
+      key: code, code,
+    });
+    await send('Input.dispatchKeyEvent', {
+      type: 'keyUp', windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk,
+      key: code, code,
+    });
+  };
+
+  /**
+   * 避坑#24（1007 ink-gomoku 实锤）：mobile 模拟下禁派鼠标 Input。
+   * 条件链 = launch({mobile:true}) → Emulation.setEmitTouchEventsForMouse(mobile) → 页面 touchstart
+   *          里 e.preventDefault()。此时 Input.dispatchMouseEvent(mousePressed) 的 CDP 响应永不返回
+   *          （mouseMoved 正常返回、mousePressed 死等浏览器对触摸手势的判定结果；--headless=new
+   *          Chrome 146 实测；desktop 不开触摸模拟，mousePressed 正常）。
+   * 判别要点：卡死点恰在第一次 mousePressed；换 dispatchTouchEvent 立即返回且正常落子。
+   * 处方（已内置 trustedClick）：mobile 一律用 Input.dispatchTouchEvent(touchStart/touchEnd)，
+   *          真实触摸语义，页面 click 与 touchstart 两种监听都收得到；别在 mobile 验收里走鼠标 Input。
+   */
+
+  /**
+   * 1006: 可信点击（CDP Input 真实鼠标）。合成 MouseEvent 的 mousedown+mouseup 不产生 click
+   *       事件（Chrome 安全行为），只监听 click 的作品（ink-gomoku）用 tap() 会静默。
+   * x/y 为 CSS 像素、相对 sel 元素。返回派发前的 rect。
+   */
+  const trustedClick = async (sel, x, y) => {
+    const pos = await q(`(function(){
+      var c=document.querySelector(${JSON.stringify(sel)});
+      var r=c.getBoundingClientRect();
+      return {x:Math.round(r.left+${x}),y:Math.round(r.top+${y})};
+    })()`);
+    // 1007 避坑#24：mobile 模拟下鼠标派件会死等（见头部文档）→ 派真实 touch，click/touch 监听均收得到
+    if (o.mobile) {
+      await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: pos.x, y: pos.y }] });
+      await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    } else {
+      await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:pos.x,y:pos.y});
+      await send('Input.dispatchMouseEvent',{type:'mousePressed',x:pos.x,y:pos.y,button:'left',clickCount:1});
+      await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:pos.x,y:pos.y,button:'left',clickCount:1});
+    }
+    return pos;
+  };
+
+  return { send, q, shot, goto, tap, drag, trustedClick, waitFor, state, pixelRatio, pixels, viewport, realErrors, key,
            get errors() { return errors; }, kill, chrome, get ws() { return client; } };
 }
 

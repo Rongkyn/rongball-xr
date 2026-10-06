@@ -243,3 +243,32 @@
 
 ### O3. 过程档欠账清零
 - 绒丝/踏雪/天灯三件 process 档补齐：`process/件名/{intent,iteration-log}.md`，v1–v4 按作品 notes 回填，1005 修复记为 v5。
+
+## 2026-10-06 回流（9 件全量双档体检 · acc1006）
+
+### P. 字体加载永不阻塞渲染（加载纪律，2 件实锤）
+- `<style>` 内 `@import url(远程字体)` 在资源不可达时拖死 load：readyState 长停 loading、**内联脚本不执行**（ink-2048 空棋盘、ink-gomoku 无交互）。比 0927「拖 load 但 interactive 可用」更严重。
+- 处方：禁在 `<style>` 内 @import 远程资源；字体用 `<link media="print" onload="this.media='all'">` 非阻塞，字体栈必带本地兜底。全仓 grep 已清零阻塞 @import。
+
+### Q. 合成 mousedown+mouseup 不产生 click → click-only 作品用 trustedClick（harness 新能力）
+- Chrome 安全行为：合成 MouseEvent 不会派生出 click。只监听 click 的作品（ink-gomoku）用 tap() 静默。
+- 已回流 harness：新增 `trustedClick(sel,x,y)`（CDP Input.dispatchMouseEvent 真实鼠标三件套）。验收 click-only 交互必须用它；并多落点补击防抖动。
+
+### R. drag() 同步派 mouse 事件（harness 能力扩展）
+- ink-particles 只监听 mousemove，drag() 原只派 pointer → 拖动静默（同 tap §15 早期作品单监听坑）。
+- 已回流：`drag(sel,pts,opts)` 增加 opts.mouse（默认 true），同步派 mousedown/mousemove/mouseup；触摸验收仍显式 pointerType:'touch'。
+
+### S. §D3/canvas-backing 又 2 件实锤（mo-yun / ink-sound）
+- mo-yun resize 直取当前 dpr、ink-sound 裸乘 devicePixelRatio 无封顶+ctx.scale 累积，均在移动模拟下 backing 降糊。maxDpr 只升不降口径现已 5 件实锤（墨洇/绒丝/天灯/墨云/听声），新件直接用 `lib/canvas-backing.js`，勿再手写。
+
+### T. 大批量验收抗资源抖动（流程口径）
+- 连开 18 chrome 时 backingHealthy/交互偶发丢失。口径：bootHealthy 3 次换 profile + 交互多落点补击 + 主循环整件重跑一次；**zeroErrors 失败禁重跑**（真实代码错误不得被重跑掩盖）。
+### U. mobile 验收禁派鼠标 Input —— touchstart preventDefault 下 mousePressed 死等（harness 避坑#24）
+- 条件链：mobile 模拟（setEmitTouchEventsForMouse）+ 页面 touchstart preventDefault →
+  `Input.dispatchMouseEvent(mousePressed)` 的 CDP 响应永不返回（mouseMoved 正常）；
+  --headless=new Chrome 146 实测，desktop 无触摸模拟不受影响。
+- 判别：卡死点恰在第一次 mousePressed；换 `Input.dispatchTouchEvent` 立即返回且正常落子。
+- 处方（已内置 harness trustedClick）：mobile 验收一律走真实 touch dispatch，
+  click / touchstart 两种监听都能收到。任何新验收脚本在 mobile 档别用鼠标 Input。
+- 验收：acc1006 复跑 18/18 PASS（1007，修复后无挂死）。
+

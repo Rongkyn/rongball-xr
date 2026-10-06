@@ -1,0 +1,620 @@
+[
+  {
+    "tag": "feng-duo",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 780,
+        "h": 1688
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "left": 0,
+        "top": 0,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 2392816199,
+        "after": 3627630636
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "feng-duo",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "left": 0,
+        "top": 0,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 2739250640,
+        "after": 1830532234
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-2048",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "geom": {
+        "w": 340,
+        "h": 340,
+        "left": 25,
+        "top": 297,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "key2048": {
+        "before": "2|0",
+        "after": "3|0"
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-2048",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "geom": {
+        "w": 331,
+        "h": 331,
+        "left": 475,
+        "top": 206,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "key2048": {
+        "before": "2|0",
+        "after": "3|0"
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-gomoku",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 360,
+        "h": 360
+      },
+      "geom": {
+        "w": 360,
+        "h": 360,
+        "left": 15,
+        "top": 255,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 997015990,
+        "after": 2565625478
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-gomoku",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 374,
+        "h": 374
+      },
+      "geom": {
+        "w": 374,
+        "h": 374,
+        "left": 453,
+        "top": 124,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 3172641196,
+        "after": 634145217
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-particles",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 390,
+        "h": 844
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "left": 0,
+        "top": 0,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "drag": {
+        "before": 2090729427,
+        "after": 305036823
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-particles",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "left": 0,
+        "top": 0,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "drag": {
+        "before": 492743787,
+        "after": 2757472105
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-sound",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 780,
+        "h": 1688
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "left": 0,
+        "top": 0,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 745210666,
+        "after": 766410199
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-sound",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "left": 0,
+        "top": 0,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 3434876116,
+        "after": 148873231
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "living-landscape",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 390,
+        "h": 844
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "left": 0,
+        "top": 0,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 848954055,
+        "after": 314209372
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "living-landscape",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "left": 0,
+        "top": 0,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 3961602449,
+        "after": 2312809431
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "mo-yun",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 780,
+        "h": 1688
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "left": 0,
+        "top": 0,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 3842729807,
+        "after": 4009302827
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "mo-yun",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "left": 0,
+        "top": 0,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 3914119803,
+        "after": 1572433836
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "mountain-dwelling",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 780,
+        "h": 1688
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "left": 0,
+        "top": 0,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 1554954481,
+        "after": 1084346400
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "mountain-dwelling",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "left": 0,
+        "top": 0,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 3129725783,
+        "after": 3683128938
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "tai-hen",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 780,
+        "h": 1688
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "left": 0,
+        "top": 0,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 116068345,
+        "after": 1771261346
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "tai-hen",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "canvasInScreen": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "interactOk": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "left": 0,
+        "top": 0,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "tap": {
+        "before": 2736545105,
+        "after": 876221934
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  }
+]

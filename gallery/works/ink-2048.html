@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>水墨2048 🧶</title>
+<!-- 1006: @import 阻塞 CSS 解析，离线/弱网下 load 不触发（实测 readyState 长停 loading、内联脚本不执行、棋盘空）。改非阻塞 link，系统字体兜底，对齐 0927 加载口径 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" media="print" onload="this.media='all'">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap');
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -16,7 +17,7 @@
     align-items: center;
     justify-content: center;
     background: #f5f0e8;
-    font-family: 'ZCOOL XiaoWei', serif;
+    font-family: 'ZCOOL XiaoWei','Songti SC','STSong','SimSun',serif;
     overflow: hidden;
     position: relative;
   }
@@ -55,7 +56,7 @@
   }
 
   h1 {
-    font-family: 'Ma Shan Zheng', cursive;
+    font-family: 'Ma Shan Zheng','Kaiti SC','STKaiti','KaiTi',cursive;
     font-size: 2.8rem;
     color: #2c2c2c;
     letter-spacing: 0.15em;
@@ -88,16 +89,17 @@
   }
 
   .score-value {
-    font-family: 'Ma Shan Zheng', cursive;
+    font-family: 'Ma Shan Zheng','Kaiti SC','STKaiti','KaiTi',cursive;
     font-size: 1.8rem;
     color: #3a3a3a;
     line-height: 1.2;
   }
 
   .game-board {
+    touch-action: none;
     position: relative;
-    width: 380px;
-    height: 380px;
+    width: min(380px, calc(100vw - 24px), calc(100vh - 250px));
+    height: min(380px, calc(100vw - 24px), calc(100vh - 250px));
     background: rgba(200, 190, 170, 0.3);
     border-radius: 12px;
     padding: 10px;
@@ -135,7 +137,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 8px;
-    font-family: 'Ma Shan Zheng', cursive;
+    font-family: 'Ma Shan Zheng','Kaiti SC','STKaiti','KaiTi',cursive;
     font-weight: 400;
     transition: top 0.15s ease, left 0.15s ease;
     z-index: 2;
@@ -206,7 +208,7 @@
   }
 
   button {
-    font-family: 'ZCOOL XiaoWei', serif;
+    font-family: 'ZCOOL XiaoWei','Songti SC','STSong','SimSun',serif;
     padding: 8px 24px;
     border: 1px solid rgba(160,150,130,0.5);
     background: rgba(240,235,225,0.8);
@@ -246,7 +248,7 @@
   }
 
   .game-over-overlay h2 {
-    font-family: 'Ma Shan Zheng', cursive;
+    font-family: 'Ma Shan Zheng','Kaiti SC','STKaiti','KaiTi',cursive;
     font-size: 2.2rem;
     color: #3a3a3a;
     margin-bottom: 8px;

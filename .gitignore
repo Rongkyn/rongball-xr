@@ -63,3 +63,21 @@ _patches/
 
 # one-off debug probes (1005)
 gallery/studio/painting/acc1005/_dbg_*.js
+
+# acc1006 browser profiles (9 works x many retries, ~320MB)
+gallery/studio/painting/acc1006/dbg*/
+gallery/studio/painting/acc1006/dbg*/**
+gallery/studio/painting/acc1006/fs_*/
+gallery/studio/painting/acc1006/fs_*/**
+gallery/studio/painting/acc1006/gf*/
+gallery/studio/painting/acc1006/gf*/**
+gallery/studio/painting/acc1006/sink-*/
+gallery/studio/painting/acc1006/sink-*/**
+gallery/studio/painting/acc1006/sm1006[md]-*/
+gallery/studio/painting/acc1006/sm1006[md]-*/**
+
+# one-off debug probes (1006)
+gallery/studio/painting/acc1006/debug_*.js
+
+# one-off run logs (1007 re-runs)
+gallery/studio/painting/acc1006/run1007*.log

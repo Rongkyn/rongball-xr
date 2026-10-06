@@ -14,7 +14,7 @@ body{
   -webkit-user-select:none;
   touch-action:none;
 }
-canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;touch-action:none}
 
 /* UI overlay */
 .ui{
@@ -156,11 +156,16 @@ canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 let W, H;
+// 1006: maxDpr 只升不降（避坑#20）；原直接乘 devicePixelRatio 无上限且 resize 重放 dpr=1 会降糊
+let _maxDpr = 1;
 
 function resize() {
-  W = canvas.width = window.innerWidth * devicePixelRatio;
-  H = canvas.height = window.innerHeight * devicePixelRatio;
-  ctx.scale(1, 1);
+  var _d = Math.min(window.devicePixelRatio || 1, 2);
+  if (_d > _maxDpr) _maxDpr = _d;
+  W = canvas.width = Math.round(window.innerWidth * _maxDpr);
+  H = canvas.height = Math.round(window.innerHeight * _maxDpr);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(_maxDpr, _maxDpr);
   generateMountains();
 }
 window.addEventListener('resize', resize);
@@ -458,8 +463,8 @@ function spawnNoteVisuals(x, y, note) {
   const el = document.createElement('div');
   el.className = 'note-char';
   el.textContent = note.name;
-  el.style.left = (x / devicePixelRatio) + 'px';
-  el.style.top = (y / devicePixelRatio) + 'px';
+  el.style.left = (x / _maxDpr) + 'px';
+  el.style.top = (y / _maxDpr) + 'px';
   el.style.color = note.color;
   document.getElementById('noteDisplay').appendChild(el);
   setTimeout(() => el.remove(), 1500);
@@ -740,26 +745,26 @@ function handleInteraction(x, y) {
 }
 
 canvas.addEventListener('mousedown', (e) => {
-  handleInteraction(e.clientX * devicePixelRatio, e.clientY * devicePixelRatio);
+  handleInteraction(e.clientX * _maxDpr, e.clientY * _maxDpr);
 });
 
 canvas.addEventListener('mousemove', (e) => {
   if (e.buttons === 1) {
-    handleInteraction(e.clientX * devicePixelRatio, e.clientY * devicePixelRatio);
+    handleInteraction(e.clientX * _maxDpr, e.clientY * _maxDpr);
   }
 });
 
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
   for (let touch of e.changedTouches) {
-    handleInteraction(touch.clientX * devicePixelRatio, touch.clientY * devicePixelRatio);
+    handleInteraction(touch.clientX * _maxDpr, touch.clientY * _maxDpr);
   }
 }, { passive: false });
 
 canvas.addEventListener('touchmove', (e) => {
   e.preventDefault();
   for (let touch of e.changedTouches) {
-    handleInteraction(touch.clientX * devicePixelRatio, touch.clientY * devicePixelRatio);
+    handleInteraction(touch.clientX * _maxDpr, touch.clientY * _maxDpr);
   }
 }, { passive: false });
 

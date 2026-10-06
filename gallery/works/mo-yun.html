@@ -13,7 +13,7 @@ body{
   user-select:none;-webkit-user-select:none;touch-action:none;
   cursor:crosshair;
 }
-canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;touch-action:none}
 
 .ui{position:fixed;z-index:10;pointer-events:none}
 
@@ -123,9 +123,11 @@ const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
 
 // --- DPR & Resize ---
-let W, H, DPR;
+let W, H, DPR = 1;
 function resize(){
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  // 1006: maxDpr 只升不降（避坑#20，canvas-backing §D3）——resize 重放瞬时 dpr=1 不把 retina backing 降糊
+  var _d = Math.min(window.devicePixelRatio || 1, 2);
+  if (_d > DPR) DPR = _d;
   W = window.innerWidth;
   H = window.innerHeight;
   canvas.width = W * DPR;

@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>弈 · 水墨五子棋</title>
+<!-- 1006: 阻塞 @import 致离线 readyState 长停 loading、脚本不执行（同 ink-2048）。改非阻塞 link，本地 Noto Serif/楷体兜底 -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&display=swap" media="print" onload="this.media='all'">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 body{
   font-family:'Noto Serif SC','STKaiti','KaiTi','SimSun',serif;
@@ -27,6 +28,7 @@ h1{
   transition:color 0.3s;
 }
 canvas{
+  touch-action:none;
   border-radius:6px;
   box-shadow:0 8px 40px rgba(0,0,0,0.6),0 0 60px rgba(196,162,101,0.08);
   cursor:pointer;
