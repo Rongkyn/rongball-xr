@@ -1,0 +1,131 @@
+[
+  {
+    "tag": "mobile",
+    "view": "mobile",
+    "checks": {
+      "backingHealthy": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "gestureInks": true,
+      "hintFades": true,
+      "backingAfterResize": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 780,
+        "h": 1688,
+        "css": [
+          390,
+          844
+        ]
+      },
+      "geom": {
+        "w": 390,
+        "h": 844,
+        "vw": 390,
+        "vh": 844,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "ink": {
+        "before": 0,
+        "after": 643,
+        "delta": 643
+      },
+      "hint": {
+        "opacity": "0",
+        "display": "none"
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "desktop",
+    "view": "desktop",
+    "checks": {
+      "backingHealthy": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "gestureInks": true,
+      "hintFades": true,
+      "backingAfterResize": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1280,
+        "h": 581,
+        "css": [
+          1280,
+          581
+        ]
+      },
+      "geom": {
+        "w": 1280,
+        "h": 581,
+        "vw": 1280,
+        "vh": 581,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "ink": {
+        "before": 0,
+        "after": 443,
+        "delta": 443
+      },
+      "hint": {
+        "opacity": "0",
+        "display": "none"
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "landscape",
+    "view": "landscape",
+    "checks": {
+      "backingHealthy": true,
+      "noOverflow": true,
+      "touchActionNone": true,
+      "gestureInks": true,
+      "hintFades": true,
+      "backingAfterResize": true,
+      "zeroErrors": true
+    },
+    "detail": {
+      "backing": {
+        "w": 1688,
+        "h": 780,
+        "css": [
+          844,
+          390
+        ]
+      },
+      "geom": {
+        "w": 844,
+        "h": 390,
+        "vw": 844,
+        "vh": 390,
+        "overflowX": false,
+        "overflowY": false
+      },
+      "touchAction": "none",
+      "ink": {
+        "before": 0,
+        "after": 558,
+        "delta": 558
+      },
+      "hint": {
+        "opacity": "0",
+        "display": "none"
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  }
+]

@@ -4,8 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>弈 · 水墨五子棋</title>
-<!-- 1006: 阻塞 @import 致离线 readyState 长停 loading、脚本不执行（同 ink-2048）。改非阻塞 link，本地 Noto Serif/楷体兜底 -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&display=swap" media="print" onload="this.media='all'">
+<!-- acc1009 坑#25：media=print 实测仍长停 loading（同 ink-2048），改内联脚本
+     动态注入 link，不阻塞 DCL/主脚本，断网静默回落本地 Noto Serif/楷体栈。 -->
+<script>(function () {
+  try {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&display=swap';
+    document.head.appendChild(l);
+  } catch (e) {}
+})();</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{

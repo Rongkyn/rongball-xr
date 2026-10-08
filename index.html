@@ -5,9 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>绒球 XR 实验室 | Rongball XR Lab 🧶</title>
   <meta name="description" content="WebXR / A-Frame / 空间音频 / VR 原型探索 — 为 VR Soundscape 毕设提供快速原型验证">
+  <!-- acc1009 坑#25：@import 阻塞字体改内联脚本动态注入，不卡 DCL；断网回落本地字体栈。 -->
+  <script>(function () {
+    try {
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Ma+Shan+Zheng&display=swap';
+      document.head.appendChild(l);
+    } catch (e) {}
+  })();</script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Ma+Shan+Zheng&display=swap');
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {

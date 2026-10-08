@@ -5,9 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>绒球水墨集 · Rongball Ink Studio</title>
   <meta name="description" content="绒球水墨集——东方美学 × 程序生成的互动作品集：水墨粒子、山水间、水墨2048、弈·水墨五子棋、墨音、山居、墨园。">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;500;600;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <!-- acc1009 坑#25：阻塞字体链改内联脚本动态注入，不卡 DCL/交互；断网回落本地字体栈。 -->
+  <script>(function () {
+    try {
+      var l = document.createElement('link');
+      l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;500;600;700&family=ZCOOL+XiaoWei&display=swap';
+      document.head.appendChild(l);
+    } catch (e) {}
+  })();</script>
   <style>
     :root{
       --paper:#f3ece0;
@@ -563,6 +569,25 @@
             <span class="tag">本地持久化</span>
             <span class="tag">粒子升空</span>
             <span class="tag accent">心愿回放</span>
+          </div>
+          <span class="enter">入画 <span class="arrow">→</span></span>
+        </div>
+      </a>
+
+      <a class="card" href="works/hou.html">
+        <div class="cover" style="background:linear-gradient(180deg,#f5f0e8 0%,#e4ddd0 55%,#c9c0ae 100%)">
+          <span class="corner">2026.08.14</span>
+          <span class="glyph">候</span>
+          <span class="stamp">待</span>
+        </div>
+        <div class="body">
+          <div class="title"><h3>候 · Awaiting</h3><span class="en-title">Hou</span></div>
+          <div class="date">触碰留墨 · 静待自生</div>
+          <p>一纸素白，落墨之后并不静止：墨点缓缓呼吸、洇开、彼此牵引，在空处自行生发新痕。落笔的人与时间共同画完这张画，是「等待」本身的样子。</p>
+          <div class="tags">
+            <span class="tag">生成艺术</span>
+            <span class="tag">墨点自生长</span>
+            <span class="tag accent">指针双端</span>
           </div>
           <span class="enter">入画 <span class="arrow">→</span></span>
         </div>

@@ -5,10 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#070a18">
 <title>天灯 · 祈愿</title>
-<!-- 字体非阻塞加载：preconnect 预连 + media swap 技巧，断网时本地字体兜底，不阻塞页面 -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400&display=swap" media="print" onload="this.media='all'">
+<!-- acc1009 坑#25：preconnect + media swap 版实测仍长停 loading（Chrome 对非匹配
+     媒体样式表的 DCL 口径不稳定）。改为内联脚本动态注入 link——脚本插入的样式表
+     不是解析器阻塞资源，不延迟 DCL、不阻塞主脚本；断网时静默回落本地字体栈。 -->
+<script>(function () {
+  try {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Noto+Serif+SC:wght@300;400&display=swap';
+    document.head.appendChild(l);
+  } catch (e) {}
+})();</script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 

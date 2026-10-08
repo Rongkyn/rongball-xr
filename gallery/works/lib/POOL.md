@@ -272,3 +272,36 @@
   click / touchstart 两种监听都能收到。任何新验收脚本在 mobile 档别用鼠标 Input。
 - 验收：acc1006 复跑 18/18 PASS（1007，修复后无挂死）。
 
+## 2026-10-09 回流（候 hou 基线补齐 · 字体阻塞全仓修复 · harness drag 假阳性）
+
+### V. 外部字体唯一可靠加载法：内联脚本动态注入（§P 实锤升级，5 件实锤）
+- §P 开的处方 `<link media="print" onload="this.media='all'">` 及 ink-garden 的 `preload+rel swap`，
+  在 1009 复测**全部不合格**：当前环境（系统层 curl fonts.googleapis 200/0.15s，但 **Chrome 层
+  请求发出后无响应、无失败、永久挂起**）下，4 件 media=print/preload 件 readyState 三跑两卡、长停 loading。
+- 机制澄清：
+  - 解析器插入的样式表（`<link rel=stylesheet>`，**即使 media=print / preload**）都参与 DOMContentLoaded 延迟；
+    Chrome 对非匹配媒体样式表的 DCL 口径不稳定（headless 实测三跑两卡），不能赌。
+  - **脚本用 JS `createElement('link')+appendChild` 注入的样式表不是解析器阻塞资源**——不延迟 DCL、
+    不阻塞后续脚本，字体在后台静默加载，成功 onload 自然生效，失败/挂起则永远停留本地 serif/楷体回退栈。
+- 处方（新件/修旧件统一）：外部字体一律用 head 内联引导脚本动态注入（见 hou/ink-2048/ink-garden/
+  ink-gomoku/tian-deng 头部），字体栈必带本地兜底。**禁用**裸 link、@import、media=print、preload swap 四种旧写法。
+
+### W. Node 闭包变量泄漏进「浏览器页面模板」→ drag 假阳性 PASS（harness 坑#26，1009 高危）
+- 病根：harness `drag()` 把要在页面里执行的代码写成模板字符串，其中一行写了
+  `var useMouse = o.mouse!==false;`——`o` 是 **Node launch 闭包变量，页面上下文根本不存在**，
+  浏览器执行首行即抛 `ReferenceError: o is not defined`，**一个手势事件都没派出去**，
+  却被 q 记成 `{__evalError:'Uncaught'}` 静默吞掉。
+- 假阳性闭环：acc1006 对 ink-particles 的交互判定是「某数值 before≠after」，而该件粒子持续随机
+  自运动，drag 完全没派事件、数值本来就在变 → before≠after 成立 → 假阳性 PASS。
+  即 acc1004/1006 所有走 drag 的验收都被静默绕过，覆盖力为零。
+- 判别手法（本次定位过程）：①同一段代码用 `s.q()` 手动执行成功、`s.drag()` 必败 →
+  问题在 harness 而非页面；②最小复现逐个拆构造器/dispatch，对照「Node 侧 vs 页面侧」变量；
+  ③在页面装捕获探针确认 window/canvas 到底收没收到事件。
+- 处方（已回流 harness）：Node 侧先 `const useMouse=opts.mouse!==false` 算好，再用 `${JSON.stringify(useMouse)}`
+  序列化进模板。**铁律：模板字符串内不得出现任何 Node 作用域的裸标识符**，跨边界只走 JSON.stringify。
+- 验收铁律（防自运动假阳性）：交互判定禁只断言「数值变化」；必须证明变化由手势引起——
+  静态件用手势前后同指标差量、自运动件须取「手势区局部像素/计数器」等不受自运动污染的信号。
+
+### X. touch-action 从 body 挪到事件目标本体（§L 又 1 件实锤：候 hou）
+- hou 旧写法 touch-action:none 只挂 body；全屏画布才是手势目标。已改挂 canvas#scene 本体（§L 口径）。
+

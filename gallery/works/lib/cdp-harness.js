@@ -72,6 +72,20 @@
  *     长时间停在 interactive（字体网从沙箱可达性不稳，load 事件被拖 30s+），加载完成断言要接
  *     受 interactive + 画布就位，别把「等 load」当成挂死；作品侧字体 <link> 宜加 media 交换或
  *     系统字体兜底。
+ * 25. 阻塞式外部字体可让页面永久打不开，唯一可靠修法=内联脚本动态注入（1009 五件实锤）：
+ *     系统层 curl fonts.googleapis 返回 200/0.15s，Chrome 层请求却发出后无响应、无失败、
+ *     永久挂起（浏览器有独立网络栈/代理/证书路径，系统可达≠浏览器可达）。此时：
+ *       - 裸 <link rel=stylesheet>（解析器插入）拖住 DCL，body 主脚本最坏不执行；
+ *       - media=print onload 切 all、preload+rel swap 三跑两卡（Chrome 对非匹配媒体/预加载
+ *         样式表的 DCL 口径不稳定），都不可靠；
+ *       - 唯有内联脚本 createElement('link')+appendChild：脚本插入的样式表非解析器阻塞，
+ *         不延迟 DCL/主脚本，断网静默回落本地字体栈。详见 POOL §V。
+ * 26. Node 闭包变量泄漏进浏览器模板 → drag 静默失效 + 假阳性 PASS（1009 ink-particles 实锤）：
+ *     drag() 页面模板里写了 `var useMouse=o.mouse!==false`，o 是 Node launch 变量、页面不存在，
+ *     首行即 ReferenceError、零事件派出，却被 q 记成 {__evalError:'Uncaught'} 吞掉；
+ *     自运动作品 before≠after 照样成立 → 假阳性。铁律：模板内不得出现 Node 作用域裸标识符，
+ *     跨边界只走 JSON.stringify；交互判定须证明变化由手势引起（自运动件取局部像素/计数器）。
+ *     详见 POOL §W。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});
@@ -275,17 +289,25 @@ async function launch(o) {
    * opts.pointerType：'mouse'（默认，向后兼容）| 'touch'（pointerId=2、pointerType:'touch'、
    *                   带触摸宽高压/force）。0929 交互手感验收：触摸拖动须显式传 {pointerType:'touch'}。
    */
-  const drag = async (sel, pts, opts = {}) => q(`(function(){
+  const drag = async (sel, pts, opts = {}) => {
+    // 坑#26（1009 hou 实锤）：useMouse 必须在 Node 侧算好再序列化，
+    // 绝不能把 Node 闭包变量写进「浏览器页面上下文」的模板字符串。
+    // 旧代码行内写 var useMouse = o.mouse!==false; —— 页面里没有 o，首行即抛
+    // ReferenceError: o is not defined，整个 drag 一个事件都没派出去，却被 q 记成
+    // {__evalError:'Uncaught'} 静默吞掉；调用方若只断言「某数值发生变化」，恰好作品在
+    // 自运动（ink-particles 持续随机），before≠after 照样成立 → 假阳性 PASS。
+    const useMouse = opts.mouse !== false;
+    return q(`(function(){
     var c=document.querySelector(${JSON.stringify(sel)});
     var r=c.getBoundingClientRect();
     var pts=${JSON.stringify(pts)};
     var pt=${JSON.stringify(opts.pointerType || 'mouse')};
     var pid=pt==='touch'?2:1;
+    var useMouse=${JSON.stringify(useMouse)};
     var base={bubbles:true,cancelable:true,pointerId:pid,pointerType:pt,button:0};
     if(pt==='touch'){base.width=20;base.height=20;base.pressure=0.5;base.isPrimary=true;}
     // 1006: opts.mouse!==false 同步派 mouse 事件——早期作品(ink-particles)只监听 mousemove/mousedown，
     //       单派 pointer 拖动静默（同 tap §15 双派逻辑）
-    var useMouse = o.mouse!==false;
     pts.forEach(function(p,i){
       var type = i===0?'pointerdown':'pointermove';
       c.dispatchEvent(new PointerEvent(type,Object.assign({},base,{clientX:r.left+p[0],clientY:r.top+p[1],buttons:1})));
@@ -298,6 +320,7 @@ async function launch(o) {
       {bubbles:true,cancelable:true,clientX:r.left+last[0],clientY:r.top+last[1],button:0,buttons:0}));
     return 'dragged'+pts.length+':'+pt;
   })()`);
+  };
   /** 轮询等待断言（坑#2：禁固定 sleep 断言物理）。predExpr 为 JS 表达式，真值即通过。
    *  坑#21（冻结闸口1004·can-he 实锤）：验证「手势触发某指标」时，禁在手势后固定延时读 #state
    *       镜像——①can-he 镜像每 10 帧才刷一次，手势后立即读拿到手势前旧帧（误报未响应）；

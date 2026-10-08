@@ -1,0 +1,154 @@
+[
+  {
+    "tag": "ink-2048",
+    "view": "mobile",
+    "checks": {
+      "loadsReady": true,
+      "zeroErrors": true,
+      "interact": true
+    },
+    "detail": {
+      "grid": {
+        "before": "墨韵0至境0",
+        "after": "墨韵4至境4"
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-2048",
+    "view": "desktop",
+    "checks": {
+      "loadsReady": true,
+      "zeroErrors": true,
+      "interact": true
+    },
+    "detail": {
+      "grid": {
+        "before": "墨韵0至境4",
+        "after": "墨韵4至境4"
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-garden",
+    "view": "mobile",
+    "checks": {
+      "loadsReady": true,
+      "zeroErrors": true,
+      "interact": true
+    },
+    "detail": {
+      "canvas": {
+        "w": 390,
+        "h": 844,
+        "cw": 780,
+        "ch": 1688
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-garden",
+    "view": "desktop",
+    "checks": {
+      "loadsReady": true,
+      "zeroErrors": true,
+      "interact": true
+    },
+    "detail": {
+      "canvas": {
+        "w": 1280,
+        "h": 581,
+        "cw": 1280,
+        "ch": 581
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-gomoku",
+    "view": "mobile",
+    "checks": {
+      "loadsReady": true,
+      "zeroErrors": true,
+      "interact": true
+    },
+    "detail": {
+      "stones": {
+        "stones0": 0,
+        "stones1": 0,
+        "pos": {
+          "x": 115,
+          "y": 355
+        }
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "ink-gomoku",
+    "view": "desktop",
+    "checks": {
+      "loadsReady": true,
+      "zeroErrors": true,
+      "interact": true
+    },
+    "detail": {
+      "stones": {
+        "stones0": 0,
+        "stones1": 0,
+        "pos": {
+          "x": 553,
+          "y": 224
+        }
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "tian-deng",
+    "view": "mobile",
+    "checks": {
+      "loadsReady": true,
+      "zeroErrors": true,
+      "interact": true
+    },
+    "detail": {
+      "canvas": {
+        "w": 390,
+        "h": 844,
+        "cw": 780,
+        "ch": 1688
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  },
+  {
+    "tag": "tian-deng",
+    "view": "desktop",
+    "checks": {
+      "loadsReady": true,
+      "zeroErrors": true,
+      "interact": true
+    },
+    "detail": {
+      "canvas": {
+        "w": 1280,
+        "h": 581,
+        "cw": 1280,
+        "ch": 581
+      }
+    },
+    "realErrors": [],
+    "pass": true
+  }
+]

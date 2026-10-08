@@ -4,8 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>水墨2048 🧶</title>
-<!-- 1006: @import 阻塞 CSS 解析，离线/弱网下 load 不触发（实测 readyState 长停 loading、内联脚本不执行、棋盘空）。改非阻塞 link，系统字体兜底，对齐 0927 加载口径 -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" media="print" onload="this.media='all'">
+<!-- acc1009 坑#25：media=print 版在此环境实测仍长停 loading（Chrome 对非匹配媒体
+     样式表的 DCL 口径不稳定，三跑两卡）。改为内联脚本动态注入 link——脚本插入的
+     样式表不是解析器阻塞资源，不延迟 DCL、不阻塞主脚本；断网时静默回落本地字体栈。 -->
+<script>(function () {
+  try {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap';
+    document.head.appendChild(l);
+  } catch (e) {}
+})();</script>
 <style>
 
   * { margin: 0; padding: 0; box-sizing: border-box; }

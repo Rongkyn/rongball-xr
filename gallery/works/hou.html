@@ -4,9 +4,31 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>候 · Awaiting</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+<!-- acc1009 健壮性修复（坑#25）：外部字体彻底从「解析器插入的渲染阻塞样式表」改为
+     「内联脚本动态注入」。
+
+     病根：旧写法 <link rel="stylesheet" href="https://fonts.googleapis..."> 在 <head> 里，
+     是解析器插入的样式表。file:// 分发 + 浏览器层字体请求挂起时（断网/弱网/海外漫游/
+     国内网络限制——实测系统层 curl 200 但 Chrome 层请求无响应无失败、永久挂起），
+     样式表加载与 DOMContentLoaded 绑定，导致：
+       ① readyState 永久卡 loading；② body 末尾主脚本虽多数情况下已执行，但
+       ③ 页面生命周期不完整，最糟情况解析器提前停下、主脚本不执行，作品彻底打不开。
+     试过 media=print + onload 切 all：三跑两卡 DCL（Chrome 对非匹配媒体样式表的
+     DCL 口径不稳定），不合格。
+
+     正解（本实现）：内联引导脚本用 JS 创建 link 并 append——脚本插入的样式表不是
+     解析器阻塞资源，不延迟 DCL、不阻塞后续脚本；字体在后台静默加载，成功则 onload
+     自然生效，失败/挂起则永远停留在本地 serif/楷体回退栈，作品生命周期完全正常。
+     同源五件（hou / ink-2048 / ink-garden / ink-gomoku / tian-deng）同一修复。 -->
+<script>(function () {
+  var FONT_HREF = 'https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap';
+  try {
+    var l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = FONT_HREF;
+    document.head.appendChild(l); // 脚本插入：非解析器阻塞，不卡 DCL / 主脚本
+  } catch (e) { /* 无网/受限环境静默回落本地字体栈 */ }
+})();</script>
 <style>
   :root{
     --paper:#f5f0e8;
@@ -19,9 +41,11 @@
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{
     width:100%;height:100%;overflow:hidden;background:var(--paper);
-    -webkit-tap-highlight-color:transparent;touch-action:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;user-select:none;
   }
-  canvas#scene{display:block;position:fixed;top:0;left:0;cursor:crosshair}
+  /* acc1009 坑#25 姊妹修复：touch-action 从 body 挪到事件目标本体（§L 口径）。
+     全屏画布才是手势目标，仅挂 body 在部分移动浏览器上不能保证画布区域抑制默认滚动手势。 */
+  canvas#scene{display:block;position:fixed;top:0;left:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
   #sealCanvas{position:fixed;bottom:20px;right:26px;pointer-events:none;z-index:10}
   #titleBlock{
     position:fixed;top:22px;left:26px;z-index:10;pointer-events:none;
