@@ -81,3 +81,41 @@ gallery/studio/painting/acc1006/debug_*.js
 
 # one-off run logs (1007 re-runs)
 gallery/studio/painting/acc1006/run1007*.log
+
+# one-off debug probes / browser profiles (acc1009 leftover, 98MB)
+gallery/studio/painting/acc1009/_*.js
+gallery/studio/painting/acc1009/_*.html
+gallery/studio/painting/acc1009/dbg*.png
+gallery/studio/painting/acc1009/dbg*/
+gallery/studio/painting/acc1009/dbg*/**
+gallery/studio/painting/acc1009/exp1/
+gallery/studio/painting/acc1009/exp1/**
+gallery/studio/painting/acc1009/reg-ink-2048-d0/
+gallery/studio/painting/acc1009/reg-ink-2048-d0/**
+gallery/studio/painting/acc1009/reg-ink-2048-m*/
+gallery/studio/painting/acc1009/reg-ink-2048-m*/**
+gallery/studio/painting/acc1009/reg-ink-garden-d0/
+gallery/studio/painting/acc1009/reg-ink-garden-d0/**
+gallery/studio/painting/acc1009/reg-ink-garden-m0/
+gallery/studio/painting/acc1009/reg-ink-garden-m0/**
+gallery/studio/painting/acc1009/reg-ink-gomoku-d0/
+gallery/studio/painting/acc1009/reg-ink-gomoku-d0/**
+gallery/studio/painting/acc1009/reg-ink-gomoku-m0/
+gallery/studio/painting/acc1009/reg-ink-gomoku-m0/**
+gallery/studio/painting/acc1009/reg-tian-deng-d0/
+gallery/studio/painting/acc1009/reg-tian-deng-d0/**
+gallery/studio/painting/acc1009/reg-tian-deng-m*/
+gallery/studio/painting/acc1009/reg-tian-deng-m*/**
+gallery/studio/painting/acc1009/rep*/
+gallery/studio/painting/acc1009/rep*/**
+
+# one-off debug probes (acc1010)
+gallery/studio/painting/acc1010/_dbg_*.js
+gallery/studio/painting/acc1010/dbg_st
+gallery/studio/painting/acc1010/dbg_st/**
+gallery/studio/painting/acc1010/dbg_stroke.png
+
+# gallery local check scratch
+gallery/_chk_gallery.js
+gallery/gallery-chk.png
+gallery/gallery-chk/

@@ -422,7 +422,7 @@ inkCv.addEventListener('pointerdown', e=>{
   e.preventDefault();
   drawing=true; try{ inkCv.setPointerCapture(e.pointerId); }catch(_){} 
   const [gx,gy]=toGrid(e);
-  drop(gx,gy,14,3.6,1.6); dropCount++;
+  drop(gx,gy,6,3.2,1.5); dropCount++;   // v1009 修尺度：点落半径 14→6 格（初始墨点 ~38px，洇开 ~90px，原是霸屏大墨坨）
   lastP=[gx,gy]; revive();
 });
 inkCv.addEventListener('pointermove', e=>{
@@ -432,7 +432,7 @@ inkCv.addEventListener('pointermove', e=>{
   const dist=Math.hypot(dx,dy);
   const n=Math.max(1,Math.floor(dist/2.2));
   for(let k=1;k<=n;k++){
-    drop(lastP[0]+dx*k/n, lastP[1]+dy*k/n, 6.5, 2.0, 1.0);
+    drop(lastP[0]+dx*k/n, lastP[1]+dy*k/n, 3, 1.6, 0.9);   // v1009 修尺度：行笔半径 6.5→3 格（笔迹 ~20px 洇开 ~35px，原像拖把不像笔）
   }
   lastP=[gx,gy]; revive();
 });
@@ -472,7 +472,7 @@ document.addEventListener('visibilitychange', ()=>{
 });
 
 /* ---------- 开场一滴（fast 模式立即落，不等 700ms） ---------- */
-function openingDrop(){ drop(N*0.5, N*0.45, 16, 4.5, 1.8); dropCount++; revive(); }
+function openingDrop(){ drop(N*0.5, N*0.45, 8, 4.0, 1.7); dropCount++; revive(); }   // v1009 修尺度：开场一滴 16→8 格，保留仪式感不霸屏
 if(FAST){ openingDrop(); } else { setTimeout(openingDrop, 700); }
 kick();
 </script>
