@@ -97,6 +97,19 @@
  *     （镜像延迟）同源，都是合成手势 vs 异步帧的竞态，方向相反（#21 读太早拿旧值，#27 读
  *     太晚东西已消失）。另：度量脚本自身的笔误（minY 误赋成 xx）会造出永远为 0 的假失败，
  *     新写的像素探针先在已知非空场景验一次探针本身。
+ * 28. 饱和背景上的「相对增量像素」口径与全量连跑抖动 = 两类假 FAIL（1012 冻结闸口实锤，均脚本侧）：
+ *     (a) 饱和背景：墨园宣纸初始 alpha>25 像素≈整画布（实测 mobile=390*844、desktop=1280*721
+ *         全满），单株植物墨增量远不足 +15%，「手势后像素相对增>15%」在 mobile 恒假 FAIL，
+ *         desktop 批跑 PASS 反属侥幸。判别铁律：先看手势前像素计数是否已≈总像素；饱和则换
+ *         作品自带的权威状态钩子（墨园 window.__inkDebug().plants.length，实测 tap 后 +1~+3、
+ *         0 realErrors），不要在饱和背景上用相对增量。
+ *     (b) 全量连跑抖动：作品在 pointerdown 瞬间即 +0.9（雨）、单跑/小件 mini 批 100% 响应，
+ *         但 16 件串行全量在累积 chrome 启停负载下，固定 1200ms 单次 waitFor 稳定落在某一件
+ *         mobile 上假 FAIL（峰值采样全 0，事件 pd/pm/pu 却全送达）。处方：手势后改为
+ *         「2.4s 每150ms 连续采样取峰值；未达标则等指标回基线后重拖，最多3次」，只改脚本
+ *         鲁棒性、不碰作品本体。另：returnByValue 无法序列化函数，typeof window.__hook
+ *         经 CDP 回传恒 undefined——判断钩子是否存在要在页内 eval 成数字/布尔再取
+ *         （typeof window.__hook==='function' ? 1 : 0），不能在 Node 侧 typeof s.q(...)。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});

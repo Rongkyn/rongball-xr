@@ -21,6 +21,7 @@
 | `selected` | 已选用：被某作品接入使用 |
 | `validated` | 已验证：≥2 件作品在用，有运行证据（即已 dogfood） |
 | `deprecated` | 弃用：已被替代，保留供考古 |
+| `extracted-unused` | 已提取入库但 0 作品真 `<script src>` 引用（仅注释/内联），待新件 dogfood 转正 |
 
 ## 入池标准（每条必须满足）
 
@@ -55,6 +56,7 @@
 |------|------|------|------|
 | `audio-lib.js` | Web Audio 声音资产：KS 古琴拨弦、加法铃音、master 总线出声口 | `validated`（真 import 4 件：听墨/残荷/芦花/风铎；另有桂雨/月波/秋虫 3 件内联同源代码未改 import，按 dogfood 证据补记；0930 体检复核） | `README.md` |
 | `resize-debounce.js` | 窗口 resize 防抖 + 构造即自动首次尺寸化 | `validated`（真 script 引用 6 件：墨园/桂雨/月波/秋虫/芦花/墨洇，0927 双端 42/42；0930 复核 L3 采用注释齐全） | 模块头文档 |
+| `canvas-backing.js` | backing 三件套：零尺寸守卫 + maxDpr 只升不降 + backing/变换同步（§D/D2/D3） | `extracted-unused`（1012 账实校正：全 24 件 html 无一处真 script src，5 件实锤均内联/注释，待新件真引转正） | 模块头文档 |
 | `cdp-harness.js` | CDP 交互验收 harness（建连/goto/tap/drag/像素/错误） | `validated`（全部作品验收在用；0927 错误带 `[file:line]` 详情） | 模块头文档 |
 | `ui-floating-stack.css` | 底部浮层栈：hint 操作提示 + 角落印章 seal 的版式与分层（窄屏/矮视口响应式） | `validated`（桂雨/月波 2 件接入，0928 双端 56/56；0930 补 L3 采用注释） | 模块头文档 |
 
@@ -231,9 +233,10 @@
 
 ## 2026-10-05 回流（绒丝/踏雪/天灯 冻结前体检 · 过程档补档）
 
-### O. D3 第 2/3 件实锤 → 已提取 `lib/canvas-backing.js`
+### O. D3 第 2/3 件实锤 → 已提取 `lib/canvas-backing.js`（**1012 账实校正：0 真引用，extracted-unused**）
 - floss-threads、tian-deng 两件 resize 里「当前 dpr」重设 backing，移动模拟下 backing 被降成 css×1（1005 冒烟实测 backing 390×844、应为 780×1688）。连同墨洇共 3 件 → §D+D2+D3 提取条件达成。
-- **已提取 `lib/canvas-backing.js`（selected）**：零尺寸守卫 + maxDpr 只升不降 + backing/变换同步三件套。
+- **已提取 `lib/canvas-backing.js`（1012 由 selected 校正为 extracted-unused）**：零尺寸守卫 + maxDpr 只升不降 + backing/变换同步三件套。
+- **1012 账实核对**：全 24 件 html 无一处 `<script src=.../canvas-backing.js>` 真引用（mo-yun 仅注释提及，tian-deng/floss-threads 最小内联），原标 selected 不符 dogfood 门槛；库文件保留，待新件真引转正。
 - floss-threads/tian-deng 本次按最小改动直接内联修复（未引入 require/构建链，两件均为单文件 HTML）；后续接入构建或大改时换库，不为此返工。
 - 复跑冒烟：`acc1005/smoke_1005.js` 三件 × 双视口 **6/6 PASS**，零真实 JS 错误。
 
@@ -259,7 +262,7 @@
 - 已回流：`drag(sel,pts,opts)` 增加 opts.mouse（默认 true），同步派 mousedown/mousemove/mouseup；触摸验收仍显式 pointerType:'touch'。
 
 ### S. §D3/canvas-backing 又 2 件实锤（mo-yun / ink-sound）
-- mo-yun resize 直取当前 dpr、ink-sound 裸乘 devicePixelRatio 无封顶+ctx.scale 累积，均在移动模拟下 backing 降糊。maxDpr 只升不降口径现已 5 件实锤（墨洇/绒丝/天灯/墨云/听声），新件直接用 `lib/canvas-backing.js`，勿再手写。
+- mo-yun resize 直取当前 dpr、ink-sound 裸乘 devicePixelRatio 无封顶+ctx.scale 累积，均在移动模拟下 backing 降糊。maxDpr 只升不降口径现已 5 件实锤（墨洇/绒丝/天灯/墨云/听声；均内联修复，未真引库）。**新件必须 `<script src>` 真引 `lib/canvas-backing.js`**（勿再手写、勿只在注释提及——1012 已发现库被提取后 0 真引用，需在新件 dogfood 转正）。
 
 ### T. 大批量验收抗资源抖动（流程口径）
 - 连开 18 chrome 时 backingHealthy/交互偶发丢失。口径：bootHealthy 3 次换 profile + 交互多落点补击 + 主循环整件重跑一次；**zeroErrors 失败禁重跑**（真实代码错误不得被重跑掩盖）。
@@ -326,3 +329,14 @@
 - 审计脚本按「第二场景才提取」暂留 acc1010；下次周日例行（10-18）连续复跑后评估提取入 lib。
 
 
+## 2026-10-12 回流（acc1012 冻结闸口回归 · 脚本假 FAIL 口径修复 · canvas-backing 账实校正）
+
+### AA. 代表作冻结闸口 16/16（acc1012/freeze_gate_1012.js，8 件×双档）
+- 背景：1004 首次冻结闸口后，1005–1011 累积改动墨园字体/墨洇尺度/天灯等，闸口未整体重跑；1012 重跑暴露 2 处 mobile 假 FAIL，实证均为脚本口径、作品本体零缺陷。
+- 假 FAIL 一（墨园·饱和背景相对增量）：旧口径「墨色 alpha>25 像素手势后相对增>15%」，饱和宣纸初始计数≈整画布（mobile=390×844、desktop=1280×721 全满），单株增量永不足 15%，mobile 恒假 FAIL、desktop 批跑 PASS 属侥幸。改用作品权威钩子 `window.__inkDebug().plants.length`（tap 后 mobile 3→5、desktop 3→4，0 realErrors）。
+- 假 FAIL 二（残荷·全量连跑抖动）：rain 在 pointerdown 瞬间 +0.9，单跑 3/3、mini 4/4 事件 pd/pm/pu 全送达；但 16 件串行全量在累积 chrome 启停负载下固定 1200ms waitFor 稳定落残荷 mobile 假 FAIL（峰值采样全 0）。改为「拖动后 2.4s 每 150ms 采峰值；未达标等回基线重拖最多 3 次」，仅增脚本鲁棒性不碰作品。
+- 连续两轮全量 16/16 PASS。新坑已回流 cdp-harness 头部避坑#28（含 returnByValue 不能序列化函数：typeof window.__hook 须在页内 eval 成数字再取，Node 侧 typeof s.q(...) 恒 undefined）。
+
+### AB. canvas-backing.js 账实校正：selected → extracted-unused
+- 全 24 件 html 扫描：无一处 `<script src=.../canvas-backing.js>` 真引用，5 件 backing 实锤（墨洇/绒丝/天灯/墨云/听声）全部内联修复，mo-yun 仅注释提及。原 selected/validated 标记账实不符。
+- 处置：库文件保留不删；状态词汇表新增 `extracted-unused`；L1 总账补登该行；§O/§S 改为「新件必须真 script src 引库 dogfood 转正」。
