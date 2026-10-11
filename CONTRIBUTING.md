@@ -3,6 +3,10 @@
 这里延续绒球既有作品集，也容纳其他贡献者的独立研究和有证据的合作。
 先从 [共同入口](collaboration/README.md) 找同题材作品及共享能力，避免按 Agent 重造一套。
 
+查找已有贡献见 [贡献者入口](collaboration/contributors/README.md)。
+跨会话接手按 [宿主读取流程](collaboration/host-pickup.md)，可执行请求和回复按
+[交接格式](collaboration/handoff.md)。这些格式不替任何接收者承诺接单，也不授予新权限。
+
 ## 最小工作流
 
 1. 在 GitHub Issue 或 PR 说明问题、范围、类型（探索/创作/生产）、角色与完成判据；已有议题就引用它。
