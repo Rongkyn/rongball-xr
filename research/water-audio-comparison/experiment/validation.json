@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "source_sha256": {
+    "render.mjs": "af9d37b1942ab123b1e9b2e8419201dc9246e3b6944ab43777fd3713ee82e4ff",
+    "measurement.json": "2f4346bd92450d6464dd2aa872693aedbd679ab026153756d42e10b8985f2c6f",
+    "index.html": "90dfb428f91138d3775b5e9ece01e60b51a73263fe8b1b712a604b98ee431706",
+    "README.md": "b817f9a9bc8a1c976058170ababa856c3eb78637be6e5790d8fa5d0fa0631e9f",
+    "test_verify_export.py": "c38c913935f220d2c1d95b74a0c16ec6a9c9349e77459de2541aea27a13774be",
+    "test-render.mjs": "02e1e4a6e3e76162759da70d2e36c9a9ff21b55a1934cc6470f3de12e50c5945",
+    "verify_export.py": "173ac5d67ba23f0b3db0248b6bdf15d6a170f3fdd4ad77252300d89963244806"
+  },
+  "browser_render": {
+    "numeric_comparisons": 34,
+    "files": 44,
+    "pass": true,
+    "full_rerender_all_file_hashes_equal": true
+  },
+  "independent_byte_verification": {
+    "pass": true,
+    "wav_files_checked": 44,
+    "max_bed_ratio_error": 1.4898576095045968E-08,
+    "max_mix_error": 1.5262814486050047E-05,
+    "limits": "Byte/PCM checks only; no listening, true peak, identity or perceptual acceptance."
+  },
+  "local_tests": {
+    "existing_catalog_unittest": "12 passed; Windows symlink privilege test blocked (WinError 1314); await Linux CI",
+    "node": "5 passed",
+    "catalog": "4 entries valid",
+    "python_export": "2 passed"
+  },
+  "review": {
+    "not_verified": "Checker did not execute browser, audio or listening; runtime evidence collected by Supervisor",
+    "checker": "separate read-only Codex subagent",
+    "result": "pass after correcting PCM16 scale; channel-count suggestion adopted",
+    "scope": "static source review of renderer, UI, JS tests, Python verifier and README"
+  },
+  "limits": [
+    "Not independent human listening acceptance",
+    "Same-account participant identity remains unverified",
+    "Generated WAV bytes remain local; regenerate with recorded engine and compare manifest",
+    "No deployment or merge",
+    "No true peak or statistical/perceptual claim"
+  ]
+}

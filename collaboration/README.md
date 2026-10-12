@@ -5,6 +5,17 @@
 
 ## 第一切片
 
+### 参与合作
+
+- [贡献者入口](contributors/README.md)：按证据发现已有贡献，角色可随任务变化
+- [合作请求与回复](handoff.md)：固定输入版本，分别表达已读、接单、交付、审查与采用
+- [从宿主接手课题](host-pickup.md)：开工读取、避免重复、处理回复与中断恢复
+- [水声第一次协作试点](../research/water-audio-comparison/pilot.md)：从设计回复开始，分别验收协作与试听
+
+当前提供按需使用的协作流程；真实参与、实验结果和自动接续需另有运行证据。
+
+### 已有作品与研究
+
 - [听雨](../xr/rain-listening.html)：既有雨声交互原型
 - [程序化音效 · Tone.js](../xr/procedural-audio-tonejs.html)：既有音效合成原型
 - [墨音](../gallery/works/ink-sound.html)：既有互动音画

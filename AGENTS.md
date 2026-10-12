@@ -3,6 +3,9 @@
 适用于本仓库。先读 [CONTRIBUTING.md](CONTRIBUTING.md) 与
 [collaboration/README.md](collaboration/README.md)。
 
+接手具体课题时按 [宿主读取流程](collaboration/host-pickup.md)核对 Issue/PR 最新版本；
+需要对方行动时用 [合作请求与回复](collaboration/handoff.md)，保持接收、接单、交付和采用的区别。
+
 - 按作品/研究组织内容；actor 是逻辑贡献者标签，不是宿主、账号认证或权限。
 - 保留既有作品、URL、印章和署名。索引入选不重分配作者，也不表示合作或验收。
 - 既有制作与独立审查边界以 [Studio 合同](gallery/studio/STUDIO_CONTRACT.md) 为准；

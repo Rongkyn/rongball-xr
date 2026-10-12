@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "audio_revision": "a81294ba710614dbf354b01196f127b0f7dfaadf",
+  "source_sha256": {
+    "prepare_listening.py": "5fe583267a13af102d7c244024bde4ec2d461da9a842537465cdfaff9c953b84",
+    "test_prepare_listening.py": "51448e39550fca3f57cad6ab4a790262c1262ea7d624e4da43609625215c3788",
+    "README.md": "7e437b1d90d3d6ee84013a4a0e4e9d9432ac55d20194cbbf2615554ee6470235"
+  },
+  "local_tests": {
+    "python": {
+      "passed": 5,
+      "scope": "3 packaging tests plus 2 WAV verifier tests"
+    }
+  },
+  "package_audit": {
+    "pass": true,
+    "groups": [
+      {
+        "zip": "listen-01.zip",
+        "files": 15,
+        "audio_hashes_verified": 12,
+        "answer_rows_blank": 12,
+        "size_bytes": 20305877,
+        "sha256": "066db64bba55ab76af58181fa760d0df3873af03a21edac857ed8fb6b8eaa62c"
+      },
+      {
+        "zip": "listen-02.zip",
+        "files": 15,
+        "audio_hashes_verified": 12,
+        "answer_rows_blank": 12,
+        "size_bytes": 20305877,
+        "sha256": "95b2a2a316a8724d71db27d233939bbb705f8c8f99c5f782437bc18d5202fb74"
+      }
+    ]
+  },
+  "checks": [
+    "Both group sequences match pilot; 12 clips in each group",
+    "All 44 input WAV files reverified before packaging",
+    "Both ZIPs independently opened; exact 15-file allowlist each",
+    "Each of 24 packaged WAV copies matches the pinned source hash",
+    "All answer fields in both CSV files are blank",
+    "No condition key, event table or source filenames included in either listener ZIP"
+  ],
+  "browser": {
+    "scope": "Local loopback HTTP, 2 pages and 24 audio metadata assertions",
+    "result": "passed assertion script without errors",
+    "duration_seconds": 10,
+    "audio_started": false,
+    "file_url": "Blocked by Playwright CLI; direct file-open behavior not verified"
+  },
+  "review": {
+    "result": "read-only static review pass; Chinese rating-label suggestion adopted",
+    "reviewer": "separate Codex subagent; not the external recipient",
+    "limits": "Did not execute tests, inspect generated ZIPs or hear audio"
+  },
+  "limits": [
+    "No real listener assigned or responses received",
+    "Numbered conditions do not guarantee complete blinding",
+    "ZIP hashes identify this local build; ZIP timestamps may differ on regeneration",
+    "Audio and ZIPs remain local; no deployment or merge",
+    "No perceptual or independent human acceptance"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "audio_revision": "a81294ba710614dbf354b01196f127b0f7dfaadf",
+  "previous_package_revision": "265f57b61f45e018873bfd317ba15e4a156d52ed",
+  "source_sha256": {
+    "listener-form.js": "6eae71c7c298f1edaa3121cb84d96d5324b34b90cdd7f1a0403be50c00ab05b8",
+    "test-listener-form.cjs": "23071453d6b011be3f48180be3228039f23dcfbf5d6032addc29f30239c633bd",
+    "prepare_listening.py": "0ff19bcbe6033873daaf024fb3d6074c7ade5dfd7c5f45d929b31c5a1310032e",
+    "test_prepare_listening.py": "c414a266ecd3ab95864ef63f977ffb4f03a4f14c912262eef7ed515fd568e604",
+    "README.md": "8244ef60ae13288cb29d7e8015727453fc4f212a8ee011917e299b45a1348ec5"
+  },
+  "packages": [
+    {
+      "zip": "listen-01.zip",
+      "files": 16,
+      "wav_hashes_verified": 12,
+      "sha256": "0829a9d83fec4e2c381c578d3d506a9cf70a79071c6cd773695606acb36918bf"
+    },
+    {
+      "zip": "listen-02.zip",
+      "files": 16,
+      "wav_hashes_verified": 12,
+      "sha256": "fc988c7150f9e8577e1d53b9d877b3ee7e12d733e1ee93bcf2c65c2f53398ecf"
+    }
+  ],
+  "local_tests": {
+    "form_node": 3,
+    "python": 5,
+    "catalog": "4 valid; Windows 12/13 tests pass, symlink privilege blocked; Linux CI required"
+  },
+  "browser": {
+    "transport": "loopback HTTP",
+    "synthetic_QA_only": true,
+    "actual_JSON_downloads_verified": 2,
+    "verified": [
+      "All 12 answer rows and session fields initially blank",
+      "Count zero preserved as zero string, blank remains empty",
+      "Uncertain plus nonempty count rejected without download",
+      "Corrected partial response exported and JSON bytes read independently",
+      "Chinese notes and punctuation preserved",
+      "beforeunload reminder observed after input and export",
+      "Other group starts with all answers blank",
+      "12 audio elements in other group have 10 second duration and remain paused"
+    ],
+    "file_URL": "not tested; prior CLI blocks file URL"
+  },
+  "review": {
+    "result": "pass",
+    "scope": "separate read-only Codex static review of five source files",
+    "not_external_recipient": true,
+    "not_human_listening": true
+  },
+  "limits": [
+    "No real listening, participant assignment or acceptance",
+    "No upload, deployment or merge",
+    "No autosave; user must confirm JSON download before closing",
+    "Playback fields are user reports, not proofs of attention or completion",
+    "Only selected contradictions validated; play_count=0 and played_completely=yes not cross-checked",
+    "QA downloads are isolated outside listener packages, not research observations"
+  ]
+}
