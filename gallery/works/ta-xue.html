@@ -407,15 +407,41 @@ document.getElementById("snd").addEventListener("click", e=>{
 
 /* ---------- 交互 ---------- */
 let wind = 0.6;
-/* 立轴缩放入屏：按视口宽/高可用空间算等比系数（704 画 + header/footer 余量） */
+/* 立轴缩放入屏（1013 修两处）：
+   ①旧法在 390×844 被高度系数 0.746 卡住，画布 525px 横向溢出 135px → 竖屏宽度优先。
+   ②含 704px 固定内容时，headless/部分移动 webview 把 layout viewport 撑宽，
+     window.innerWidth 读到被撑开的伪值（390 机实测 547）→ 以 visualViewport/
+     documentElement.clientWidth 真实可视宽为准。 */
+function viewW(){
+  const vv = window.visualViewport && window.visualViewport.width;
+  const cw = document.documentElement.clientWidth;
+  return vv ? Math.min(vv, cw || vv) : (cw || window.innerWidth);
+}
+function viewH(){
+  const vv = window.visualViewport && window.visualViewport.height;
+  const ch = document.documentElement.clientHeight;
+  return vv ? Math.min(vv, ch || vv) : (ch || window.innerHeight);
+}
 function fitAxis(){
-  const availW = Math.min(window.innerWidth*0.96, 704);
-  const availH = window.innerHeight - 110;  // header/footer 约 110px
-  const k = Math.min(availW/704, availH/704, 1);
+  const vw = viewW(), vh = viewH();
+  const availW = Math.min(vw*0.96, 704);
+  // 实测 chrome 占用（header + footer + margin），拿不到再回退经验值
+  const hdr = document.querySelector('header');
+  const ftr = document.querySelector('footer');
+  const reserve = (hdr ? hdr.getBoundingClientRect().height + 14 : 0)
+                + (ftr ? ftr.getBoundingClientRect().height + 12 : 0)
+                || 110;
+  const availH = vh - reserve;
+  const kW = availW/704;
+  const kH = availH/704;
+  // 竖屏窄机：宽度是硬边界，优先入宽（纵向可随页面滚动）；横屏矮窗才让高度约束生效
+  const portrait = vh >= vw;
+  const k = portrait ? Math.min(kW, 1) : Math.min(kW, kH, 1);
   document.documentElement.style.setProperty('--ax', k.toFixed(4));
 }
 fitAxis();
 window.addEventListener('resize', fitAxis);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitAxis);
 document.getElementById("wind").addEventListener("input", e=>{ wind = parseFloat(e.target.value); });
 cv.addEventListener("pointermove", e=>{
   // 鼠标轻推：横向位置微调瞬时风

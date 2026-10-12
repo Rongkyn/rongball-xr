@@ -110,6 +110,14 @@
  *         鲁棒性、不碰作品本体。另：returnByValue 无法序列化函数，typeof window.__hook
  *         经 CDP 回传恒 undefined——判断钩子是否存在要在页内 eval 成数字/布尔再取
  *         （typeof window.__hook==='function' ? 1 : 0），不能在 Node 侧 typeof s.q(...)。
+ * 29. drag(pointerType:'touch') 不派 TouchEvent = 只听 touch 的作品被假阴性误判（1013 ink-sound 实锤）：
+ *     drag() 只 dispatchEvent(PointerEvent)+(可选)MouseEvent，全程没有 TouchEvent。作品若只挂
+ *     touchstart/touchmove（ink-sound），mobile 用 drag() 拖动零响应，实测帧级 arc 计数恒等于
+ *     静默基线（42→42），误判作品坏；换 CDP 真触摸 touchStart/touchMove/touchEnd 后 gesPeak
+ *     冲到 9131，作品本健康。处方：mobile 验收「触摸拖动」一律用 s.touchDrag(sel, pts)（真实
+ *     Input.dispatchTouchEvent 序列），不要用 drag({pointerType:'touch'})。判别流程：drag 零
+ *     响应先换 touchDrag 复跑；touchDrag 仍零响应才是作品真缺 touch 监听（1013 ink-particles
+ *     实锤：只挂 canvas mousemove/click，补 touchstart/touchmove/touchend 后修复）。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});
@@ -474,7 +482,34 @@ async function launch(o) {
     return pos;
   };
 
-  return { send, q, shot, goto, tap, drag, trustedClick, waitFor, state, pixelRatio, pixels, viewport, realErrors, key,
+  /**
+   * 可信触摸拖动（CDP Input 真实触摸序列）。避坑#29（1013 ink-sound 实锤）：
+   *   drag(pointerType:'touch') 派的是合成 PointerEvent + MouseEvent，从不派 TouchEvent；
+   *   只监听 touchstart/touchmove 的作品（ink-sound）收不到任何事件 → 交互被误判 FAIL（假阴性）。
+   *   真机手指拖动用本方法：Input.dispatchTouchEvent(touchStart→touchMove×N→touchEnd)，
+   *   页面 touch 监听真实触发。仅 mobile 模拟下使用；pts 为相对 sel 元素 CSS 像素点列。
+   * opts.stepMs：每个 touchMove 间隔（默认 26ms，≈2.5 帧，让作品逐帧生成粒子/笔记）。
+   * 判据：若某作品 mobile 用 drag() 拖动「零响应」而 desktop 正常，先别判作品坏——换成
+   *   touchDrag() 复跑；touchDrag 下仍零响应才是作品真缺 touch 监听（1013 ink-particles 实锤）。
+   */
+  const touchDrag = async (sel, pts, opts = {}) => {
+    const stepMs = opts.stepMs == null ? 26 : opts.stepMs;
+    const r = await q(`(function(){
+      var b=document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect();
+      return{x:b.left,y:b.top};
+    })()`);
+    const P = pts.map(p => ({ x: Math.round(r.x + p[0]), y: Math.round(r.y + p[1]) }));
+    await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [P[0]] });
+    for (let i = 1; i < P.length; i++) {
+      await waitMs(stepMs);
+      await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [P[i]] });
+    }
+    await waitMs(stepMs);
+    await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    return 'touchDragged' + P.length;
+  };
+
+  return { send, q, shot, goto, tap, drag, touchDrag, trustedClick, waitFor, state, pixelRatio, pixels, viewport, realErrors, key,
            get errors() { return errors; }, kill, chrome, get ws() { return client; } };
 }
 

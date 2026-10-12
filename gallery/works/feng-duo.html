@@ -42,8 +42,14 @@ const cv = document.getElementById('cv');
 const ctx2d = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1;
 
+// 避坑#20（1013 复核实锤）：移动模拟/真机地址栏收放会补发一次瞬时 devicePixelRatio=1
+// 的 resize，直接用「当前 dpr」重设 backing 会把 retina 画布降级成 css×1（画面发糊）。
+// 缓存观测到的最大 DPR（上限 2），backing 只升不降；真机物理 DPR 不会回落。
+let maxDPR = Math.min(window.devicePixelRatio || 1, 2);
 function resize() {
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const curDPR = Math.min(window.devicePixelRatio || 1, 2);
+  if (curDPR > maxDPR) maxDPR = curDPR;
+  DPR = maxDPR;
   W = window.innerWidth; H = window.innerHeight;
   cv.width = W * DPR; cv.height = H * DPR;
   cv.style.width = W + 'px'; cv.style.height = H + 'px';

@@ -340,3 +340,43 @@
 ### AB. canvas-backing.js 账实校正：selected → extracted-unused
 - 全 24 件 html 扫描：无一处 `<script src=.../canvas-backing.js>` 真引用，5 件 backing 实锤（墨洇/绒丝/天灯/墨云/听声）全部内联修复，mo-yun 仅注释提及。原 selected/validated 标记账实不符。
 - 处置：库文件保留不删；状态词汇表新增 `extracted-unused`；L1 总账补登该行；§O/§S 改为「新件必须真 script src 引库 dogfood 转正」。
+
+
+## 2026-10-13 回流（acc1013 余量12件真触摸回归 · harness touchDrag 新原语 · 3 处作品真缺陷修复）
+
+### AC. 修复后 harness 对「从未在修好 harness 下验过真触摸」的 12 件回归（24/24 PASS）
+- 背景：避坑#26（drag 零事件假阳性）1009 才修，但修复后只用修好的 drag 重验过 1012 的 8 件代表作；
+  1005/1006 批次 12 件（绒丝/踏雪/天灯/2048/五子棋/水墨粒子/听声/山景/墨云/山居/苔痕/绒线）的历史
+  PASS 都在「drag 实际不派事件或不派 TouchEvent」的旧 harness 下得出，靠拖动手势者存在被自运动/宽松
+  断言放过的风险。本次用修复后 harness 统一回归，断言锚定各件权威钩子（JSON #state / __debug /
+  落子数 / 帧级绘制计数），不看像素自运动。
+- 实锤 3 处作品真缺陷（见 AD/AE/AF），外加 1 处 harness 能力缺口（见 AG）；tian-deng desktop
+  首个 FAIL 是脚本点错位置（点天空而非地面灯），探针证实作品健康，属脚本口径，已改走真实放飞链路。
+
+### AD. ink-particles 移动端主交互完全失效 → 补 touch 监听（真缺陷）
+- 现象：hint 承诺「移动鼠标即可绘制水墨轨迹」，但 canvas 只挂 mousemove/click，移动端真触摸拖动
+  无任何 touch/pointermove 监听 → 拖动画墨在手机上零响应（真触摸 touchDrag 实测帧 arc 恒 0）。
+- 修复：抽出 emitTrail（按上一触点→当前触点距离发射粒子）/emitBurst（晕染+30 粒爆发）两个共用函数，
+  mousemove/click 与 touchstart/touchmove/touchend/touchcancel 共用；短按=晕染（等价 click，
+  touch-action:none 下触摸不派合成 click，故 touchend 判未移动才 burst，拖动结束不重复爆发）。
+
+### AE. ta-xue（踏雪寻梅）窄机立轴横向溢出 135px → fitAxis 两处修（真缺陷）
+- 现象一：旧 fitAxis 用 `min(innerW,innerH-110)` 算等比，390×844 被高度系数 0.746 卡住，画布仍
+  525px、横向溢出 135px（rect.left=-68）。竖屏改为宽度优先（纵向可滚动），高度约束只在横屏矮窗生效。
+- 现象二（headless 移动模拟特有、真机同样可能踩的坑）：含 704px 固定宽内容时，layout viewport 被
+  撑宽，window.innerWidth 在 390 机上读到 547（伪值，visualViewport.width 与
+  documentElement.clientWidth 才是真实 390）。改为以 visualViewport（兜底 clientWidth）为准，
+  并订阅 visualViewport.resize。修复后 390×844 k=0.5318（画 374px 居中）、1280×581 k=0.695（489px）双入屏。
+
+### AF. feng-duo（风铃）retina backing 被 resize 降级（坑#20 同类复发，真缺陷）
+- 现象：mobile 下 backing 被设成 390×844（应 780×1688 dpr2）。setDeviceMetricsOverride 后 Chrome
+  补发一次瞬时 devicePixelRatio=1 的 resize，旧 resize 直接用「当前 dpr」重设 backing，把 retina
+  画布降成 css×1（高 DPR 屏发糊）。按坑#20 处方修：缓存观测到的最大 DPR（上限 2）、backing 只升不降。
+
+### AG. harness 新原语 s.touchDrag(sel, pts) + 避坑#29（假阴性能力缺口）
+- 现象：drag({pointerType:'touch'}) 只 dispatchEvent(PointerEvent)+MouseEvent，**从不派 TouchEvent**；
+  只挂 touchstart/touchmove 的 ink-sound 用它拖动零响应（帧 arc 恒 42），差点误判作品坏。换 CDP
+  Input.dispatchTouchEvent(touchStart→touchMove×N→touchEnd) 后 gesPeak 冲到 9131，作品本健康。
+- 沉淀：cdp-harness.js 新增 `touchDrag(sel, pts, {stepMs:26})`（真实触摸序列，逐帧间隔让作品生成
+  粒子/笔记），头部登记避坑#29。判别铁律：mobile 拖动 drag() 零响应先换 touchDrag 复跑，仍零响应
+  才是作品真缺 touch 监听。脚本 acc1013/freeze_gate_1013.js + probes/ 留存。

@@ -1,0 +1,21 @@
+const path = require('path');
+const H = require('../../../works/lib/cdp-harness.js');
+const WS = '/usr/lib/node_modules/coze-coding-dev-sdk/node_modules/ws';
+const full = path.resolve(__dirname, '../../../works/tian-deng.html');
+(async () => {
+  const s = await H.launch({ out: __dirname, profile: 'probeTD', wsPath: WS, port: 9321, mobile: true, width: 390, height: 844 });
+  await s.goto('file://' + encodeURI(full) + '?cb=' + Date.now());
+  await H.waitMs(1500);
+  const g = await s.q(`(function(){var r=document.querySelector('canvas').getBoundingClientRect();return{w:r.width,h:r.height,left:r.left,top:r.top};})()`);
+  console.log('geom', g);
+  const before = await s.q(`({r:released, gx:ground&&ground.x, gy:ground&&ground.y, gs:ground&&ground.s, bankH, panel:panel.classList.contains('open')})`);
+  console.log('before tap', before);
+  await s.tap('canvas', 117, 422, { holdMs: 90, mouse: true, touch: true });
+  await H.waitMs(500);
+  const after = await s.q(`({r:released, panel:panel.classList.contains('open'), gx:ground&&ground.x, gy:ground&&ground.y, gstate:ground&&ground.state})`);
+  console.log('after tap', after);
+  await H.waitMs(2200);
+  const later = await s.q(`({r:released, panel:panel.classList.contains('open')})`);
+  console.log('2.5s later', later);
+  await s.close();
+})().catch(e => { console.error(e); process.exit(1); });

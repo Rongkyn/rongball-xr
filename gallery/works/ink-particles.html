@@ -198,46 +198,86 @@
         let lastMouseX = 0;
         let lastMouseY = 0;
         let isMouseMoving = false;
-        
-        // 鼠标移动事件
-        canvas.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            isMouseMoving = true;
-            
-            // 创建粒子轨迹
-            const dx = mouseX - lastMouseX;
-            const dy = mouseY - lastMouseY;
+
+        // 1013 避坑：移动端主交互「拖动画墨」此前只挂 mousemove，真触摸无对应事件 → 拖移零响应。
+        // 抽出按「上一触点→当前触点」距离发射粒子的轨迹函数，鼠标与触摸共用。
+        function emitTrail(x, y, lastX, lastY) {
+            const dx = x - lastX;
+            const dy = y - lastY;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
             if (distance > 2) {
                 const particleCount = Math.min(5, Math.floor(distance / 3));
                 for (let i = 0; i < particleCount; i++) {
                     const spread = 8;
-                    const px = mouseX + (Math.random() - 0.5) * spread;
-                    const py = mouseY + (Math.random() - 0.5) * spread;
+                    const px = x + (Math.random() - 0.5) * spread;
+                    const py = y + (Math.random() - 0.5) * spread;
                     const vx = (Math.random() - 0.5) * 2;
                     const vy = (Math.random() - 0.5) * 2;
                     particles.push(new InkParticle(px, py, vx, vy));
                 }
             }
-            
-            lastMouseX = mouseX;
-            lastMouseY = mouseY;
-        });
-        
-        // 点击事件 - 晕染
-        canvas.addEventListener('click', (e) => {
-            diffusions.push(new Diffusion(e.clientX, e.clientY));
-            
-            // 同时爆发一些粒子
+        }
+        // 点击/触摸落点 - 晕染 + 爆发
+        function emitBurst(x, y) {
+            diffusions.push(new Diffusion(x, y));
             for (let i = 0; i < 30; i++) {
                 const angle = (Math.PI * 2 * i) / 30;
                 const speed = 2 + Math.random() * 3;
                 const vx = Math.cos(angle) * speed;
                 const vy = Math.sin(angle) * speed;
-                particles.push(new InkParticle(e.clientX, e.clientY, vx, vy));
+                particles.push(new InkParticle(x, y, vx, vy));
             }
+        }
+
+        // 鼠标移动事件
+        canvas.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            isMouseMoving = true;
+
+            emitTrail(mouseX, mouseY, lastMouseX, lastMouseY);
+
+            lastMouseX = mouseX;
+            lastMouseY = mouseY;
+        });
+
+        // 触摸事件（1013 补：真机手指点按=晕染爆发、拖动=拖出墨迹）
+        const touchLast = new Map();
+        const touchStartAt = new Map();
+        canvas.addEventListener('touchstart', (e) => {
+            for (const t of e.changedTouches) {
+                touchLast.set(t.identifier, { x: t.clientX, y: t.clientY });
+                touchStartAt.set(t.identifier, { x: t.clientX, y: t.clientY, moved: false });
+            }
+        }, { passive: true });
+        canvas.addEventListener('touchmove', (e) => {
+            for (const t of e.changedTouches) {
+                const last = touchLast.get(t.identifier) || { x: t.clientX, y: t.clientY };
+                emitTrail(t.clientX, t.clientY, last.x, last.y);
+                touchLast.set(t.identifier, { x: t.clientX, y: t.clientY });
+                const st = touchStartAt.get(t.identifier);
+                if (st && Math.hypot(t.clientX - st.x, t.clientY - st.y) > 10) st.moved = true;
+            }
+        }, { passive: true });
+        canvas.addEventListener('touchend', (e) => {
+            // 短按（未明显移动）等价桌面 click：晕染爆发；拖动结束不重复爆发
+            for (const t of e.changedTouches) {
+                const st = touchStartAt.get(t.identifier);
+                if (st && !st.moved) emitBurst(t.clientX, t.clientY);
+                touchLast.delete(t.identifier);
+                touchStartAt.delete(t.identifier);
+            }
+        }, { passive: true });
+        canvas.addEventListener('touchcancel', (e) => {
+            for (const t of e.changedTouches) {
+                touchLast.delete(t.identifier);
+                touchStartAt.delete(t.identifier);
+            }
+        }, { passive: true });
+
+        // 点击事件 - 晕染
+        canvas.addEventListener('click', (e) => {
+            emitBurst(e.clientX, e.clientY);
         });
         
         // 清空按钮

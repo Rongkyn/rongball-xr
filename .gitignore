@@ -119,3 +119,11 @@ gallery/studio/painting/acc1010/dbg_stroke.png
 gallery/_chk_gallery.js
 gallery/gallery-chk.png
 gallery/gallery-chk/
+# acc1013 browser profiles + throwaway probe profiles（probes/*.js 源码保留纳管）
+gallery/studio/painting/acc1013/fg1013*/
+gallery/studio/painting/acc1013/probe[A-Z]*/
+gallery/studio/painting/acc1013/probeTD*/
+gallery/studio/painting/acc1013/probeTS*/
+gallery/studio/painting/acc1013/probeVW/
+gallery/studio/painting/acc1013/probeTX/
+gallery/studio/painting/acc1013/pvw*/
