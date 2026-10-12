@@ -51,7 +51,29 @@ python research/water-audio-comparison/experiment/verify_export.py /path/to/expo
 
 ## 下一步真实试听
 
-检查通过后，由安排者按 pilot 的组 1/组 2 顺序制作匿名副本，条件映射与事件表单独保管。
+安排者可以生成按 pilot 两种顺序编排的听者包：
+
+```sh
+python research/water-audio-comparison/experiment/prepare_listening.py /path/to/export /path/to/new-listening-output
+```
+
+输入必须含完整 44 WAV 和原始 `measurement.json`；程序先核对报告与音频版本
+`a81294ba710614dbf354b01196f127b0f7dfaadf` 的已提交散列，再重新验证全部 WAV 字节。
+若更换浏览器导致字节变化，需重新审查测量证据，不能跳过固定版本检查。
+输出目录必须不存在；程序拒绝覆盖已有记录。发生失败时保留该次目录用于诊断，换新目录重试。
+
+输出 `listen-01.zip` 和 `listen-02.zip`，每包有 12 段编号 WAV、离线 `index.html`、
+全空的回答表 `responses.csv` 与 `session.txt`。听者解压后可直接打开页面、按顺序播放，
+用表格软件填写并保存 CSV；页面不会记录或上传回答。CSV 的前两列仅预填编号和目标材质。
+每位听者只分配一包，交替分配两组。两组均含全部 12 混音，仅组内顺序相反。
+`operator-key.json` 与 `OPERATOR.txt` 在两个包之外，由安排者保管；完成回答后再揭示条件。
+不要把整个输出目录、制作台或公开的事件真值提前给听者。
+
+这是隐藏条件标签的编号副本，不是身份核验、不可推断条件或完全盲法的保证；
+可听到的音量差、已读公开方法和重复片段仍可能破坏盲法或产生学习效应，需记录。
+参见 [试听包验证记录](listening-validation.json)。原 `validation.json` 的源散列记录音频版本
+`a81294b` 的历史快照；本次包工具和 README 的散列单独记在新验证记录中。
+
 每段至少休息 15 秒，固定设备舒适音量，不临时等响或改增益。真实听者记录目标材质的总数与四项评分，
 允许无法判断；总数误差不等于逐事件命中/虚警。制作台和本技术报告不能代替该环节。
 产物后的外部只读检查、参与者来源确认以及真人试听仍分别留在 Issue #2 跟进。
