@@ -1,0 +1,4322 @@
+{
+  "config": {
+    "version": 1,
+    "sampleRate": 48000,
+    "seconds": 10,
+    "noiseSeed": 78123,
+    "eventSeed": 19481,
+    "noiseLoopSeconds": 4,
+    "master": 0.5,
+    "safetyGain": 0.5,
+    "bedB": 0.5011872336272722,
+    "lfoHz": 0.25,
+    "lfoDepth": 0.08,
+    "lfoPhase": 0,
+    "source": "9141f500f3eb51b3a07e6bcdc62cfab92ea1cc4b",
+    "protocol": "6b16b92aa7122904ec476824c9713115735150d7"
+  },
+  "engine": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+  "files": {
+    "bed-bamboo-A.wav": {
+      "sha256": "66a76c3c0948ee6dfbe9a956ec5ee9a2227a631880b60ea0f106fcd584e2dbbb",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.7013896703720093,
+          "rms": 0.18588375842269195,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.7458930015563965,
+          "rms": 0.18646892542303414,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bed-bamboo-B.wav": {
+      "sha256": "bbe8728b57bea41128ac79518f581b0459eec4bc7410b13029e2ff0be3fa71ae",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.35152754187583923,
+          "rms": 0.09316256665929123,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.3738320469856262,
+          "rms": 0.09345584490710067,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bed-stone-A.wav": {
+      "sha256": "119fc0b1ccb4122aa734455c959a6561670cb61ab2f5fcba2d399c2be1642227",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.2732846438884735,
+          "rms": 0.0871289783146766,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.2700352072715759,
+          "rms": 0.0871446029577003,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bed-stone-B.wav": {
+      "sha256": "5e6b57e1356ab20d233469cfc2086fd49090c34c5c6d58ea0166e7a68676db8b",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.1369667798280716,
+          "rms": 0.043667931618846544,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.1353382021188736,
+          "rms": 0.04367576248287874,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bed-water-A.wav": {
+      "sha256": "53ce9182837d1ef9943b02732530267313f20649fe96abbdf69bb1a8b838ad89",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.2273084670305252,
+          "rms": 0.05931944205437893,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.25531014800071716,
+          "rms": 0.05870464803048358,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bed-water-B.wav": {
+      "sha256": "8435a4bdd3e09fd7b8344f8ee5c7779081c377bf219a849a4e57a42e8f031f4a",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.11392410099506378,
+          "rms": 0.029730147063856408,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.12795819342136383,
+          "rms": 0.02942202015582616,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bed-distant-A.wav": {
+      "sha256": "fbc7c5662a3c7d97c7c502ea7e9bccd8fc808d413276cf9b2096ed2da9bc948f",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.2304261475801468,
+          "rms": 0.05351114909163775,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.23011671006679535,
+          "rms": 0.052874227483863764,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bed-distant-B.wav": {
+      "sha256": "fb1a52672762cf76130a7fb9ab9ebd3556912db0659ed03aeb438db9f6edcb1f",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.11548664420843124,
+          "rms": 0.02681910478510648,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.11533156037330627,
+          "rms": 0.026499887804137284,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T1-A-drops.wav": {
+      "sha256": "fa846fcfc5b2036b0f579f31bab994cb69c1cc31533d21899d450c10d5d9ae9c",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.07442475855350494,
+          "rms": 0.002630832935977969,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05963880196213722,
+          "rms": 0.00250457737158441,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T1-A-bed.wav": {
+      "sha256": "6af0244b1876b13ef65bfdbb754eedfa3a3ddbfb65ecdf9ae821ae99105d491b",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.8770914673805237,
+          "rms": 0.23728035935117162,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.87513267993927,
+          "rms": 0.23752758827315676,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T1-A-mix.wav": {
+      "sha256": "96b0ac947637642e6d7246c1738695e1350c5153ec697af42ff88eeb4851e4aa",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.219268798828125,
+          "rms": 0.059327208334106755,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.218780517578125,
+          "rms": 0.059383644993930014,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T1-B-drops.wav": {
+      "sha256": "fa846fcfc5b2036b0f579f31bab994cb69c1cc31533d21899d450c10d5d9ae9c",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.07442475855350494,
+          "rms": 0.002630832935977969,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05963880196213722,
+          "rms": 0.00250457737158441,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T1-B-bed.wav": {
+      "sha256": "86a5f9d5867fdaff2a28a435ab388cbaf4edcf6a93e216bc0309d6730fe1ca88",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.4395870566368103,
+          "rms": 0.11892188690060601,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.43860533833503723,
+          "rms": 0.11904579490035365,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T1-B-mix.wav": {
+      "sha256": "f229b4ec1d1f7945e0d2a53258edd408e5a2474041cb6da16e9a51b406279c67",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.109893798828125,
+          "rms": 0.02974123728210199,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.109649658203125,
+          "rms": 0.029766499973906027,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T2-A-drops.wav": {
+      "sha256": "0565fd65b196ccaad5c527d7c98701d05373119eb22c812368ab24e51fd948eb",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.07517042011022568,
+          "rms": 0.002662531273707372,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.060473762452602386,
+          "rms": 0.002503254215291331,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T2-A-bed.wav": {
+      "sha256": "6af0244b1876b13ef65bfdbb754eedfa3a3ddbfb65ecdf9ae821ae99105d491b",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.8770914673805237,
+          "rms": 0.23728035935117162,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.87513267993927,
+          "rms": 0.23752758827315676,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T2-A-mix.wav": {
+      "sha256": "24678bbe26fb45401cbfb3eaed64073374208cf0f1db09180fac287aca746157",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.2230224609375,
+          "rms": 0.05932254061312922,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.218780517578125,
+          "rms": 0.059386071469946275,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T2-B-drops.wav": {
+      "sha256": "0565fd65b196ccaad5c527d7c98701d05373119eb22c812368ab24e51fd948eb",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.07517042011022568,
+          "rms": 0.002662531273707372,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.060473762452602386,
+          "rms": 0.002503254215291331,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T2-B-bed.wav": {
+      "sha256": "86a5f9d5867fdaff2a28a435ab388cbaf4edcf6a93e216bc0309d6730fe1ca88",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.4395870566368103,
+          "rms": 0.11892188690060601,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.43860533833503723,
+          "rms": 0.11904579490035365,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "bamboo-T2-B-mix.wav": {
+      "sha256": "f419998b38546f83ddebe1b55ad3f358313c5428b9115f8704d9eb219fdc0d9d",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.1136474609375,
+          "rms": 0.029736665227320245,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.109649658203125,
+          "rms": 0.029768933956477225,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T1-A-drops.wav": {
+      "sha256": "ed58ab16ef1a24364c855a57cb779fdc093aa43fc938e88ef2623418eae9f415",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.05488087236881256,
+          "rms": 0.002097029092338807,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05341595411300659,
+          "rms": 0.002097013321181394,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T1-A-bed.wav": {
+      "sha256": "6af0244b1876b13ef65bfdbb754eedfa3a3ddbfb65ecdf9ae821ae99105d491b",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.8770914673805237,
+          "rms": 0.23728035935117162,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.87513267993927,
+          "rms": 0.23752758827315676,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T1-A-mix.wav": {
+      "sha256": "10512c19342dd29e1b5edbd7b42724e202314a9e99847716825133278efc02b2",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.219268798828125,
+          "rms": 0.05932128662539331,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.218780517578125,
+          "rms": 0.059385014248757195,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T1-B-drops.wav": {
+      "sha256": "ed58ab16ef1a24364c855a57cb779fdc093aa43fc938e88ef2623418eae9f415",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.05488087236881256,
+          "rms": 0.002097029092338807,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05341595411300659,
+          "rms": 0.002097013321181394,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T1-B-bed.wav": {
+      "sha256": "86a5f9d5867fdaff2a28a435ab388cbaf4edcf6a93e216bc0309d6730fe1ca88",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.4395870566368103,
+          "rms": 0.11892188690060601,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.43860533833503723,
+          "rms": 0.11904579490035365,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T1-B-mix.wav": {
+      "sha256": "5c1c797f561100dd1678ef7f225fbadd77c27892de9c6684bbfdfca2b24a5488",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.109893798828125,
+          "rms": 0.02973399294207328,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.109649658203125,
+          "rms": 0.029766889123759157,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T2-A-drops.wav": {
+      "sha256": "a389e185eaa1abffe9bcb35d3113989717daca886dd7a52c51b463ef4d9cbd2c",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.05488087236881256,
+          "rms": 0.0020970290924250848,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05341595411300659,
+          "rms": 0.0020970133251780915,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T2-A-bed.wav": {
+      "sha256": "6af0244b1876b13ef65bfdbb754eedfa3a3ddbfb65ecdf9ae821ae99105d491b",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.8770914673805237,
+          "rms": 0.23728035935117162,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.87513267993927,
+          "rms": 0.23752758827315676,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T2-A-mix.wav": {
+      "sha256": "66fee15558f0961e6219ca8a5938ce2545558ac6a9dd064cbe78f107260b5184",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.219268798828125,
+          "rms": 0.05932364247608199,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.218780517578125,
+          "rms": 0.059384697744932095,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T2-B-drops.wav": {
+      "sha256": "a389e185eaa1abffe9bcb35d3113989717daca886dd7a52c51b463ef4d9cbd2c",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.05488087236881256,
+          "rms": 0.0020970290924250848,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05341595411300659,
+          "rms": 0.0020970133251780915,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T2-B-bed.wav": {
+      "sha256": "86a5f9d5867fdaff2a28a435ab388cbaf4edcf6a93e216bc0309d6730fe1ca88",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.4395870566368103,
+          "rms": 0.11892188690060601,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.43860533833503723,
+          "rms": 0.11904579490035365,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "stone-T2-B-mix.wav": {
+      "sha256": "a42df5909faf2377c201b9ec9ddf5e9eec9c090bdbf9eacff8b5825b27a7c957",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.109893798828125,
+          "rms": 0.0297363401452676,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.109649658203125,
+          "rms": 0.029766570156881295,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T1-A-drops.wav": {
+      "sha256": "6331defbc66ec3b19cc03912c45f8f4966adbbddb99538bf1e8f3a93e6bed507",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.052889999002218246,
+          "rms": 0.004126652271114972,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05231475085020065,
+          "rms": 0.004132947809813561,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T1-A-bed.wav": {
+      "sha256": "6af0244b1876b13ef65bfdbb754eedfa3a3ddbfb65ecdf9ae821ae99105d491b",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.8770914673805237,
+          "rms": 0.23728035935117162,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.87513267993927,
+          "rms": 0.23752758827315676,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T1-A-mix.wav": {
+      "sha256": "b1c9debed7c835f0c4816dfc58e5bf19d1dc1ecc8bd30e2baaff46cabfc4baf5",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.219268798828125,
+          "rms": 0.059330533983106476,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.218780517578125,
+          "rms": 0.05939293594279458,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T1-B-drops.wav": {
+      "sha256": "6331defbc66ec3b19cc03912c45f8f4966adbbddb99538bf1e8f3a93e6bed507",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.052889999002218246,
+          "rms": 0.004126652271114972,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05231475085020065,
+          "rms": 0.004132947809813561,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T1-B-bed.wav": {
+      "sha256": "86a5f9d5867fdaff2a28a435ab388cbaf4edcf6a93e216bc0309d6730fe1ca88",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.4395870566368103,
+          "rms": 0.11892188690060601,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.43860533833503723,
+          "rms": 0.11904579490035365,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T1-B-mix.wav": {
+      "sha256": "52ae2ea3ff2c0ea3907b9b847af245763e27ff91205f2b2d47157853c20940ce",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.109893798828125,
+          "rms": 0.02974984973633452,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.109649658203125,
+          "rms": 0.029781433400619638,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T2-A-drops.wav": {
+      "sha256": "84ba1e9dec2c00ed98767f23d3ea1617c277700e056cf4e479d5bc46fd0bc54c",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.052889999002218246,
+          "rms": 0.004126538750769615,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05231475085020065,
+          "rms": 0.004133022116882263,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T2-A-bed.wav": {
+      "sha256": "6af0244b1876b13ef65bfdbb754eedfa3a3ddbfb65ecdf9ae821ae99105d491b",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.8770914673805237,
+          "rms": 0.23728035935117162,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.87513267993927,
+          "rms": 0.23752758827315676,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T2-A-mix.wav": {
+      "sha256": "15b60eb4e449431dc137a1aeea3d46df79485958bca100d36a5364739b1b77f2",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.2215576171875,
+          "rms": 0.05932798253425814,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.218780517578125,
+          "rms": 0.05939373658725252,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T2-B-drops.wav": {
+      "sha256": "84ba1e9dec2c00ed98767f23d3ea1617c277700e056cf4e479d5bc46fd0bc54c",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.052889999002218246,
+          "rms": 0.004126538750769615,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.05231475085020065,
+          "rms": 0.004133022116882263,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T2-B-bed.wav": {
+      "sha256": "86a5f9d5867fdaff2a28a435ab388cbaf4edcf6a93e216bc0309d6730fe1ca88",
+      "bytes": 3840044,
+      "encoding": "IEEE_FLOAT32",
+      "channels": [
+        {
+          "samplePeak": 0.4395870566368103,
+          "rms": 0.11892188690060601,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.43860533833503723,
+          "rms": 0.11904579490035365,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    },
+    "water-T2-B-mix.wav": {
+      "sha256": "948c9fe961570a5a8ce65491c4db99081fae57f3af3cca0bbcc7eb029242e36b",
+      "bytes": 1920044,
+      "encoding": "PCM16",
+      "channels": [
+        {
+          "samplePeak": 0.1121826171875,
+          "rms": 0.029747300275129535,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        },
+        {
+          "samplePeak": 0.109649658203125,
+          "rms": 0.02978224946720416,
+          "nonfinite": 0,
+          "samplesAtOrBeyondFullScale": 0
+        }
+      ]
+    }
+  },
+  "checks": [
+    {
+      "name": "bamboo-T1-A-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "bamboo-T1-B-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "bamboo-T1-repeat-drops",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "bamboo-T1-exported-drops-identical",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "bamboo-T1-exported-bed-ratio",
+      "error": 1.4898576095045968e-8,
+      "tolerance": 1e-7
+    },
+    {
+      "name": "bamboo-T2-A-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "bamboo-T2-B-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "bamboo-T2-repeat-drops",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "bamboo-T2-exported-drops-identical",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "bamboo-T2-exported-bed-ratio",
+      "error": 1.4898576095045968e-8,
+      "tolerance": 1e-7
+    },
+    {
+      "name": "stone-T1-A-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "stone-T1-B-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "stone-T1-repeat-drops",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "stone-T1-exported-drops-identical",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "stone-T1-exported-bed-ratio",
+      "error": 1.4898576095045968e-8,
+      "tolerance": 1e-7
+    },
+    {
+      "name": "stone-T2-A-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "stone-T2-B-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "stone-T2-repeat-drops",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "stone-T2-exported-drops-identical",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "stone-T2-exported-bed-ratio",
+      "error": 1.4898576095045968e-8,
+      "tolerance": 1e-7
+    },
+    {
+      "name": "water-T1-A-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "water-T1-B-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "water-T1-repeat-drops",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "water-T1-exported-drops-identical",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "water-T1-exported-bed-ratio",
+      "error": 1.4898576095045968e-8,
+      "tolerance": 1e-7
+    },
+    {
+      "name": "water-T2-A-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "water-T2-B-PCM16-error",
+      "error": 0.0000152587890625,
+      "tolerance": 0.000030517578125
+    },
+    {
+      "name": "water-T2-repeat-drops",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "water-T2-exported-drops-identical",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "water-T2-exported-bed-ratio",
+      "error": 1.4898576095045968e-8,
+      "tolerance": 1e-7
+    },
+    {
+      "name": "bed-bamboo-repeat",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "bed-stone-repeat",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "bed-water-repeat",
+      "error": 0,
+      "tolerance": 0
+    },
+    {
+      "name": "bed-distant-repeat",
+      "error": 0,
+      "tolerance": 0
+    }
+  ],
+  "routes": {
+    "bed-bamboo": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.7
+          }
+        },
+        {
+          "id": "lfo",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 0.25
+          }
+        },
+        {
+          "id": "lfo-depth",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.08
+          }
+        },
+        {
+          "id": "noise",
+          "type": "BufferSource",
+          "parameters": {
+            "loop": true
+          }
+        },
+        {
+          "id": "bamboo-bp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "bandpass",
+            "frequency": 2800,
+            "Q": 0.7
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "lfo",
+          "to": "lfo-depth",
+          "param": null
+        },
+        {
+          "from": "lfo-depth",
+          "to": "channel",
+          "param": "gain"
+        },
+        {
+          "from": "noise",
+          "to": "bamboo-bp",
+          "param": null
+        },
+        {
+          "from": "bamboo-bp",
+          "to": "channel",
+          "param": null
+        }
+      ]
+    },
+    "bed-stone": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.5
+          }
+        },
+        {
+          "id": "noise",
+          "type": "BufferSource",
+          "parameters": {
+            "loop": true
+          }
+        },
+        {
+          "id": "stone-hp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "highpass",
+            "frequency": 1500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "stone-scale",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.3
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "noise",
+          "to": "stone-hp",
+          "param": null
+        },
+        {
+          "from": "stone-hp",
+          "to": "stone-scale",
+          "param": null
+        },
+        {
+          "from": "stone-scale",
+          "to": "channel",
+          "param": null
+        }
+      ]
+    },
+    "bed-water": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.6
+          }
+        },
+        {
+          "id": "noise",
+          "type": "BufferSource",
+          "parameters": {
+            "loop": true
+          }
+        },
+        {
+          "id": "water-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 400,
+            "Q": 1
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "noise",
+          "to": "water-lp",
+          "param": null
+        },
+        {
+          "from": "water-lp",
+          "to": "channel",
+          "param": null
+        }
+      ]
+    },
+    "bed-distant": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.4
+          }
+        },
+        {
+          "id": "noise",
+          "type": "BufferSource",
+          "parameters": {
+            "loop": true
+          }
+        },
+        {
+          "id": "distant-hp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "highpass",
+            "frequency": 80,
+            "Q": 1
+          }
+        },
+        {
+          "id": "distant-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 700,
+            "Q": 1
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "noise",
+          "to": "distant-hp",
+          "param": null
+        },
+        {
+          "from": "distant-hp",
+          "to": "distant-lp",
+          "param": null
+        },
+        {
+          "from": "distant-lp",
+          "to": "channel",
+          "param": null
+        }
+      ]
+    },
+    "drops-bamboo-T1": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.7
+          }
+        },
+        {
+          "id": "lfo",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 0.25
+          }
+        },
+        {
+          "id": "lfo-depth",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.08
+          }
+        },
+        {
+          "id": "bamboo-1-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1281.0357972979546
+          }
+        },
+        {
+          "id": "bamboo-1-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-1-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.75
+          }
+        },
+        {
+          "id": "bamboo-2-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1116.2602577358484
+          }
+        },
+        {
+          "id": "bamboo-2-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-2-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.25
+          }
+        },
+        {
+          "id": "bamboo-3-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1136.7068195715547
+          }
+        },
+        {
+          "id": "bamboo-3-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-3-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.75
+          }
+        },
+        {
+          "id": "bamboo-4-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1537.0709206908941
+          }
+        },
+        {
+          "id": "bamboo-4-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-4-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.25
+          }
+        },
+        {
+          "id": "bamboo-5-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1141.5915951132774
+          }
+        },
+        {
+          "id": "bamboo-5-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-5-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "bamboo-6-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1883.1426948308945
+          }
+        },
+        {
+          "id": "bamboo-6-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-6-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.5
+          }
+        },
+        {
+          "id": "bamboo-7-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1883.2691174000502
+          }
+        },
+        {
+          "id": "bamboo-7-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-7-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.5
+          }
+        },
+        {
+          "id": "bamboo-8-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1591.1388268694282
+          }
+        },
+        {
+          "id": "bamboo-8-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-8-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "lfo",
+          "to": "lfo-depth",
+          "param": null
+        },
+        {
+          "from": "lfo-depth",
+          "to": "channel",
+          "param": "gain"
+        },
+        {
+          "from": "bamboo-1-osc",
+          "to": "bamboo-1-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-1-env",
+          "to": "bamboo-1-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-1-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-2-osc",
+          "to": "bamboo-2-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-2-env",
+          "to": "bamboo-2-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-2-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-3-osc",
+          "to": "bamboo-3-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-3-env",
+          "to": "bamboo-3-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-3-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-4-osc",
+          "to": "bamboo-4-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-4-env",
+          "to": "bamboo-4-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-4-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-5-osc",
+          "to": "bamboo-5-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-5-env",
+          "to": "bamboo-5-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-5-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-6-osc",
+          "to": "bamboo-6-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-6-env",
+          "to": "bamboo-6-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-6-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-7-osc",
+          "to": "bamboo-7-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-7-env",
+          "to": "bamboo-7-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-7-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-8-osc",
+          "to": "bamboo-8-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-8-env",
+          "to": "bamboo-8-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-8-pan",
+          "to": "channel",
+          "param": null
+        }
+      ]
+    },
+    "drops-bamboo-T2": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.7
+          }
+        },
+        {
+          "id": "lfo",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 0.25
+          }
+        },
+        {
+          "id": "lfo-depth",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.08
+          }
+        },
+        {
+          "id": "bamboo-1-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1281.0357972979546
+          }
+        },
+        {
+          "id": "bamboo-1-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-1-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.75
+          }
+        },
+        {
+          "id": "bamboo-2-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1116.2602577358484
+          }
+        },
+        {
+          "id": "bamboo-2-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-2-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.25
+          }
+        },
+        {
+          "id": "bamboo-3-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1136.7068195715547
+          }
+        },
+        {
+          "id": "bamboo-3-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-3-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.75
+          }
+        },
+        {
+          "id": "bamboo-4-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1537.0709206908941
+          }
+        },
+        {
+          "id": "bamboo-4-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-4-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.25
+          }
+        },
+        {
+          "id": "bamboo-5-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1141.5915951132774
+          }
+        },
+        {
+          "id": "bamboo-5-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-5-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "bamboo-6-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1883.1426948308945
+          }
+        },
+        {
+          "id": "bamboo-6-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-6-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.5
+          }
+        },
+        {
+          "id": "bamboo-7-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1883.2691174000502
+          }
+        },
+        {
+          "id": "bamboo-7-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-7-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.5
+          }
+        },
+        {
+          "id": "bamboo-8-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 1591.1388268694282
+          }
+        },
+        {
+          "id": "bamboo-8-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "bamboo-8-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "lfo",
+          "to": "lfo-depth",
+          "param": null
+        },
+        {
+          "from": "lfo-depth",
+          "to": "channel",
+          "param": "gain"
+        },
+        {
+          "from": "bamboo-1-osc",
+          "to": "bamboo-1-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-1-env",
+          "to": "bamboo-1-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-1-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-2-osc",
+          "to": "bamboo-2-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-2-env",
+          "to": "bamboo-2-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-2-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-3-osc",
+          "to": "bamboo-3-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-3-env",
+          "to": "bamboo-3-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-3-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-4-osc",
+          "to": "bamboo-4-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-4-env",
+          "to": "bamboo-4-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-4-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-5-osc",
+          "to": "bamboo-5-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-5-env",
+          "to": "bamboo-5-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-5-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-6-osc",
+          "to": "bamboo-6-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-6-env",
+          "to": "bamboo-6-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-6-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-7-osc",
+          "to": "bamboo-7-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-7-env",
+          "to": "bamboo-7-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-7-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "bamboo-8-osc",
+          "to": "bamboo-8-env",
+          "param": null
+        },
+        {
+          "from": "bamboo-8-env",
+          "to": "bamboo-8-pan",
+          "param": null
+        },
+        {
+          "from": "bamboo-8-pan",
+          "to": "channel",
+          "param": null
+        }
+      ]
+    },
+    "drops-stone-T1": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.5
+          }
+        },
+        {
+          "id": "stone-1-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2471.3270948268473
+          }
+        },
+        {
+          "id": "stone-1-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-1-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.75
+          }
+        },
+        {
+          "id": "stone-1-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 3821.647655358538
+          }
+        },
+        {
+          "id": "stone-2-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 3099.623885564506
+          }
+        },
+        {
+          "id": "stone-2-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-2-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.25
+          }
+        },
+        {
+          "id": "stone-2-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4386.102072382346
+          }
+        },
+        {
+          "id": "stone-3-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2650.111093465239
+          }
+        },
+        {
+          "id": "stone-3-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-3-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.75
+          }
+        },
+        {
+          "id": "stone-3-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4339.393386663869
+          }
+        },
+        {
+          "id": "stone-4-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2458.450487162918
+          }
+        },
+        {
+          "id": "stone-4-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-4-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.25
+          }
+        },
+        {
+          "id": "stone-4-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4304.7523526940495
+          }
+        },
+        {
+          "id": "stone-5-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2328.8937313482165
+          }
+        },
+        {
+          "id": "stone-5-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-5-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "stone-5-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4318.970145191997
+          }
+        },
+        {
+          "id": "stone-6-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2616.293442621827
+          }
+        },
+        {
+          "id": "stone-6-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-6-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.5
+          }
+        },
+        {
+          "id": "stone-6-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 3847.0639584120363
+          }
+        },
+        {
+          "id": "stone-7-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2857.8922788612545
+          }
+        },
+        {
+          "id": "stone-7-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-7-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.5
+          }
+        },
+        {
+          "id": "stone-7-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4370.918215531856
+          }
+        },
+        {
+          "id": "stone-8-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2911.5248516201973
+          }
+        },
+        {
+          "id": "stone-8-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-8-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "stone-8-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4251.456267666072
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "stone-1-osc",
+          "to": "stone-1-env",
+          "param": null
+        },
+        {
+          "from": "stone-1-env",
+          "to": "stone-1-pan",
+          "param": null
+        },
+        {
+          "from": "stone-1-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-1-osc2",
+          "to": "stone-1-env",
+          "param": null
+        },
+        {
+          "from": "stone-2-osc",
+          "to": "stone-2-env",
+          "param": null
+        },
+        {
+          "from": "stone-2-env",
+          "to": "stone-2-pan",
+          "param": null
+        },
+        {
+          "from": "stone-2-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-2-osc2",
+          "to": "stone-2-env",
+          "param": null
+        },
+        {
+          "from": "stone-3-osc",
+          "to": "stone-3-env",
+          "param": null
+        },
+        {
+          "from": "stone-3-env",
+          "to": "stone-3-pan",
+          "param": null
+        },
+        {
+          "from": "stone-3-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-3-osc2",
+          "to": "stone-3-env",
+          "param": null
+        },
+        {
+          "from": "stone-4-osc",
+          "to": "stone-4-env",
+          "param": null
+        },
+        {
+          "from": "stone-4-env",
+          "to": "stone-4-pan",
+          "param": null
+        },
+        {
+          "from": "stone-4-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-4-osc2",
+          "to": "stone-4-env",
+          "param": null
+        },
+        {
+          "from": "stone-5-osc",
+          "to": "stone-5-env",
+          "param": null
+        },
+        {
+          "from": "stone-5-env",
+          "to": "stone-5-pan",
+          "param": null
+        },
+        {
+          "from": "stone-5-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-5-osc2",
+          "to": "stone-5-env",
+          "param": null
+        },
+        {
+          "from": "stone-6-osc",
+          "to": "stone-6-env",
+          "param": null
+        },
+        {
+          "from": "stone-6-env",
+          "to": "stone-6-pan",
+          "param": null
+        },
+        {
+          "from": "stone-6-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-6-osc2",
+          "to": "stone-6-env",
+          "param": null
+        },
+        {
+          "from": "stone-7-osc",
+          "to": "stone-7-env",
+          "param": null
+        },
+        {
+          "from": "stone-7-env",
+          "to": "stone-7-pan",
+          "param": null
+        },
+        {
+          "from": "stone-7-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-7-osc2",
+          "to": "stone-7-env",
+          "param": null
+        },
+        {
+          "from": "stone-8-osc",
+          "to": "stone-8-env",
+          "param": null
+        },
+        {
+          "from": "stone-8-env",
+          "to": "stone-8-pan",
+          "param": null
+        },
+        {
+          "from": "stone-8-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-8-osc2",
+          "to": "stone-8-env",
+          "param": null
+        }
+      ]
+    },
+    "drops-stone-T2": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.5
+          }
+        },
+        {
+          "id": "stone-1-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2471.3270948268473
+          }
+        },
+        {
+          "id": "stone-1-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-1-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.75
+          }
+        },
+        {
+          "id": "stone-1-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 3821.647655358538
+          }
+        },
+        {
+          "id": "stone-2-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 3099.623885564506
+          }
+        },
+        {
+          "id": "stone-2-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-2-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.25
+          }
+        },
+        {
+          "id": "stone-2-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4386.102072382346
+          }
+        },
+        {
+          "id": "stone-3-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2650.111093465239
+          }
+        },
+        {
+          "id": "stone-3-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-3-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.75
+          }
+        },
+        {
+          "id": "stone-3-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4339.393386663869
+          }
+        },
+        {
+          "id": "stone-4-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2458.450487162918
+          }
+        },
+        {
+          "id": "stone-4-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-4-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.25
+          }
+        },
+        {
+          "id": "stone-4-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4304.7523526940495
+          }
+        },
+        {
+          "id": "stone-5-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2328.8937313482165
+          }
+        },
+        {
+          "id": "stone-5-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-5-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "stone-5-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4318.970145191997
+          }
+        },
+        {
+          "id": "stone-6-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2616.293442621827
+          }
+        },
+        {
+          "id": "stone-6-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-6-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.5
+          }
+        },
+        {
+          "id": "stone-6-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 3847.0639584120363
+          }
+        },
+        {
+          "id": "stone-7-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2857.8922788612545
+          }
+        },
+        {
+          "id": "stone-7-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-7-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.5
+          }
+        },
+        {
+          "id": "stone-7-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4370.918215531856
+          }
+        },
+        {
+          "id": "stone-8-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "triangle",
+            "frequency": 2911.5248516201973
+          }
+        },
+        {
+          "id": "stone-8-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "stone-8-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "stone-8-osc2",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 4251.456267666072
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "stone-1-osc",
+          "to": "stone-1-env",
+          "param": null
+        },
+        {
+          "from": "stone-1-env",
+          "to": "stone-1-pan",
+          "param": null
+        },
+        {
+          "from": "stone-1-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-1-osc2",
+          "to": "stone-1-env",
+          "param": null
+        },
+        {
+          "from": "stone-2-osc",
+          "to": "stone-2-env",
+          "param": null
+        },
+        {
+          "from": "stone-2-env",
+          "to": "stone-2-pan",
+          "param": null
+        },
+        {
+          "from": "stone-2-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-2-osc2",
+          "to": "stone-2-env",
+          "param": null
+        },
+        {
+          "from": "stone-3-osc",
+          "to": "stone-3-env",
+          "param": null
+        },
+        {
+          "from": "stone-3-env",
+          "to": "stone-3-pan",
+          "param": null
+        },
+        {
+          "from": "stone-3-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-3-osc2",
+          "to": "stone-3-env",
+          "param": null
+        },
+        {
+          "from": "stone-4-osc",
+          "to": "stone-4-env",
+          "param": null
+        },
+        {
+          "from": "stone-4-env",
+          "to": "stone-4-pan",
+          "param": null
+        },
+        {
+          "from": "stone-4-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-4-osc2",
+          "to": "stone-4-env",
+          "param": null
+        },
+        {
+          "from": "stone-5-osc",
+          "to": "stone-5-env",
+          "param": null
+        },
+        {
+          "from": "stone-5-env",
+          "to": "stone-5-pan",
+          "param": null
+        },
+        {
+          "from": "stone-5-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-5-osc2",
+          "to": "stone-5-env",
+          "param": null
+        },
+        {
+          "from": "stone-6-osc",
+          "to": "stone-6-env",
+          "param": null
+        },
+        {
+          "from": "stone-6-env",
+          "to": "stone-6-pan",
+          "param": null
+        },
+        {
+          "from": "stone-6-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-6-osc2",
+          "to": "stone-6-env",
+          "param": null
+        },
+        {
+          "from": "stone-7-osc",
+          "to": "stone-7-env",
+          "param": null
+        },
+        {
+          "from": "stone-7-env",
+          "to": "stone-7-pan",
+          "param": null
+        },
+        {
+          "from": "stone-7-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-7-osc2",
+          "to": "stone-7-env",
+          "param": null
+        },
+        {
+          "from": "stone-8-osc",
+          "to": "stone-8-env",
+          "param": null
+        },
+        {
+          "from": "stone-8-env",
+          "to": "stone-8-pan",
+          "param": null
+        },
+        {
+          "from": "stone-8-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "stone-8-osc2",
+          "to": "stone-8-env",
+          "param": null
+        }
+      ]
+    },
+    "drops-water-T1": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.6
+          }
+        },
+        {
+          "id": "water-1-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 272.61688471771777
+          }
+        },
+        {
+          "id": "water-1-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-1-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.75
+          }
+        },
+        {
+          "id": "water-1-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-2-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 255.15827126801014
+          }
+        },
+        {
+          "id": "water-2-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-2-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.25
+          }
+        },
+        {
+          "id": "water-2-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-3-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 263.34207837935537
+          }
+        },
+        {
+          "id": "water-3-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-3-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.75
+          }
+        },
+        {
+          "id": "water-3-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-4-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 340.7293351367116
+          }
+        },
+        {
+          "id": "water-4-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-4-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.25
+          }
+        },
+        {
+          "id": "water-4-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-5-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 343.35789014585316
+          }
+        },
+        {
+          "id": "water-5-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-5-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "water-5-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-6-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 329.02145131956786
+          }
+        },
+        {
+          "id": "water-6-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-6-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.5
+          }
+        },
+        {
+          "id": "water-6-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-7-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 257.25233962293714
+          }
+        },
+        {
+          "id": "water-7-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-7-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.5
+          }
+        },
+        {
+          "id": "water-7-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-8-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 330.72122365701944
+          }
+        },
+        {
+          "id": "water-8-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-8-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "water-8-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "water-1-osc",
+          "to": "water-1-env",
+          "param": null
+        },
+        {
+          "from": "water-1-env",
+          "to": "water-1-lp",
+          "param": null
+        },
+        {
+          "from": "water-1-lp",
+          "to": "water-1-pan",
+          "param": null
+        },
+        {
+          "from": "water-1-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-2-osc",
+          "to": "water-2-env",
+          "param": null
+        },
+        {
+          "from": "water-2-env",
+          "to": "water-2-lp",
+          "param": null
+        },
+        {
+          "from": "water-2-lp",
+          "to": "water-2-pan",
+          "param": null
+        },
+        {
+          "from": "water-2-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-3-osc",
+          "to": "water-3-env",
+          "param": null
+        },
+        {
+          "from": "water-3-env",
+          "to": "water-3-lp",
+          "param": null
+        },
+        {
+          "from": "water-3-lp",
+          "to": "water-3-pan",
+          "param": null
+        },
+        {
+          "from": "water-3-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-4-osc",
+          "to": "water-4-env",
+          "param": null
+        },
+        {
+          "from": "water-4-env",
+          "to": "water-4-lp",
+          "param": null
+        },
+        {
+          "from": "water-4-lp",
+          "to": "water-4-pan",
+          "param": null
+        },
+        {
+          "from": "water-4-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-5-osc",
+          "to": "water-5-env",
+          "param": null
+        },
+        {
+          "from": "water-5-env",
+          "to": "water-5-lp",
+          "param": null
+        },
+        {
+          "from": "water-5-lp",
+          "to": "water-5-pan",
+          "param": null
+        },
+        {
+          "from": "water-5-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-6-osc",
+          "to": "water-6-env",
+          "param": null
+        },
+        {
+          "from": "water-6-env",
+          "to": "water-6-lp",
+          "param": null
+        },
+        {
+          "from": "water-6-lp",
+          "to": "water-6-pan",
+          "param": null
+        },
+        {
+          "from": "water-6-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-7-osc",
+          "to": "water-7-env",
+          "param": null
+        },
+        {
+          "from": "water-7-env",
+          "to": "water-7-lp",
+          "param": null
+        },
+        {
+          "from": "water-7-lp",
+          "to": "water-7-pan",
+          "param": null
+        },
+        {
+          "from": "water-7-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-8-osc",
+          "to": "water-8-env",
+          "param": null
+        },
+        {
+          "from": "water-8-env",
+          "to": "water-8-lp",
+          "param": null
+        },
+        {
+          "from": "water-8-lp",
+          "to": "water-8-pan",
+          "param": null
+        },
+        {
+          "from": "water-8-pan",
+          "to": "channel",
+          "param": null
+        }
+      ]
+    },
+    "drops-water-T2": {
+      "nodes": [
+        {
+          "id": "channel",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0.6
+          }
+        },
+        {
+          "id": "water-1-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 272.61688471771777
+          }
+        },
+        {
+          "id": "water-1-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-1-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.75
+          }
+        },
+        {
+          "id": "water-1-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-2-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 255.15827126801014
+          }
+        },
+        {
+          "id": "water-2-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-2-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.25
+          }
+        },
+        {
+          "id": "water-2-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-3-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 263.34207837935537
+          }
+        },
+        {
+          "id": "water-3-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-3-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.75
+          }
+        },
+        {
+          "id": "water-3-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-4-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 340.7293351367116
+          }
+        },
+        {
+          "id": "water-4-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-4-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.25
+          }
+        },
+        {
+          "id": "water-4-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-5-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 343.35789014585316
+          }
+        },
+        {
+          "id": "water-5-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-5-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "water-5-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-6-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 329.02145131956786
+          }
+        },
+        {
+          "id": "water-6-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-6-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0.5
+          }
+        },
+        {
+          "id": "water-6-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-7-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 257.25233962293714
+          }
+        },
+        {
+          "id": "water-7-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-7-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": -0.5
+          }
+        },
+        {
+          "id": "water-7-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        },
+        {
+          "id": "water-8-osc",
+          "type": "Oscillator",
+          "parameters": {
+            "type": "sine",
+            "frequency": 330.72122365701944
+          }
+        },
+        {
+          "id": "water-8-env",
+          "type": "Gain",
+          "parameters": {
+            "gain": 0
+          }
+        },
+        {
+          "id": "water-8-pan",
+          "type": "StereoPanner",
+          "parameters": {
+            "pan": 0
+          }
+        },
+        {
+          "id": "water-8-lp",
+          "type": "BiquadFilter",
+          "parameters": {
+            "type": "lowpass",
+            "frequency": 500,
+            "Q": 1
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "channel",
+          "to": "destination",
+          "param": null
+        },
+        {
+          "from": "water-1-osc",
+          "to": "water-1-env",
+          "param": null
+        },
+        {
+          "from": "water-1-env",
+          "to": "water-1-lp",
+          "param": null
+        },
+        {
+          "from": "water-1-lp",
+          "to": "water-1-pan",
+          "param": null
+        },
+        {
+          "from": "water-1-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-2-osc",
+          "to": "water-2-env",
+          "param": null
+        },
+        {
+          "from": "water-2-env",
+          "to": "water-2-lp",
+          "param": null
+        },
+        {
+          "from": "water-2-lp",
+          "to": "water-2-pan",
+          "param": null
+        },
+        {
+          "from": "water-2-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-3-osc",
+          "to": "water-3-env",
+          "param": null
+        },
+        {
+          "from": "water-3-env",
+          "to": "water-3-lp",
+          "param": null
+        },
+        {
+          "from": "water-3-lp",
+          "to": "water-3-pan",
+          "param": null
+        },
+        {
+          "from": "water-3-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-4-osc",
+          "to": "water-4-env",
+          "param": null
+        },
+        {
+          "from": "water-4-env",
+          "to": "water-4-lp",
+          "param": null
+        },
+        {
+          "from": "water-4-lp",
+          "to": "water-4-pan",
+          "param": null
+        },
+        {
+          "from": "water-4-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-5-osc",
+          "to": "water-5-env",
+          "param": null
+        },
+        {
+          "from": "water-5-env",
+          "to": "water-5-lp",
+          "param": null
+        },
+        {
+          "from": "water-5-lp",
+          "to": "water-5-pan",
+          "param": null
+        },
+        {
+          "from": "water-5-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-6-osc",
+          "to": "water-6-env",
+          "param": null
+        },
+        {
+          "from": "water-6-env",
+          "to": "water-6-lp",
+          "param": null
+        },
+        {
+          "from": "water-6-lp",
+          "to": "water-6-pan",
+          "param": null
+        },
+        {
+          "from": "water-6-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-7-osc",
+          "to": "water-7-env",
+          "param": null
+        },
+        {
+          "from": "water-7-env",
+          "to": "water-7-lp",
+          "param": null
+        },
+        {
+          "from": "water-7-lp",
+          "to": "water-7-pan",
+          "param": null
+        },
+        {
+          "from": "water-7-pan",
+          "to": "channel",
+          "param": null
+        },
+        {
+          "from": "water-8-osc",
+          "to": "water-8-env",
+          "param": null
+        },
+        {
+          "from": "water-8-env",
+          "to": "water-8-lp",
+          "param": null
+        },
+        {
+          "from": "water-8-lp",
+          "to": "water-8-pan",
+          "param": null
+        },
+        {
+          "from": "water-8-pan",
+          "to": "channel",
+          "param": null
+        }
+      ]
+    }
+  },
+  "events": {
+    "bamboo-T1": [
+      {
+        "id": "bamboo-1",
+        "material": "bamboo",
+        "time": 0.7,
+        "pan": -0.75,
+        "frequency": 1281.0357972979546,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-2",
+        "material": "bamboo",
+        "time": 1.8,
+        "pan": 0.25,
+        "frequency": 1116.2602577358484,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-3",
+        "material": "bamboo",
+        "time": 3,
+        "pan": 0.75,
+        "frequency": 1136.7068195715547,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-4",
+        "material": "bamboo",
+        "time": 4.1,
+        "pan": -0.25,
+        "frequency": 1537.0709206908941,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-5",
+        "material": "bamboo",
+        "time": 5.3,
+        "pan": 0,
+        "frequency": 1141.5915951132774,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-6",
+        "material": "bamboo",
+        "time": 6.5,
+        "pan": 0.5,
+        "frequency": 1883.1426948308945,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-7",
+        "material": "bamboo",
+        "time": 7.6,
+        "pan": -0.5,
+        "frequency": 1883.2691174000502,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-8",
+        "material": "bamboo",
+        "time": 8.8,
+        "pan": 0,
+        "frequency": 1591.1388268694282,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      }
+    ],
+    "bamboo-T2": [
+      {
+        "id": "bamboo-1",
+        "material": "bamboo",
+        "time": 0.9,
+        "pan": -0.75,
+        "frequency": 1281.0357972979546,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-2",
+        "material": "bamboo",
+        "time": 2,
+        "pan": 0.25,
+        "frequency": 1116.2602577358484,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-3",
+        "material": "bamboo",
+        "time": 2.8,
+        "pan": 0.75,
+        "frequency": 1136.7068195715547,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-4",
+        "material": "bamboo",
+        "time": 4.4,
+        "pan": -0.25,
+        "frequency": 1537.0709206908941,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-5",
+        "material": "bamboo",
+        "time": 5.6,
+        "pan": 0,
+        "frequency": 1141.5915951132774,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-6",
+        "material": "bamboo",
+        "time": 6.3,
+        "pan": 0.5,
+        "frequency": 1883.1426948308945,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-7",
+        "material": "bamboo",
+        "time": 7.9,
+        "pan": -0.5,
+        "frequency": 1883.2691174000502,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      },
+      {
+        "id": "bamboo-8",
+        "material": "bamboo",
+        "time": 8.6,
+        "pan": 0,
+        "frequency": 1591.1388268694282,
+        "frequency2": null,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.1,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.06,
+        "stopSeconds": 0.08
+      }
+    ],
+    "stone-T1": [
+      {
+        "id": "stone-1",
+        "material": "stone",
+        "time": 0.7,
+        "pan": -0.75,
+        "frequency": 2471.3270948268473,
+        "frequency2": 3821.647655358538,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-2",
+        "material": "stone",
+        "time": 1.8,
+        "pan": 0.25,
+        "frequency": 3099.623885564506,
+        "frequency2": 4386.102072382346,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-3",
+        "material": "stone",
+        "time": 3,
+        "pan": 0.75,
+        "frequency": 2650.111093465239,
+        "frequency2": 4339.393386663869,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-4",
+        "material": "stone",
+        "time": 4.1,
+        "pan": -0.25,
+        "frequency": 2458.450487162918,
+        "frequency2": 4304.7523526940495,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-5",
+        "material": "stone",
+        "time": 5.3,
+        "pan": 0,
+        "frequency": 2328.8937313482165,
+        "frequency2": 4318.970145191997,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-6",
+        "material": "stone",
+        "time": 6.5,
+        "pan": 0.5,
+        "frequency": 2616.293442621827,
+        "frequency2": 3847.0639584120363,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-7",
+        "material": "stone",
+        "time": 7.6,
+        "pan": -0.5,
+        "frequency": 2857.8922788612545,
+        "frequency2": 4370.918215531856,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-8",
+        "material": "stone",
+        "time": 8.8,
+        "pan": 0,
+        "frequency": 2911.5248516201973,
+        "frequency2": 4251.456267666072,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      }
+    ],
+    "stone-T2": [
+      {
+        "id": "stone-1",
+        "material": "stone",
+        "time": 0.9,
+        "pan": -0.75,
+        "frequency": 2471.3270948268473,
+        "frequency2": 3821.647655358538,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-2",
+        "material": "stone",
+        "time": 2,
+        "pan": 0.25,
+        "frequency": 3099.623885564506,
+        "frequency2": 4386.102072382346,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-3",
+        "material": "stone",
+        "time": 2.8,
+        "pan": 0.75,
+        "frequency": 2650.111093465239,
+        "frequency2": 4339.393386663869,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-4",
+        "material": "stone",
+        "time": 4.4,
+        "pan": -0.25,
+        "frequency": 2458.450487162918,
+        "frequency2": 4304.7523526940495,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-5",
+        "material": "stone",
+        "time": 5.6,
+        "pan": 0,
+        "frequency": 2328.8937313482165,
+        "frequency2": 4318.970145191997,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-6",
+        "material": "stone",
+        "time": 6.3,
+        "pan": 0.5,
+        "frequency": 2616.293442621827,
+        "frequency2": 3847.0639584120363,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-7",
+        "material": "stone",
+        "time": 7.9,
+        "pan": -0.5,
+        "frequency": 2857.8922788612545,
+        "frequency2": 4370.918215531856,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      },
+      {
+        "id": "stone-8",
+        "material": "stone",
+        "time": 8.6,
+        "pan": 0,
+        "frequency": 2911.5248516201973,
+        "frequency2": 4251.456267666072,
+        "endFrequency": null,
+        "sweepSeconds": null,
+        "amplitude": 0.06,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.12,
+        "stopSeconds": 0.15
+      }
+    ],
+    "water-T1": [
+      {
+        "id": "water-1",
+        "material": "water",
+        "time": 0.7,
+        "pan": -0.75,
+        "frequency": 272.61688471771777,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-2",
+        "material": "water",
+        "time": 1.8,
+        "pan": 0.25,
+        "frequency": 255.15827126801014,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-3",
+        "material": "water",
+        "time": 3,
+        "pan": 0.75,
+        "frequency": 263.34207837935537,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-4",
+        "material": "water",
+        "time": 4.1,
+        "pan": -0.25,
+        "frequency": 340.7293351367116,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-5",
+        "material": "water",
+        "time": 5.3,
+        "pan": 0,
+        "frequency": 343.35789014585316,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-6",
+        "material": "water",
+        "time": 6.5,
+        "pan": 0.5,
+        "frequency": 329.02145131956786,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-7",
+        "material": "water",
+        "time": 7.6,
+        "pan": -0.5,
+        "frequency": 257.25233962293714,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-8",
+        "material": "water",
+        "time": 8.8,
+        "pan": 0,
+        "frequency": 330.72122365701944,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      }
+    ],
+    "water-T2": [
+      {
+        "id": "water-1",
+        "material": "water",
+        "time": 0.9,
+        "pan": -0.75,
+        "frequency": 272.61688471771777,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-2",
+        "material": "water",
+        "time": 2,
+        "pan": 0.25,
+        "frequency": 255.15827126801014,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-3",
+        "material": "water",
+        "time": 2.8,
+        "pan": 0.75,
+        "frequency": 263.34207837935537,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-4",
+        "material": "water",
+        "time": 4.4,
+        "pan": -0.25,
+        "frequency": 340.7293351367116,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-5",
+        "material": "water",
+        "time": 5.6,
+        "pan": 0,
+        "frequency": 343.35789014585316,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-6",
+        "material": "water",
+        "time": 6.3,
+        "pan": 0.5,
+        "frequency": 329.02145131956786,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-7",
+        "material": "water",
+        "time": 7.9,
+        "pan": -0.5,
+        "frequency": 257.25233962293714,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      },
+      {
+        "id": "water-8",
+        "material": "water",
+        "time": 8.6,
+        "pan": 0,
+        "frequency": 330.72122365701944,
+        "frequency2": null,
+        "endFrequency": 60,
+        "sweepSeconds": 0.2,
+        "amplitude": 0.08,
+        "endAmplitude": 0.001,
+        "decaySeconds": 0.25,
+        "stopSeconds": 0.3
+      }
+    ]
+  },
+  "limitations": [
+    "Synthetic experimental reconstruction, not original interactive playback.",
+    "No listening or true-peak measurement.",
+    "Exact repeatability only checked within the recorded engine; cross-browser equality is not claimed.",
+    "All beds remain present; each trial contains drops of one target material only. No reverb/limiter/normalization."
+  ],
+  "mixing": {
+    "A": "(sum(bed stems) + target drops) * master * safetyGain",
+    "B": "(sum(bed stems) * bedB + target drops) * master * safetyGain",
+    "precision": "float32 stems, float32 sums; final PCM16; gains fixed before rendering, no per-condition normalization"
+  },
+  "pass": true
+}

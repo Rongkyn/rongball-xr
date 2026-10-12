@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>水声实验 · 离线制作台</title>
+<link rel="icon" href="data:,">
+<style>body{max-width:760px;margin:48px auto;padding:0 24px;background:#f5f3ed;color:#24383b;font:17px/1.7 system-ui}button{padding:12px 20px;font:inherit}a{color:#235e68}li{margin:5px 0}pre{white-space:pre-wrap}small{display:block}</style>
+<h1>水声实验 · 离线制作台</h1>
+<p>生成固定的竹、石、水滴声，以及仅底床降低 6 dB 的配对音频。制作台会显示条件，不能直接用于盲听。</p>
+<p>不会自动播放或上传内容。音频和报告在本机生成；播放前请使用舒适的设备音量。</p>
+<button id="render">生成并检查</button> <button id="report" disabled>下载检查报告</button>
+<pre id="status" role="status">尚未生成。约 146 MB，48 kHz，立体声，每段 10 秒。</pre>
+<p><a href="README.md">实验说明与限制</a> · <a href="../pilot.md">试点规程</a></p>
+<ul id="files"></ul>
+<script type="module">
+import {renderSuite} from './render.mjs';
+const status=document.querySelector('#status'), button=document.querySelector('#render'), links=document.querySelector('#files');
+let result=null, running=false; const urls=[];
+function download(name, bytes, type) {
+ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([bytes],{type})); a.download=name; a.textContent=name; urls.push(a.href); return a;
+}
+// Human and automation use the same small command entry, validation and event log.
+const events=[];
+async function dispatch(command) {
+ if(command?.type==='render') {
+  if(running) throw new Error('Render already running');
+  running=true;button.disabled=true;document.querySelector('#report').disabled=true;result=null;
+  urls.splice(0).forEach(URL.revokeObjectURL);links.replaceChildren();events.push({type:'render-start'});
+  try {
+   result=await renderSuite(message=>status.textContent=`正在生成：${message}`);
+   for(const [name,bytes] of result.files){const li=document.createElement('li');li.append(download(name,bytes,'audio/wav'));links.append(li);}
+   status.textContent=`检查通过：${result.files.size} 个音轨文件，${result.report.checks.length} 项数值比较。尚未进行真人试听。`;
+   document.querySelector('#report').disabled=false;events.push({type:'render-complete'});
+   return result.report;
+  } catch(error){status.textContent=`生成失败：${error.message}`;events.push({type:'render-failed',message:error.message});throw error;}
+  finally {running=false;button.disabled=false;}
+ }
+ if(command?.type==='report' && result) return result.report;
+ throw new Error('Unknown command or result unavailable');
+}
+window.experiment={dispatch,events};
+button.addEventListener('click',()=>dispatch({type:'render'}).catch(()=>{}));
+document.querySelector('#report').addEventListener('click',()=>download('measurement.json',JSON.stringify(result.report,null,2),'application/json').click());
+</script></html>
