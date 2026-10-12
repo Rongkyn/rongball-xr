@@ -48,18 +48,22 @@ def write_listener_group(root, source, records, files):
     for record in records:
         name = record['clip'] + '.wav'
         copy_checked(source / record['source'], root / name, files[record['source']]['sha256'])
-        rows.append(f'<section><h2>片段 {record["clip"]}</h2><p>只数：{LABELS[record["material"]]}</p>'
+        rows.append(f'<section data-clip="{record["clip"]}" data-material="{LABELS[record["material"]]}"><h2>片段 {record["clip"]}</h2><p>只数：{LABELS[record["material"]]}</p>'
                     f'<audio controls preload="metadata" src="{name}"></audio></section>')
     page = '''<!doctype html><html lang="zh-CN"><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>水声试听</title>
-<link rel="icon" href="data:,"><style>body{max-width:720px;margin:40px auto;padding:0 20px;font:18px/1.7 system-ui;background:#f7f4ed;color:#203439}section{border-top:1px solid #bbb;padding:14px 0}audio{width:100%}</style>
+<link rel="icon" href="data:,"><style>body{max-width:720px;margin:40px auto;padding:0 20px;font:18px/1.7 system-ui;background:#f7f4ed;color:#203439}section{border-top:1px solid #bbb;padding:14px 0}audio{width:100%}label{display:block;margin:10px 0}input,select,button{font:inherit;max-width:100%;padding:5px}button{margin:20px 0}</style>
+''' + f'<body data-package="{root.name}" data-audio-revision="{AUDIO_REVISION}">' + '''
 <h1>水声试听</h1><p>请按编号顺序，每次只播放一段。每段 10 秒。完成一段后在空白记录表填写你实际数到的目标滴声数及四项评分，休息至少 15 秒再播放下一段。</p>
 <p>只使用分配给你的这一份试听包。保持同一设备与舒适音量；不要按不同片段重新调音量。可随时停止；没有听完、重播或调整音量，请在表中如实注明。</p>
 <p>计数可以填 0；无法判断时将计数留空并把 count_status 写成 unsure。评分各为 1–7，1 表示很低，7 表示很高；不能判断则留空。相同评分可表示没有察觉差别。</p>
 <p>记录表四项评分依次是：water_feel（水的感觉）、clarity（目标滴声清晰度）、comfort（舒适度）、rain_realism（雨的真实感）。评分没有标准答案。</p>
-<p>记录不会上传。用表格软件编辑 <a href="responses.csv">responses.csv</a>；另在 <a href="session.txt">session.txt</a> 记录匿名编号、设备与音量设置。不要填写姓名、邮箱或其他身份信息。浏览器不替你填写回答。</p>
-''' + '\n'.join(rows) + '</html>\n'
+<p>可直接在页面填写，最后点“导出我的记录”。只保存在你下载的 JSON 中，不会上传或自动保存；刷新或关闭前务必导出。允许部分完成与空白回答，不要填写姓名、邮箱或其他身份信息。</p>
+<p>不使用页面填写时，可用表格软件编辑备用 <a href="responses.csv">responses.csv</a> 和 <a href="session.txt">session.txt</a>。两种方式选一种即可。页面不会替你计数或评分。</p>
+<noscript>浏览器禁用了脚本，请使用上面的 CSV 与 TXT 记录。</noscript>
+''' + '\n'.join(rows) + '<script src="listener-form.js"></script></body></html>\n'
     (root / 'index.html').write_text(page, encoding='utf-8')
+    shutil.copyfile(Path(__file__).parent / 'listener-form.js', root / 'listener-form.js')
     with (root / 'responses.csv').open('w', encoding='utf-8-sig', newline='') as stream:
         writer = csv.DictWriter(stream, fieldnames=FIELDS)
         writer.writeheader()
@@ -98,7 +102,7 @@ def build(source, destination):
     (destination / 'OPERATOR.txt').write_text(
         '不要把整个输出目录给听者。每人只分配 listen-01.zip 或 listen-02.zip 之一。\n'
         '两组交替分配，记录实际分配；组1/组2只平衡顺序，不证明消除学习效应。\n'
-        '听者解压后打开index.html，填写responses.csv和session.txt，完成全部回答后才揭示条件。\n'
+        '听者解压后打开index.html，页内填写并导出JSON，或用备用CSV/TXT。完成回答后才揭示条件。\n'
         'operator-key.json和本文件由安排者保管。包内无条件/事件真值，但这不是身份验证或防恶意推断机制。\n'
         '任一缺失/中断/重播记录按实际保留，不把空白补成0。单人结果只能作探索。\n'
         '本目录不自动发送给任何人、不上传回答、不作试听验收结论。\n', encoding='utf-8')

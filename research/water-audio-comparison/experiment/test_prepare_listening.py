@@ -44,7 +44,9 @@ class PackagingTests(unittest.TestCase):
             self.assertNotIn('-mix.wav', page)
             self.assertNotIn('T1', page)
             self.assertNotIn('condition', page)
-            self.assertNotIn('<script', page)
+            self.assertIn('<script src="listener-form.js"></script>', page)
+            self.assertEqual((target/'listener-form.js').read_bytes(), (Path(__file__).parent/'listener-form.js').read_bytes())
+            self.assertNotIn('fetch(', (target/'listener-form.js').read_text())
             for row in schedule(1):
                 self.assertEqual((target / (row['clip']+'.wav')).read_bytes(), (source / row['source']).read_bytes())
 

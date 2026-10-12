@@ -12,6 +12,7 @@
 
 ```sh
 node --test research/water-audio-comparison/experiment/test-render.mjs
+node --test research/water-audio-comparison/experiment/test-listener-form.cjs
 python -m unittest discover -s research/water-audio-comparison/experiment -p "test_*.py" -v
 python research/water-audio-comparison/experiment/verify_export.py /path/to/export
 ```
@@ -63,15 +64,21 @@ python research/water-audio-comparison/experiment/prepare_listening.py /path/to/
 输出目录必须不存在；程序拒绝覆盖已有记录。发生失败时保留该次目录用于诊断，换新目录重试。
 
 输出 `listen-01.zip` 和 `listen-02.zip`，每包有 12 段编号 WAV、离线 `index.html`、
-全空的回答表 `responses.csv` 与 `session.txt`。听者解压后可直接打开页面、按顺序播放，
-用表格软件填写并保存 CSV；页面不会记录或上传回答。CSV 的前两列仅预填编号和目标材质。
+全空的回答表 `responses.csv` 与 `session.txt`，以及本地 `listener-form.js`（每包共16文件）。
+听者解压后打开页面、按顺序播放，可直接填写计数、评分、设备和中断备注，最后导出 JSON。
+页面无网络提交和自动保存；关闭前必须确认下载成功。空白保持空白，计数0保持0，
+允许中断后导出部分记录；“无法判断”与非空计数等矛盾会阻止导出并显示原因。
+页面不自动计数/评分，不把播放器事件当作听者完成证明。
+不使用脚本时仍可用表格软件填写备用 CSV/TXT。CSV 的前两列仅预填编号和目标材质。
 每位听者只分配一包，交替分配两组。两组均含全部 12 混音，仅组内顺序相反。
 `operator-key.json` 与 `OPERATOR.txt` 在两个包之外，由安排者保管；完成回答后再揭示条件。
 不要把整个输出目录、制作台或公开的事件真值提前给听者。
 
 这是隐藏条件标签的编号副本，不是身份核验、不可推断条件或完全盲法的保证；
 可听到的音量差、已读公开方法和重复片段仍可能破坏盲法或产生学习效应，需记录。
-参见 [试听包验证记录](listening-validation.json)。原 `validation.json` 的源散列记录音频版本
+参见 [初版试听包验证记录](listening-validation.json) 与 [页内填写/导出验证](form-validation.json)。
+初版包记录对应 `265f57b`，本版多了本地表单脚本；各版本生成包和散列分开保存。
+原 `validation.json` 的源散列记录音频版本
 `a81294b` 的历史快照；本次包工具和 README 的散列单独记在新验证记录中。
 
 每段至少休息 15 秒，固定设备舒适音量，不临时等响或改增益。真实听者记录目标材质的总数与四项评分，
