@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "scope": "initial_slice",
+  "entries": [
+    {
+      "id": "rain-listening",
+      "type": "work",
+      "title": "听雨",
+      "path": "xr/rain-listening.html",
+      "contributions": [
+        {
+          "kind": "credited_author",
+          "actor": "Rongball",
+          "evidence": [
+            "README.md"
+          ]
+        }
+      ],
+      "validation": {
+        "level": "source_review",
+        "limits": [
+          "仅核对公开 README 归属与文件存在；未据此推定具体实现分工。",
+          "本次未运行作品、实耳试听、实机验收或确认合作。"
+        ],
+        "evidence": [
+          "README.md",
+          "xr/rain-listening.html"
+        ]
+      },
+      "sources": [
+        "README.md",
+        "xr/rain-listening.html"
+      ]
+    },
+    {
+      "id": "procedural-audio-tonejs",
+      "type": "work",
+      "title": "程序化音效 · Tone.js",
+      "path": "xr/procedural-audio-tonejs.html",
+      "contributions": [
+        {
+          "kind": "credited_author",
+          "actor": "Rongball",
+          "evidence": [
+            "README.md"
+          ]
+        }
+      ],
+      "validation": {
+        "level": "source_review",
+        "limits": [
+          "仅核对公开 README 归属与文件存在；未据此推定具体实现分工。",
+          "本次未运行作品、实耳试听、实机验收或确认合作。"
+        ],
+        "evidence": [
+          "README.md",
+          "xr/procedural-audio-tonejs.html"
+        ]
+      },
+      "sources": [
+        "README.md",
+        "xr/procedural-audio-tonejs.html"
+      ]
+    },
+    {
+      "id": "ink-sound",
+      "type": "work",
+      "title": "墨音",
+      "path": "gallery/works/ink-sound.html",
+      "contributions": [
+        {
+          "kind": "credited_author",
+          "actor": "Rongball",
+          "evidence": [
+            "README.md"
+          ]
+        }
+      ],
+      "validation": {
+        "level": "source_review",
+        "limits": [
+          "仅核对公开 README 归属与文件存在；未据此推定具体实现分工。",
+          "本次未运行作品、实耳试听、实机验收或确认合作。"
+        ],
+        "evidence": [
+          "README.md",
+          "gallery/works/ink-sound.html"
+        ]
+      },
+      "sources": [
+        "README.md",
+        "gallery/works/ink-sound.html"
+      ]
+    },
+    {
+      "id": "water-audio-comparison",
+      "type": "research",
+      "title": "水、雨与气泡：声源、事件和空间设计的可验证比较",
+      "path": "research/water-audio-comparison/README.md",
+      "contributions": [
+        {
+          "kind": "independent_research",
+          "actor": "dot",
+          "evidence": [
+            "research/water-audio-comparison/README.md"
+          ]
+        }
+      ],
+      "validation": {
+        "level": "source_review",
+        "limits": [
+          "仅源码比较；未播放、实耳试听、声学测量或参与者实验。",
+          "未取得绒球对本研究的合作 ACK；不代表共同成果已接受。"
+        ],
+        "evidence": [
+          "research/water-audio-comparison/README.md"
+        ]
+      },
+      "sources": [
+        "research/water-audio-comparison/README.md",
+        "https://github.com/Rongkyn/rongball-xr/issues/2",
+        "https://github.com/Rongkyn/rongball-xr/tree/9141f500f3eb51b3a07e6bcdc62cfab92ea1cc4b",
+        "https://webxr-waterball.vercel.app/"
+      ]
+    }
+  ]
+}
