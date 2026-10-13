@@ -279,7 +279,7 @@
       <div class="en">R O N G B A L L · I N K · S T U D I O</div>
       <p class="desc">
         以代码为笔，以屏幕为纸。<br>
-        七件互动小品，游走于粒子、山水、棋局、琴弦、山居与草木之间，<br>
+        二十一件互动小品，游走于粒子、山水、棋局、琴弦、山居与草木之间，<br>
         试把东方水墨的留白与肌理，请进数字的光里。
       </p>
       <div class="divider"></div>
@@ -292,9 +292,9 @@
     </header>
 
     <div class="section-head">
-      <h2>作品 · 二十则</h2>
+      <h2>作品 · 二十一件</h2>
       <span class="sub">Selected Works</span>
-      <span class="count">20 Pieces</span>
+      <span class="count">21 Pieces</span>
     </div>
 
     <div class="grid" id="grid">
@@ -308,11 +308,11 @@
         </div>
         <div class="body">
           <div class="title"><h3>水墨流韵</h3><span class="en-title">Ink Particles</span></div>
-          <div class="date">粒子交互 · 随鼠标挥毫</div>
-          <p>以粒子为墨，以屏幕为纸。鼠标过处，墨迹随行；轻点则有晕染散开。墨、青、朱、紫四种色彩切换，粒子带有生命衰减与尺寸扩散，轻盈随性，如在宣纸上挥毫。</p>
+          <div class="date">粒子交互 · 随手势挥毫</div>
+          <p>以粒子为墨，以屏幕为纸。鼠标或指尖过处，墨迹随行；轻点则有晕染散开。墨、青、朱、紫四种色彩切换，粒子带有生命衰减与尺寸扩散，轻盈随性，如在宣纸上挥毫。</p>
           <div class="tags">
             <span class="tag">Canvas 粒子</span>
-            <span class="tag">鼠标交互</span>
+            <span class="tag">鼠标 · 触摸</span>
             <span class="tag accent">晕染</span>
           </div>
           <span class="enter">入画 <span class="arrow">→</span></span>
@@ -329,7 +329,7 @@
         <div class="body">
           <div class="title"><h3>山水间</h3><span class="en-title">Living Landscape</span></div>
           <div class="date">沉浸视觉 · 四季流转</div>
-          <p>多层山脉与动态雾气由简化 Perlin 噪声生成，鼠标化作"气"扰动流场，点击激起涟漪，滚轮调节时间流速。春夏秋冬四时切换，三百流场粒子飘动于山水之间，王维《鹿柴》题诗竖向浮现。</p>
+          <p>多层山脉与动态雾气由简化 Perlin 噪声生成，手势或鼠标化作"气"扰动流场，轻点激起涟漪，滚轮或双指竖拖调节时间流速。春夏秋冬四时切换，三百流场粒子飘动于山水之间，王维《鹿柴》题诗竖向浮现。</p>
           <div class="tags">
             <span class="tag">流场噪声</span>
             <span class="tag">四季系统</span>
@@ -738,11 +738,17 @@
   function init(canvas, kind){
     const ctx = canvas.getContext('2d');
     let w, h, dpr = Math.min(window.devicePixelRatio||1, 2);
+    // 1014 修复：一次性绘制的封面（grid2048/gomoku）在移动端首帧后会因
+    // viewport/DPR 稳定触发一次 resize，而重设 canvas 尺寸会清空画布且不补画 →
+    // 这两张封面在手机上空白。静态封面在此登记 paint，resize 后重绘一次；
+    // rAF 动画封面每帧自绘，无需登记。
+    let paint = null;
     function resize(){
       const rect = canvas.getBoundingClientRect();
       w = rect.width; h = rect.height;
       canvas.width = w*dpr; canvas.height = h*dpr;
       ctx.setTransform(dpr,0,0,dpr,0,0);
+      if(paint) paint();
     }
     resize();
     window.addEventListener('resize', resize);
@@ -828,7 +834,7 @@
         c.arcTo(x+s,y+s,x,y+s,r); c.arcTo(x,y+s,x,y,r);
         c.arcTo(x,y,x+s,y,r); c.closePath();
       }
-      draw();
+      paint = draw; draw();
     }
     else if(kind==='gomoku'){
       function draw(){
@@ -854,7 +860,7 @@
           ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
         }
       }
-      draw();
+      paint = draw; draw();
     }
     else if(kind==='sound'){
       let t=0;

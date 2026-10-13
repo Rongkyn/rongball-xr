@@ -127,3 +127,15 @@ gallery/studio/painting/acc1013/probeTS*/
 gallery/studio/painting/acc1013/probeVW/
 gallery/studio/painting/acc1013/probeTX/
 gallery/studio/painting/acc1013/pvw*/
+# acc1014 browser profiles（~35MB，均为 cdp-harness 临时 user-data-dir；脚本/JSON/证据截图保留纳管）
+gallery/studio/painting/acc1014/coverdeep/
+gallery/studio/painting/acc1014/covmob/
+gallery/studio/painting/acc1014/dbgd/
+gallery/studio/painting/acc1014/fg1014-*/
+gallery/studio/painting/acc1014/land1014b/
+gallery/studio/painting/acc1014/land1014desk/
+gallery/studio/painting/acc1014/scroll_desk/
+gallery/studio/painting/acc1014/scroll_m390/
+gallery/studio/painting/acc1014/shotcovers/
+# acc1014 one-off debug probe
+gallery/studio/painting/acc1014/dbg_dot.js

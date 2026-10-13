@@ -118,6 +118,22 @@
  *     Input.dispatchTouchEvent 序列），不要用 drag({pointerType:'touch'})。判别流程：drag 零
  *     响应先换 touchDrag 复跑；touchDrag 仍零响应才是作品真缺 touch 监听（1013 ink-particles
  *     实锤：只挂 canvas mousemove/click，补 touchstart/touchmove/touchend 后修复）。
+ * 30. 触摸轻点后浏览器仍派「合成 click」= document 级 click 监听双发/误触 UI 控件（1014 山水间实锤）：
+ *     touchend 后若无 preventDefault，浏览器约 300ms 内补发一个合成 MouseEvent('click')。作品若
+ *     同时挂了 document click（如全局点按涟漪），同一次触摸会产生「touch 路径一次 + 合成 click 一次」
+ *     双效果；点在 UI 按钮（季节切换 .season-indicator）上也会误触发全局效果。验收必须显式断言：
+ *       (a) 触摸轻点后计数器恰好 +1（不是 +2），并在 ≥350ms 后复查无迟到合成 click 副作用；
+ *       (b) 点 UI 控件：控件自身行为生效（季节切换）且全局副作用（涟漪）不产生。
+ *     作品侧固定姿势：touchstart 即记录落点是否在控件上（elementFromPoint+closest，抬手坐标可能偏移）；
+ *     touchend 对「未移动的画布轻点」调 preventDefault 抑制合成 click，但必须 if(e.cancelable) 守卫——
+ *     部分 touchend（多指收尾/非目标）cancelable=false，硬调会刷控制台 Intervention 告警被 realErrors 抓到。
+ * 31. 像素探针自身的三类假阴性，改作品前先排除（1014 挂廊封面实锤）：
+ *       (a) 选择器想当然：封面 canvas 实际挂在 .cover 不是 .card-cover，noCanvas 是探针写错类名；
+ *           先读真实 DOM/源码确认选择器。
+ *       (b) 只采左上角 8×8：山形/粒子内容不在角落，角落透明≠未绘制；静态封面用全画布抽样
+ *           （非背景色像素数 ≥ 阈值，实测 grid2048=29756、gomoku=7199）。
+ *       (c) 粗步长踩透明网格：28px 步长可能全部落在棋盘/方块间隙误判空白；先全像素扫描定基线，
+ *           再决定抽样步长。resize 后重采一次是检验「一次性绘制封面 resize 清空」的唯一确定性口径。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});

@@ -162,7 +162,7 @@
         <div class="season-dot" data-season="3" title="冬"></div>
     </div>
     
-    <div class="info">
+    <div class="info" id="hint">
         移动鼠标 感受风的流向<br>
         点击 留下你的印记<br>
         滚轮 调整时间流速
@@ -589,13 +589,71 @@
         });
         
         document.addEventListener('click', (e) => {
+            // 点在季节切换按钮上不留涟漪（1014：鼠标/触摸统一处理）
+            if (e.target && e.target.closest && e.target.closest('.season-indicator')) return;
             ripples.push(new Ripple(e.clientX, e.clientY));
         });
         
         document.addEventListener('wheel', (e) => {
             timeScale = Math.max(0.2, Math.min(3.0, timeScale - e.deltaY * 0.001));
         });
-        
+
+        // ==================== 触摸交互（1014 补齐） ====================
+        // 1013 回归只验了「点按涟漪」（合成 click），但核心的拖动扰流（mousemove）
+        // 与滚轮调速（wheel）在触摸端无任何监听——手机打开只能看不能游。此处补齐：
+        //   单指拖动 → 扰流场（映射 mouseX/mouseY）
+        //   单指轻点 → 涟漪（仅触摸端派发，避免与浏览器合成 click 双发）
+        //   双指竖拖 → 调速（映射 wheel 语义，上滑加速/下滑减速）
+        const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+        if (isTouch) {
+            cursor.style.display = 'none';           // 触摸下隐藏桌面自定义圆光标
+            const hintEl = document.getElementById('hint');
+            if (hintEl) hintEl.innerHTML = '单指拖动 感受风的流向<br>轻点 留下你的印记<br>双指竖拖 调整时间流速';
+            let tDownX = 0, tDownY = 0, tMoved = false, tDownOnUI = false, twoMidY = null;
+            const onSeasonUI = (t) => {
+                const el = document.elementFromPoint(t.clientX, t.clientY);
+                return !!(el && el.closest && el.closest('.season-indicator'));
+            };
+            document.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    const t = e.touches[0];
+                    tDownX = t.clientX; tDownY = t.clientY; tMoved = false;
+                    tDownOnUI = onSeasonUI(t);          // 按下时即记录，抬手坐标可能已偏移
+                } else if (e.touches.length === 2) {
+                    twoMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                }
+            }, { passive: true });
+            document.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    const t = e.touches[0];
+                    if (tDownOnUI) return;              // 起按在季节按钮上则不扰流，交给按钮 click
+                    if (Math.abs(t.clientX - tDownX) > 8 || Math.abs(t.clientY - tDownY) > 8) tMoved = true;
+                    mouseX = t.clientX; mouseY = t.clientY;   // 单指拖动扰流场
+                } else if (e.touches.length === 2) {
+                    // 双指竖拖调速（映射滚轮语义：上滑加速、下滑减速）
+                    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    if (twoMidY != null) timeScale = Math.max(0.2, Math.min(3.0, timeScale - (midY - twoMidY) * 0.012));
+                    twoMidY = midY;
+                }
+            }, { passive: true });
+            document.addEventListener('touchend', (e) => {
+                // 季节按钮的点按直接放行给其自身 click，不产生涟漪（以起按落点为准）
+                if (!tMoved && e.changedTouches.length === 1 && tDownOnUI) {
+                    if (e.touches.length < 2) twoMidY = null;
+                    return;
+                }
+                // 单指轻点（未拖动、落在画布上）→ 涟漪；
+                // preventDefault 抑制浏览器随后合成的 click，避免与桌面 click 监听双发成两个涟漪
+                // 仅当事件可取消时调用（部分场景 touchend cancelable=false，强调会刷控制台告警）
+                if (!tMoved && e.changedTouches.length === 1) {
+                    const t = e.changedTouches[0];
+                    if (e.cancelable) e.preventDefault();
+                    ripples.push(new Ripple(t.clientX, t.clientY));
+                }
+                if (e.touches.length < 2) twoMidY = null;
+            }, { passive: false });
+        }
+
         // ==================== 主循环 ====================
         let time = 0;
         
@@ -668,7 +726,7 @@
             
             requestAnimationFrame(animate);
         }
-        
+
         animate();
     </script>
 </body>

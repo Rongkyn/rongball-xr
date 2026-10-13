@@ -380,3 +380,37 @@
 - 沉淀：cdp-harness.js 新增 `touchDrag(sel, pts, {stepMs:26})`（真实触摸序列，逐帧间隔让作品生成
   粒子/笔记），头部登记避坑#29。判别铁律：mobile 拖动 drag() 零响应先换 touchDrag 复跑，仍零响应
   才是作品真缺 touch 监听。脚本 acc1013/freeze_gate_1013.js + probes/ 留存。
+
+## 2026-10-14 回流（acc1014 挂廊入口审计 · 山水间移动端核心交互补齐 · 封面 resize 空白修复）
+
+### AH. 桌面 mousemove/wheel 单路由作品的触摸映射（living-landscape 真缺陷，与 AD 同型第 2 件）
+- 现象：山水间只有 mousemove/click/wheel 监听，1013 冻结门配置 interact:'tapPx' 只验了点按涟漪，
+  两大核心交互在触摸端缺失：①拖动扰流场（鼠标 200px 内力场驱粒子）；②滚轮调速（timeScale 0.2–3.0）。
+  手机打开只能看不能游。
+- 映射范式（第 2 件实锤，达「同类模式」但作品差异大、不提前抽库，先记 candidate）：
+  - 单指拖动 → 直写作品已有的鼠标语义变量（mouseX/mouseY），无需再造一套力场；
+  - 双指竖拖 → wheel 语义（记录上一帧两指中点 Y，deltaY×系数改 timeScale，上滑加速/下滑减速）；
+  - 单指轻点 → 涟漪；起按在季节按钮上（touchstart 时 elementFromPoint 记录，抬手坐标会偏移）则
+    放行给按钮自身 click、不产全局涟漪；
+  - touchend 对未移动轻点 if(e.cancelable) e.preventDefault()，抑制合成 click 与 document 级 click 双发；
+  - 触摸下隐藏桌面自定义圆光标、切换 hint 文案；body 已有 touch-action:none + overflow:hidden。
+- 验收 11 断言（真触摸 CDP，含「轻点涟漪恰好 1、350ms 后无迟到合成 click」「季节点切季且无涟漪」
+  「双指上滑 1.00→3.00 / 下滑 →0.20」）+ 桌面回归 9 断言，全 PASS；1013 全量冻结门 24/24 无回归。
+
+### AI. 一次性绘制的静态 canvas 封面：resize 清空后必须重绘（gallery 封面真缺陷，candidate）
+- 现象：挂廊首页 7 张 canvas 封面中，grid2048 / gomoku 是 init 时一次性 draw()（无 rAF），
+  其余 5 件是 rAF 常驻。移动端 dpr2 模拟时 setDeviceMetricsOverride 补发 resize，resize() 里
+  canvas.width=… 会清空画布，一次性封面无人重绘 → 手机端两张封面空白（桌面因尺寸未变碰巧正常）。
+- 修法（gallery/index.html init 内）：注册 `let paint=null;`，一次性封面在 draw 后 `paint=draw`；
+  resize() 末尾 `if(paint) paint();`。常驻 rAF 封面无需注册。
+- candidate 判定：挂廊封面是唯一复用点，暂不抽 lib；若后续再有「静态 canvas 展示件」踩同类
+  （resize 清空不补绘），第 2 件即提取 lib/static-canvas-cover.js（注册重绘回调 + dpr 同步 + 零尺寸守卫）。
+- 探针教训回流 harness 避坑#31：错选择器（.card-cover vs .cover）/只采左上角 8×8/粗步长踩透明网格，
+  三类探针假阴性在本次连踩，须全画布非背景像素扫描定基线。
+
+### AJ. 挂廊入口账实审计（招聘方第一落点，内容修复非代码坑）
+- hero 写「七件互动小品」、section 写「作品 · 二十则 / 20 Pieces」，实际 21 卡 → 统一「二十一件 / 21 Pieces」；
+- ink-particles / living-landscape 两张卡面文案补齐触摸能力（「随鼠标挥毫」→「随手势挥毫」、
+  「鼠标或指尖」、「滚轮或双指竖拖」），招聘方读卡片即知双端可玩。
+- 三档基线（m390 390×844 / desk 1280×720 / land 844×390）24 断言全 PASS：ready、零真错误、
+  21 卡、7 canvas 封面三端全绘制、无横向溢出、链接全相对、计数一致。脚本 acc1014/gallery_baseline_1014.js。
