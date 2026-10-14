@@ -168,6 +168,7 @@
         滚轮 调整时间流速
     </div>
 
+    <script src="lib/noise-lib.js"></script>
     <script>
         // ==================== 配置 ====================
         const mainCanvas = document.getElementById('mainCanvas');
@@ -284,45 +285,11 @@
             });
         });
         
-        // ==================== 简化柏林噪声 ====================
-        class SimplexNoise {
-            constructor() {
-                this.perm = new Uint8Array(512);
-                const p = new Uint8Array(256);
-                for (let i = 0; i < 256; i++) p[i] = i;
-                for (let i = 255; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [p[i], p[j]] = [p[j], p[i]];
-                }
-                for (let i = 0; i < 512; i++) this.perm[i] = p[i & 255];
-            }
-            
-            noise2D(x, y) {
-                const X = Math.floor(x) & 255;
-                const Y = Math.floor(y) & 255;
-                x -= Math.floor(x);
-                y -= Math.floor(y);
-                const u = this.fade(x);
-                const v = this.fade(y);
-                const a = this.perm[X] + Y;
-                const b = this.perm[X + 1] + Y;
-                return this.lerp(v,
-                    this.lerp(u, this.grad(this.perm[a], x, y), this.grad(this.perm[b], x - 1, y)),
-                    this.lerp(u, this.grad(this.perm[a + 1], x, y - 1), this.grad(this.perm[b + 1], x - 1, y - 1))
-                );
-            }
-            
-            fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
-            lerp(t, a, b) { return a + t * (b - a); }
-            grad(hash, x, y) {
-                const h = hash & 3;
-                const u = h < 2 ? x : y;
-                const v = h < 2 ? y : x;
-                return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
-            }
-        }
-        
-        const noise = new SimplexNoise();
+        // ==================== 柏林噪声 ====================
+        // 2026-10-15 提取至 lib/noise-lib.js（window.PerlinNoise）。
+        // 原类名 SimplexNoise 属误名（实为 Perlin）；本件 grad 用经典 h&3 掩码 = 库默认口径，
+        // Math.random 洗牌语义不变（每次加载换景）。逐位回归见 acc1015/parity_noiselib.js
+        const noise = new PerlinNoise();
         
         // ==================== 山水生成 ====================
         class MountainLayer {

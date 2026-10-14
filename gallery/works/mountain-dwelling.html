@@ -124,6 +124,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#f0e9d8;
 
 <div id="hint">选择元素 · 点击山水放置 · 拖拽移动</div>
 
+<script src="lib/noise-lib.js"></script>
 <script>
 "use strict";
 /* =========================================================
@@ -200,34 +201,11 @@ function seasonConfig(){
   };
 }
 
-/* ---------- Perlin Noise ---------- */
-class Noise {
-  constructor(seed){
-    this.p=new Uint8Array(512);
-    const q=new Uint8Array(256);
-    let s=seed||1;
-    for(let i=0;i<256;i++){q[i]=i}
-    for(let i=255;i>0;i--){
-      s=(s*16807)%2147483647;
-      const j=s%(i+1);
-      [q[i],q[j]]=[q[j],q[i]];
-    }
-    for(let i=0;i<512;i++) this.p[i]=q[i&255];
-  }
-  fade(t){return t*t*t*(t*(t*6-15)+10)}
-  lerp(t,a,b){return a+t*(b-a)}
-  grad(h,x,y){const u=h<2?x:y,v=h<2?y:x;return ((h&1)?-u:u)+((h&2)?-v:v)}
-  noise2D(x,y){
-    const X=Math.floor(x)&255, Y=Math.floor(y)&255;
-    x-=Math.floor(x);y-=Math.floor(y);
-    const u=this.fade(x),v=this.fade(y);
-    const a=this.p[X]+Y,b=this.p[X+1]+Y;
-    return this.lerp(v,
-      this.lerp(u,this.grad(this.p[a],x,y),this.grad(this.p[b],x-1,y)),
-      this.lerp(u,this.grad(this.p[a+1],x,y-1),this.grad(this.p[b+1],x-1,y-1)));
-  }
-}
-const noise = new Noise(42);
+/* ---------- Perlin Noise ----------
+   2026-10-15 提取至 lib/noise-lib.js（window.PerlinNoise）。
+   seed=42 的排列表与噪声输出与本件原内联类逐位一致（本件 grad 不掩码，须 gradMask:false），
+   回归见 acc1015/parity_noiselib.js */
+const noise = new PerlinNoise(42, { gradMask: false });
 
 /* ---------- 山脉（离屏轮廓缓存 + 实时染色） ----------
    轮廓（形状+山脚渐隐）只在 resize 时生成并缓存为3张白色蒙版；

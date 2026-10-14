@@ -59,13 +59,14 @@
 | `canvas-backing.js` | backing 三件套：零尺寸守卫 + maxDpr 只升不降 + backing/变换同步（§D/D2/D3） | `extracted-unused`（1012 账实校正：全 24 件 html 无一处真 script src，5 件实锤均内联/注释，待新件真引转正） | 模块头文档 |
 | `cdp-harness.js` | CDP 交互验收 harness（建连/goto/tap/drag/像素/错误） | `validated`（全部作品验收在用；0927 错误带 `[file:line]` 详情） | 模块头文档 |
 | `ui-floating-stack.css` | 底部浮层栈：hint 操作提示 + 角落印章 seal 的版式与分层（窄屏/矮视口响应式） | `validated`（桂雨/月波 2 件接入，0928 双端 56/56；0930 补 L3 采用注释） | 模块头文档 |
+| `noise-lib.js` | 二维经典 Perlin 梯度噪声：确定性种子（LCG/自定义随机源）+ grad 掩码变体（opts.gradMask） | `validated`（山居/山水间 2 件真 script src 接入；1015 重构前后逐像素 diff=0，见 acc1015） | 模块头 JSDoc |
 
 ## 二、重复实现实锤（优先提取）
 
 | 候选模块 | 能力 | 重复证据 | 计划 |
 |----------|------|----------|------|
-| `noise-lib.js` | 二维噪声（地形/云雾/肌理底座） | `living-landscape.html` SimplexNoise 类 与 `mountain-dwelling.html` Noise 类各自独立实现 | 下次触碰任一山水作品时提取，统一为带种子噪声模块 |
-| `season-lib.js` | 四季配色/参数配置 | `living-landscape.html` getCurrentSeasonConfig 与 `mountain-dwelling.html` SEASONS 各自定义 | 与 noise-lib 同期评估 |
+| ~~`noise-lib.js`~~ | ~~二维噪声~~ | 已于 2026-10-15 提取入池（§一）。两原件同源经典 Perlin，但洗牌随机源（山居 Park-Miller LCG 整数取模 / 山水间 Math.random）与 grad 口径（山居不掩码 / 山水间 h&3 掩码）两处真实分叉，库以 seed 参数 + opts.gradMask 变体统一 | ✅ 已核销 |
+| ~~`season-lib.js`~~ | ~~四季配色/参数配置~~ | 1015 同期评估后判定**不提取**：两套季节系统非同源复制——山居是白昼浅彩（4 季平铺 SEASONS 常量，mist=雾气浓淡），山水间是夜景墨色（getCurrentSeasonConfig 函数化、含季节过渡插值，mist 语义为云团参数），字段名/色板/语义全不同，强行共享只会留下一层无内容的空抽象。若未来第 3 件再出现季节系统再评估 | ⛔ 判定不提取 |
 
 ## 三、单一来源候选（candidate）
 
@@ -414,3 +415,30 @@
   「鼠标或指尖」、「滚轮或双指竖拖」），招聘方读卡片即知双端可玩。
 - 三档基线（m390 390×844 / desk 1280×720 / land 844×390）24 断言全 PASS：ready、零真错误、
   21 卡、7 canvas 封面三端全绘制、无横向溢出、链接全相对、计数一致。脚本 acc1014/gallery_baseline_1014.js。
+
+## 2026-10-15 回流（acc1015 noise-lib 提取 · 两件山水零漂移重构 · 确定性像素回归范式）
+
+### AK. noise-lib.js 提取（§二挂账核销，2 件接入，validated）
+- 触发：BOARD 挂账「noise-lib/season-lib 重复实现提取，触碰山水件时触发」；1014 山水间深磨即触发条件满足。
+- 两原件实为同一经典 Ken Perlin improved noise，但逐行比对发现两处真实分叉，库以参数统一而非抹平：
+  - 洗牌随机源：山居 seed=42 走 Park-Miller LCG，且索引用**整数直接取模** `j = s % (i+1)`
+    （不是 `floor(s/2147483647*(i+1))`，两者数学不等价，首版库写错导致 873 噪声点 maxAbs=1 漂移——坑#5）；
+    山水间走 Math.random 每次换景。API：`new PerlinNoise(seed?)`——数字=LCG 确定性、函数=自定义随机源、省略=Math.random。
+  - grad 掩码：山居 grad 不掩码（直接 `h<2`），山水间经典 `h&3`（仅 h∈{0,1} 时两口径才等价）。
+    库提供 `opts.gradMask`（默认 true=经典掩码，山居显式传 false——坑#6，一度误判两件相同）。
+- 验证：Node 逐位 parity 7/7（perm[512] 全等 + 1290 采样点全等，acc1015/parity_noiselib.js）；
+  真机 CDP 重构前后截图**逐像素 diff=0**（两件）；file:// 真实路径冒烟（切冬/镜头/零真错误）。
+- 采用注释：两件 HTML 原内联类处均留 L3 采用注释（口径差异 + 回归指针）。
+
+### AL. season-lib 同期评估结论：不提取（避免空抽象）
+- 山居 SEASONS（白昼浅彩、4 季平铺常量、mist=雾气浓淡）与山水间 getCurrentSeasonConfig
+ （夜景墨色、函数化 + 过渡插值、mist=云团参数）字段/色板/语义全不同，非同源复制。
+  共享只能得到一层无内容的空抽象，§二已标「判定不提取」，第 3 件季节系统出现时再评估。
+
+### AM. 重构零漂移回归范式（回流 harness 避坑 #32）
+- 动画件「重构前后截图必须全等」须双锁定：①固定 PRNG（Math.random 覆盖，控纸张纤维/粒子/洗牌）；
+  ②确定性虚拟时钟 + 手动 rAF（window.__step(n)，固定步长推进帧，setTimeout 入队随帧执行）。
+  缺①实测山居 46% 像素差，缺②实测山水间 1.4% 相位差——都是脚本侧假 FAIL，非作品缺陷。
+- data:text/html 内联整页不可取：库 JSDoc 中字面量 `</script>` 提前闭合脚本块；
+  改用本地 HTTP server + 临时页（基线 git HEAD 单文件 / 新版临时目录 + ../lib 相对路径），测完即删。
+- 完整可复用范式：acc1015/cdp_regression_1015.js（含纯 JS PNG 解码 + 逐像素 diff）。

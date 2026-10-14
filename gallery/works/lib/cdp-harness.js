@@ -134,6 +134,20 @@
  *           （非背景色像素数 ≥ 阈值，实测 grid2048=29756、gomoku=7199）。
  *       (c) 粗步长踩透明网格：28px 步长可能全部落在棋盘/方块间隙误判空白；先全像素扫描定基线，
  *           再决定抽样步长。resize 后重采一次是检验「一次性绘制封面 resize 清空」的唯一确定性口径。
+ * 32. 重构零漂移回归：动画件截图比对必须「确定性虚拟时钟 + 固定 PRNG」双锁定（1015 noise-lib 提取实锤）：
+ *     对「同一作品重构前后截图必须像素全等」的验收，真实 rAF+真实时钟+真实 Math.random 下两次独立加载
+ *     必有三类不可控差异：①帧落点时刻不同（动画相位漂移，实测山水间 1.4% 像素差/maxAbs=107）；
+ *     ②Math.random 消费序列不同（纸张纤维/粒子/洗牌，实测山居 46% 像素差/maxAbs=192）；③切季等过渡态。
+ *     固定姿势（基线页与新版页注入完全相同的首脚本，插在页面第一个 <script> 前）：
+ *       (a) 固定 PRNG：mulberry32 常量种子覆盖 Math.random（注意 LCG 自洗牌的作品噪声不受其影响，仍确定性）；
+ *       (b) 虚拟时钟：performance.now/Date.now 返回虚拟毫秒，setTimeout/setInterval 入队不自动执行；
+ *       (c) 手动 rAF：requestAnimationFrame 只入队，暴露 window.__step(n) 按固定 1000/60ms 步长推进 n 帧
+ *           （每帧先跑到期 timer 再跑 rAF 回调，setTimeout(300) 类预置元素在第19帧就位）；
+ *       (d) navigate 后等外部脚本拉取，再 __step(同一帧数)，再截图。
+ *     基线（git show HEAD 单文件）与新版（临时目录 + ../lib 相对路径）走同一本地 HTTP server；
+ *     data:text/html 内联整页方案不可取：内联库 JSDoc 里的字面量 </script> 会被 HTML 解析器提前闭合
+ *     脚本块（须转义 <\\/script>），且 file:// 真实引用无此问题——冒烟永远以真实文件路径为准。
+ *     完整范式见 acc1015/cdp_regression_1015.js（4 页临时生成测完即删：diff=0 + file:// 交互冒烟）。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});
