@@ -180,12 +180,21 @@
         
         let W, H;
         
+        let maxDpr = Math.min(window.devicePixelRatio || 1, 2);
         function resize() {
             // acc1016 修：retina backing（坑#20 同型）。backing=css×dpr，ctx 缩放保持 W/H 为 CSS 像素，
             // 绘制坐标全部不变；dpr 封顶 2 控移动 fill-rate。
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            W = window.innerWidth;
-            H = window.innerHeight;
+            // 坑#20 时序：脚本在 head 同步执行首次 resize 时，移动模拟 dpr 短暂读成 1，之后无 resize 事件
+            // 就不再重建 → 缓存「观测到的最大 dpr」只升不降（1002 墨洇同款模式），并由 rAF 轮询兜底补偿。
+            const nextDpr = Math.max(maxDpr, Math.min(window.devicePixelRatio || 1, 2));
+            const nW = window.innerWidth, nH = window.innerHeight;
+            // 尺寸与 dpr 都没变则跳过重建（backing 重置会清空画布、打断动画）
+            if (nextDpr === maxDpr && nW === W && nH === H &&
+                mainCanvas.width === Math.round(nW * nextDpr)) return;
+            maxDpr = nextDpr;
+            const dpr = maxDpr;
+            W = nW;
+            H = nH;
             for (const cv of [mainCanvas, uiCanvas]) {
                 cv.width = Math.round(W * dpr);
                 cv.height = Math.round(H * dpr);
@@ -197,6 +206,17 @@
         }
         resize();
         window.addEventListener('resize', resize);
+        // 坑#20 补偿：headless 移动模拟/真机首帧 dpr 可能短暂读成 1（实测本页脚本在页面时钟
+        // ~3s 才首次执行、恰好踩中 dpr=1 的瞬时窗口，故不能用 performance.now 绝对时间裁剪）。
+        // 用帧计数兜底：脚本运行后连续观察 120 帧（约 2s），dpr 升高且 backing 未跟上则补建；
+        // resize 有尺寸/dpr 守卫，未变化直接 return，不会每帧清空画布。
+        (function dprCatch(frames) {
+            frames = frames || 0;
+            const cur = Math.min(window.devicePixelRatio || 1, 2);
+            const needW = Math.round(W * Math.max(maxDpr, cur));
+            if (cur > maxDpr || mainCanvas.width !== needW) resize();
+            if (frames < 120) requestAnimationFrame(() => dprCatch(frames + 1));
+        })();
         
         // ==================== 四季系统 ====================
         const seasons = {
