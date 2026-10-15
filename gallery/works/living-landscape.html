@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
+      <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>山水间 | Living Ink Landscape</title>
     <style>
@@ -180,8 +181,19 @@
         let W, H;
         
         function resize() {
-            W = mainCanvas.width = uiCanvas.width = window.innerWidth;
-            H = mainCanvas.height = uiCanvas.height = window.innerHeight;
+            // acc1016 修：retina backing（坑#20 同型）。backing=css×dpr，ctx 缩放保持 W/H 为 CSS 像素，
+            // 绘制坐标全部不变；dpr 封顶 2 控移动 fill-rate。
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            W = window.innerWidth;
+            H = window.innerHeight;
+            for (const cv of [mainCanvas, uiCanvas]) {
+                cv.width = Math.round(W * dpr);
+                cv.height = Math.round(H * dpr);
+                cv.style.width = W + 'px';
+                cv.style.height = H + 'px';
+            }
+            mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            uiCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
         resize();
         window.addEventListener('resize', resize);

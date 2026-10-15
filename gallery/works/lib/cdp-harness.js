@@ -148,6 +148,14 @@
  *     data:text/html 内联整页方案不可取：内联库 JSDoc 里的字面量 </script> 会被 HTML 解析器提前闭合
  *     脚本块（须转义 <\\/script>），且 file:// 真实引用无此问题——冒烟永远以真实文件路径为准。
  *     完整范式见 acc1015/cdp_regression_1015.js（4 页临时生成测完即删：diff=0 + file:// 交互冒烟）。
+ * 33. file:// 验收绿 ≠ 线上部署绿（1016 Pages 全量部署审计实锤）：file:// 永远暴露不了三类 HTTPS 坑——
+ *     ①默认 favicon 请求站点根 /favicon.ico（GitHub Pages 仓库放不到根，无 <link rel=icon> 时每页 console
+ *     固定 2 条 404，Network 审计须按 url 过滤 favicon 防噪声、但要作为真实缺陷修：加真实 svg 图标 link，
+ *     禁零字节占位）；②部署版本漂移（Pages 缓存/未触发构建，grep 线上 HTML 核对最新入池库是否在线）；
+ *     ③http:// 混合内容 + 非 200 资源。部署审计固定姿势：Network.enable 收集 loadingFailed（除 Favicon 型）
+ *     /responseReceived(status>=400、url http:// 开头)，逐件断言 location.protocol==='https:' + 主元素入屏
+ *     + 移动 backing=css×min(dpr,2)。完整骨架见 acc1016/live_audit_1016.js；HTTP 层预扫见
+ *     acc1016/http_scan_1016.js（HEAD 21 卡 href+封面+lib，30/30）。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});

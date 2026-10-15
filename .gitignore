@@ -142,3 +142,10 @@ gallery/studio/painting/acc1014/dbg_dot.js
 # acc1015 throwaway HEAD snapshots & temp HTTP pages（脚本内 git show 动态生成）
 gallery/studio/painting/acc1015/_head_*.html
 gallery/works/.reg1015/
+# acc1016 browser profiles（cdp-harness 临时 user-data-dir；脚本/JSON 证据保留纳管）
+gallery/studio/painting/acc1016/la1016-*/
+gallery/studio/painting/acc1016/live1016[dm]/
+gallery/studio/painting/acc1016/probe404/
+gallery/studio/painting/acc1016/vll-*/
+gallery/studio/painting/acc1016/vlli/
+gallery/studio/painting/acc1016/shots/
