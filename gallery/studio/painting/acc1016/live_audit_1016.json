@@ -1,5 +1,5 @@
 {
-  "at": "2026-10-15T17:20:15.028Z",
+  "at": "2026-10-15T18:24:41.941Z",
   "url": "https://rongkyn.github.io/rongball-xr/gallery/",
   "desktop": {
     "total": 21,
@@ -7,7 +7,7 @@
   },
   "mobile": {
     "total": 8,
-    "pass": 7
+    "pass": 8
   },
   "gallery": {
     "tag": "gallery-index",
@@ -17,29 +17,5 @@
     "ox": false,
     "netBad": []
   },
-  "fails": [
-    {
-      "tag": "living-landscape",
-      "mobile": true,
-      "pass": false,
-      "issues": [
-        "backing降级 390x844 css=390x844 dpr=2"
-      ],
-      "location": "https:",
-      "ready": "complete",
-      "m": {
-        "found": true,
-        "tag": "canvas",
-        "w": 390,
-        "h": 844,
-        "left": 0,
-        "right": 390,
-        "bw": 390,
-        "bh": 844,
-        "ox": false,
-        "hostW": 390,
-        "dpr": 2
-      }
-    }
-  ]
+  "fails": []
 }

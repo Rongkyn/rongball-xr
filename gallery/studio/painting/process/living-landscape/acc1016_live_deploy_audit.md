@@ -43,11 +43,22 @@ file:// 与 https:// 的差异面（网络 404、混合内容、部署版本漂�
   双 canvas backing 一致、主画面非空（21585 采样点）、零真错误 → PASS
 - verify_ll_interact.js（本地移动真触摸）：tap 涟漪生成（点击链路坐标未被 transform 破坏）→ PASS
 
-## 待 push 后线上复验
-- 线上 living-landscape 移动 backing=780 宽
-- 全站 console 无 favicon 404
+## push 后线上复验（269e47c → ab2552b）
 
-## POOL 评估
-- 新增可复用模式：「线上部署审计」脚本骨架（Network 域抓失败/4xx/混合内容 + 协议断言 +
-  file→https 双环境）。候选入 POOL「部署/Pages」类；待线上复验绿后正式入池。
-- retina backing 模式与坑#20 同源，不入新池，在坑表注明 living-landscape 曾漏网。
+- 首版（269e47c）线上复验：favicon 全站 404 已清零（gallery/mo-yun/living 零 4xx、link 在线上 HTML）；
+  但 living-landscape 移动线上 backing 仍=390，修复未生效。
+- 注入 Page.addScriptToEvaluateOnNewDocument 时间线探针（probe_dpr3.js，100ms 采样）实锤根因：
+  本页脚本在**页面时钟 ~2967ms 才首次执行**，且那一刻 devicePixelRatio 瞬时=1（CDP 移动模拟时序，
+  与坑#20 记录的「resize 后 dpr 短暂读成 1」同源），随后 dpr 回到 2 但再无 resize 事件。
+  我首版兜底用 `performance.now()<2000` 绝对时间裁剪——脚本起跑时已 >2000ms，轮询体一次没跑，backing 锁死 390。
+- 二次修复（ab2552b）：兜底改用**帧计数**（脚本运行后连续 120 帧≈2s），不依赖绝对时钟；
+  resize 加「nextDpr/宽/高/backing 全未变即 return」守卫，避免轮询每帧重置 backing 清空画布。
+- 最终线上证据（live_verify_1016.js，等 pages-build completed + ?cb 绕缓存）：
+  gallery/mo-yun/living 桌面零 4xx、favicon link 生效；living-M back=780、cssW=390、dpr=2。
+  完整线上复跑 live_audit_1016.js：**桌面 21/21、移动 8/8、gallery 23 链接零溢出 → 零失败**。
+
+## POOL 评估（已正式入池）
+- POOL §AN「线上部署审计骨架」validated：三层——HTTP 预扫 / Network 域运行时 / push 后带 cache-buster 复验。
+- harness 避坑#33：file:// 绿≠线上绿；favicon 404 过滤与修复范式；线上版本漂移 grep 核对；混合内容。
+- 坑#20 补注：dpr 兜底轮询禁用 performance.now 绝对裁剪（脚本晚执行时基准已偏），用帧计数 + resize 守卫。
+- retina backing 主体模式与坑#20 同源，不另立库；living-landscape 漏网案例记入坑表。

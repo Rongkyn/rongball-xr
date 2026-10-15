@@ -442,3 +442,22 @@
 - data:text/html 内联整页不可取：库 JSDoc 中字面量 `</script>` 提前闭合脚本块；
   改用本地 HTTP server + 临时页（基线 git HEAD 单文件 / 新版临时目录 + ../lib 相对路径），测完即删。
 - 完整可复用范式：acc1015/cdp_regression_1015.js（含纯 JS PNG 解码 + 逐像素 diff）。
+
+### AN. 线上部署审计骨架（validated，1016 全廊实跑 21+8 全绿；回流 harness 避坑 #33）
+- 触发：作品挂 GitHub Pages 公开链接（P13）后，冻结/投递前至少跑一次；file:// 验收绿 ≠ 线上绿。
+- 三层：
+  1. HTTP 层预扫（无需浏览器）：解析 gallery/index.html 的卡片 href + CSS 封面 url() + 各 work 的
+    script/link，HEAD/GET 断言 200。骨架 acc1016/http_scan_1016.js（1016：21 卡+7 封面+4 lib=30/30）。
+  2. 运行时 CDP 审计（Network 域）：Network.enable 收 loadingFailed（type!=='Favicon'）与
+    responseReceived（status>=400 记 url、http:// 开头记混合内容）；逐件断言
+    location.protocol==='https:'、readyState complete、主 canvas/宿主入屏且 >80px、无横向溢出、
+    移动 backing=round(css×min(dpr,2))、realErrors 过滤 favicon/资源类噪声后为 0。
+    骨架 acc1016/live_audit_1016.js（桌面全量 + 移动代表作矩阵，选择器按件映射，禁统一 #cv）。
+  3. push 后线上复验：等 pages-build-deployment workflow completed，带 ?cb= 时间戳绕 CDP 缓存，
+    断言修复在线上 HTML/运行时生效（grep 线上源码核对入池库已部署）。骨架 acc1016/live_verify_1016.js。
+- favicon 404 标准解（坑#21）：Pages 项目页站点根 /favicon.ico 仓库放不到；每个 html head 加
+  `<link rel="icon" type="image/svg+xml" href="…/favicon.svg">`（works 用 ../），给真实 SVG 资产，
+  不用零字节 ico 占位。审计时 favicon 404 要算真实缺陷但从 per-page 错误噪声中单独过滤。
+- retina dpr 时序（坑#20 线上复现新细节）：作品脚本可能晚于页面时钟数秒执行且恰踩 dpr=1 瞬时窗口，
+  dpr 兜底轮询禁用 performance.now() 绝对时间裁剪（基准已偏），改用帧计数（120 帧）；
+  resize 必须带「尺寸+dpr 未变即 return」守卫，否则轮询每帧重置 backing 清空画布。
