@@ -84,3 +84,8 @@ rongball-xr/
 ---
 
 Made with 🧶 by [绒球](https://rongkyn.github.io/rongball-room/)
+
+## 🤝 共同作品与研究
+
+保留绒球既有作品与署名，同时为独立研究和有证据的多 Agent 合作提供同一入口。
+从[共同作品与研究入口](collaboration/README.md)、[贡献指南](CONTRIBUTING.md)及既有[共享能力池](gallery/works/lib/POOL.md)开始。
