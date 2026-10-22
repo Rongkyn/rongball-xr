@@ -1,0 +1,343 @@
+{
+  "ts": "2026-10-22T18:16:07.721Z",
+  "total": 56,
+  "fail": 0,
+  "results": [
+    {
+      "suite": "mobile390",
+      "name": "主题映射「晚安，今天有」=>moon",
+      "ok": true,
+      "detail": "got=moon"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「空山新雨后，」=>rain",
+      "ok": true,
+      "detail": "got=rain"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「独钓寒江雪」=>snow",
+      "ok": true,
+      "detail": "got=snow"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「野旷天低树」=>mountain",
+      "ok": true,
+      "detail": "got=mountain"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「孤舟蓑笠翁」=>boat",
+      "ok": true,
+      "detail": "got=boat"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「桃花开了春天」=>flower",
+      "ok": true,
+      "detail": "got=flower"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「宁可食无肉，」=>bamboo",
+      "ok": true,
+      "detail": "got=bamboo"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「停车坐爱枫林」=>autumn",
+      "ok": true,
+      "detail": "got=autumn"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「千山鸟飞绝」=>bird",
+      "ok": true,
+      "detail": "got=bird"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「行到水穷处坐」=>cloud",
+      "ok": true,
+      "detail": "got=cloud"
+    },
+    {
+      "suite": "mobile390",
+      "name": "主题映射「江水悠悠向东」=>jiang",
+      "ok": true,
+      "detail": "got=jiang"
+    },
+    {
+      "suite": "mobile390",
+      "name": "成画后镜像 themeKey=moon",
+      "ok": true,
+      "detail": "moon"
+    },
+    {
+      "suite": "mobile390",
+      "name": "成画后题诗为月题",
+      "ok": true,
+      "detail": "明月松间照，清泉石上流"
+    },
+    {
+      "suite": "mobile390",
+      "name": "seed 为数字",
+      "ok": true,
+      "detail": "1297091453"
+    },
+    {
+      "suite": "mobile390",
+      "name": "确定性：同句同变体同 hash",
+      "ok": true,
+      "detail": "eb48b935"
+    },
+    {
+      "suite": "mobile390",
+      "name": "换卷：变体不同 hash 不同",
+      "ok": true,
+      "detail": "eb48b935 vs 83d36b6c"
+    },
+    {
+      "suite": "mobile390",
+      "name": "换卷：变体不同 seed 不同",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "suite": "mobile390",
+      "name": "换一卷按钮 variant=1",
+      "ok": true,
+      "detail": "variant=1 seed0=1297091453 seedNow=4010377654"
+    },
+    {
+      "suite": "mobile390",
+      "name": "换一卷后 seed 已变",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "suite": "mobile390",
+      "name": "像素：天区留白纸面>55%",
+      "ok": true,
+      "detail": "0.995"
+    },
+    {
+      "suite": "mobile390",
+      "name": "像素：下半幅山体墨色>8%",
+      "ok": true,
+      "detail": "0.347"
+    },
+    {
+      "suite": "mobile390",
+      "name": "像素：题字区朱印像素存在",
+      "ok": true,
+      "detail": "0.02955"
+    },
+    {
+      "suite": "mobile390",
+      "name": "题原句：note 标注原句",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "suite": "mobile390",
+      "name": "存图：toDataURL 以 image/png 触发",
+      "ok": true,
+      "detail": "image/png"
+    },
+    {
+      "suite": "mobile390",
+      "name": "沙箱：零外部资源请求",
+      "ok": true,
+      "detail": "external=0"
+    },
+    {
+      "suite": "mobile390",
+      "name": "布局：无横向溢出",
+      "ok": true,
+      "detail": "{\"sw\":390,\"cw\":390,\"body\":390}"
+    },
+    {
+      "suite": "mobile390",
+      "name": "性能：单次渲染<1000ms",
+      "ok": true,
+      "detail": "50ms"
+    },
+    {
+      "suite": "mobile390",
+      "name": "零真实 JS 错误",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「晚安，今天有」=>moon",
+      "ok": true,
+      "detail": "got=moon"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「空山新雨后，」=>rain",
+      "ok": true,
+      "detail": "got=rain"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「独钓寒江雪」=>snow",
+      "ok": true,
+      "detail": "got=snow"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「野旷天低树」=>mountain",
+      "ok": true,
+      "detail": "got=mountain"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「孤舟蓑笠翁」=>boat",
+      "ok": true,
+      "detail": "got=boat"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「桃花开了春天」=>flower",
+      "ok": true,
+      "detail": "got=flower"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「宁可食无肉，」=>bamboo",
+      "ok": true,
+      "detail": "got=bamboo"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「停车坐爱枫林」=>autumn",
+      "ok": true,
+      "detail": "got=autumn"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「千山鸟飞绝」=>bird",
+      "ok": true,
+      "detail": "got=bird"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「行到水穷处坐」=>cloud",
+      "ok": true,
+      "detail": "got=cloud"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "主题映射「江水悠悠向东」=>jiang",
+      "ok": true,
+      "detail": "got=jiang"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "成画后镜像 themeKey=moon",
+      "ok": true,
+      "detail": "moon"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "成画后题诗为月题",
+      "ok": true,
+      "detail": "明月松间照，清泉石上流"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "seed 为数字",
+      "ok": true,
+      "detail": "1297091453"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "确定性：同句同变体同 hash",
+      "ok": true,
+      "detail": "eb48b935"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "换卷：变体不同 hash 不同",
+      "ok": true,
+      "detail": "eb48b935 vs 83d36b6c"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "换卷：变体不同 seed 不同",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "suite": "desktop1280",
+      "name": "换一卷按钮 variant=1",
+      "ok": true,
+      "detail": "variant=1 seed0=1297091453 seedNow=4010377654"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "换一卷后 seed 已变",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "suite": "desktop1280",
+      "name": "像素：天区留白纸面>55%",
+      "ok": true,
+      "detail": "0.995"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "像素：下半幅山体墨色>8%",
+      "ok": true,
+      "detail": "0.347"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "像素：题字区朱印像素存在",
+      "ok": true,
+      "detail": "0.02955"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "题原句：note 标注原句",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "suite": "desktop1280",
+      "name": "存图：toDataURL 以 image/png 触发",
+      "ok": true,
+      "detail": "image/png"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "沙箱：零外部资源请求",
+      "ok": true,
+      "detail": "external=0"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "布局：无横向溢出",
+      "ok": true,
+      "detail": "{\"sw\":1265,\"cw\":1265,\"body\":1265}"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "性能：单次渲染<1000ms",
+      "ok": true,
+      "detail": "51ms"
+    },
+    {
+      "suite": "desktop1280",
+      "name": "零真实 JS 错误",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

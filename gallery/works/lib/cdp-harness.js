@@ -156,6 +156,17 @@
  *     /responseReceived(status>=400、url http:// 开头)，逐件断言 location.protocol==='https:' + 主元素入屏
  *     + 移动 backing=css×min(dpr,2)。完整骨架见 acc1016/live_audit_1016.js；HTTP 层预扫见
  *     acc1016/http_scan_1016.js（HEAD 21 卡 href+封面+lib，30/30）。
+ * 34. trustedClick(sel) 省略 x/y 是静默假阴性（1023 一句话水墨实锤）：tap/click 的坐标模板
+ *     缺参会插值出 NaN，事件落到页面原点 (0,0)，无报错、无断言线索，表现为「点了没反应」。
+ *     凡点元素一律传元素内 CSS 坐标；推荐固定 centerClick 姿势：
+ *       const c = await s.q(`(function(){var el=document.querySelector(SEL);
+ *         el.scrollIntoView({block:'center'}); var r=el.getBoundingClientRect();
+ *         return {x:Math.round(r.width/2),y:Math.round(r.height/2)};})()`);
+ *       await s.trustedClick(SEL, c.x, c.y);
+ * 35. 矮视口下元素被布局挤出可视区，CDP 点击落在视口外静默丢失（1023 一句话水墨 desktop1280×720
+ *     实锤）：3:4 高画布把控件按钮顶到 y>视口高，mobile 全过、desktop 点击类全挂且无错误。
+ *     点击前必须 scrollIntoView({block:'center'}) 再取 rect 中心；桌面验收视口高度给足或
+ *     断言元素 rect 顶边 < innerHeight，先排除「不可见就点不到」再查作品逻辑。
  * 最小示例：
  *   const H = require('./cdp-harness.js');
  *   const s = await H.launch({out: __dirname, profile: 'acc', port: 9500});

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>一句话水墨 · Ink in a Line</title>
+<!--
+  P01 一句话水墨 v1（小红书 Builder Hub 沙箱原型）
+  - 纯前端、零外部 API、零依赖、零外链：单文件可直接进沙箱
+  - 输入一句话 -> 关键词诗性映射到主题 -> 程序化生成竖幅水墨壁纸（题字+朱印）-> 存 PNG
+  - 确定性：种子 = hash(输入文本) + 变体号；同句同变体永远同一幅
+  - 渲染原语（FBM 山脊/竖排题字器/程序印章/主题映射）登记 POOL candidate，
+    回流目标：P08 长卷寻灵、P03 inkwash-engine
+  2026-10-23 绒球创作时间
+-->
+<style>
+:root{
+  --paper:#f4ede0; --paper-deep:#e9dfcc; --ink:#2b2620; --ink-mid:#6b6258;
+  --vermilion:#b3402f; --vermilion-deep:#94331f;
+  --line:rgba(60,48,34,.18);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:"Songti SC","STSong","SimSun","Noto Serif SC",serif;
+  color:var(--ink);background:var(--paper-deep);
+  display:flex;flex-direction:column;align-items:center;
+  min-height:100vh;min-height:100dvh;
+}
+.app{width:100%;max-width:520px;flex:1;display:flex;flex-direction:column;padding:18px 16px calc(20px + env(safe-area-inset-bottom))}
+header.top{text-align:center;margin:4px 0 14px}
+header.top h1{font-size:22px;letter-spacing:.28em;font-weight:600;padding-left:.28em}
+header.top .en{font-size:10px;letter-spacing:.34em;color:var(--ink-mid);margin-top:5px}
+.stage{position:relative;width:100%;border-radius:4px;overflow:hidden;
+  box-shadow:0 10px 34px rgba(60,48,34,.22), 0 2px 8px rgba(60,48,34,.12);
+  background:var(--paper);border:1px solid var(--line)}
+.stage canvas{display:block;width:100%;height:auto}
+.stage .loading{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:var(--paper);color:var(--ink-mid);letter-spacing:.3em;font-size:13px;
+  opacity:0;pointer-events:none;transition:opacity .15s}
+.stage.busy .loading{opacity:1}
+.controls{margin-top:16px;display:flex;flex-direction:column;gap:11px}
+.input-row{display:flex;gap:8px}
+input#phrase{
+  flex:1;min-width:0;font-family:inherit;font-size:15px;color:var(--ink);
+  background:rgba(255,255,255,.55);border:1px solid var(--line);border-radius:3px;
+  padding:11px 12px;outline:none;letter-spacing:.06em}
+input#phrase::placeholder{color:#a89c8b}
+input#phrase:focus{border-color:rgba(179,64,47,.55);box-shadow:0 0 0 2px rgba(179,64,47,.08)}
+button{
+  font-family:inherit;cursor:pointer;border:none;border-radius:3px;
+  letter-spacing:.18em;font-size:15px;padding:11px 16px;
+  transition:transform .08s ease, background .15s ease, opacity .15s ease;
+  touch-action:manipulation;user-select:none}
+button:active{transform:scale(.965)}
+button.primary{background:var(--vermilion);color:#fbf4e7}
+button.primary:active{background:var(--vermilion-deep)}
+button.ghost{background:transparent;color:var(--ink-mid);border:1px solid var(--line)}
+.btn-row{display:flex;gap:8px}
+.btn-row button{flex:1}
+.opt-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-mid);
+  padding:2px 2px;letter-spacing:.05em}
+.opt-row input{accent-color:var(--vermilion);width:16px;height:16px}
+.theme-note{font-size:12px;color:#9a8d7a;text-align:center;letter-spacing:.08em;min-height:16px}
+footer.foot{margin-top:14px;text-align:center;font-size:11px;color:#a89c8b;letter-spacing:.2em}
+@media (max-width:360px){
+  header.top h1{font-size:19px}
+  button{font-size:14px;padding:10px 12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <h1>一句话水墨</h1>
+    <div class="en">I N K · I N · A · L I N E</div>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="paper"></canvas>
+    <div class="loading">研墨中…</div>
+  </div>
+
+  <div class="controls">
+    <div class="input-row">
+      <input id="phrase" type="text" maxlength="24" autocomplete="off"
+             placeholder="写一句心境、名字或诗句…">
+      <button class="primary" id="btnGen">成画</button>
+    </div>
+    <label class="opt-row">
+      <input type="checkbox" id="useOwn"> 题我的原句（不题库中诗句）
+    </label>
+    <div class="btn-row">
+      <button class="ghost" id="btnShuffle">换一卷</button>
+      <button class="ghost" id="btnSave">存图</button>
+    </div>
+    <div class="theme-note" id="themeNote"></div>
+  </div>
+
+  <footer class="foot">程序生成 · 每一句都独一无二</footer>
+</div>
+
+<script>
+(function(){
+'use strict';
+/* ============ 确定性随机（LCG + 字符串 hash） ============ */
+function hashStr(s){
+  let h = 2166136261>>>0;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619)>>>0; }
+  return h>>>0;
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function lerp(a,b,t){ return a+(b-a)*t; }
+
+/* ============ 值噪声 + fBm（紧凑实现，无需外部库） ============ */
+function makeNoise(seed){
+  const rng = mulberry32(seed);
+  const perm = new Uint8Array(512), p = new Uint8Array(256);
+  for(let i=0;i<256;i++) p[i]=i;
+  for(let i=255;i>0;i--){ const j=(rng()*(i+1))|0; const t=p[i]; p[i]=p[j]; p[j]=t; }
+  for(let i=0;i<512;i++) perm[i]=p[i&255];
+  const grad = new Float32Array(256);
+  for(let i=0;i<256;i++) grad[i] = rng()*2-1;
+  function fade(t){ return t*t*t*(t*(t*6-15)+10); }
+  function noise1(x){
+    const xi = Math.floor(x), xf = x-xi, u = fade(xf);
+    const g0 = grad[perm[xi & 255]], g1 = grad[perm[(xi+1) & 255]];
+    const v0 = g0*xf, v1 = g1*(xf-1);
+    return lerp(v0,v1,u)*1.8; // 约 [-1,1]
+  }
+  function fbm(x, oct, lac, gain){
+    let amp=0.55, freq=1, sum=0, norm=0;
+    for(let o=0;o<oct;o++){ sum += amp*noise1(x*freq); norm+=amp; amp*=gain; freq*=lac; }
+    return sum/norm;
+  }
+  return {noise1, fbm};
+}
+
+/* ============ 主题：关键词诗性映射（本地，无 API） ============ */
+/* 特异词优先于泛词；每个主题一句公认古典名句（公版） */
+/* keys: [词, 权重]。特异词（雨/雪/舟/竹/枫…）高权重，单字泛词低权重；
+   泛情绪词只在无特异意象时把句子引向月/云等心境主题。 */
+var THEMES = {
+  moon:  {label:'月', poem:'明月松间照，清泉石上流', poet:'王维',
+          keys:[['晚安',6],['想你',5],['月亮',6],['月色',6],['月光',5],['夜空',4],['星空',4],['睡不着',5],['失眠',5],['孤独',3],['寂寞',3],['想念',3],['梦',2],['眠',2],['暮',1.5],['月',3.5],['夜',2],['晚',1.2],['星',2]]},
+  rain:  {label:'雨', poem:'空山新雨后，天气晚来秋', poet:'王维',
+          keys:[['下雨',6],['听雨',6],['落雨',6],['雨水',6],['霖',5],['雨',5],['点滴',3]]},
+  snow:  {label:'雪', poem:'孤舟蓑笠翁，独钓寒江雪', poet:'柳宗元',
+          keys:[['下雪',6],['雪',6],['凛',4],['冰封',4],['寒',3.5],['冬',3],['冷',2],['冰',3],['梅',3.5]]},
+  jiang: {label:'江', poem:'野旷天低树，江清月近人', poet:'孟浩然',
+          keys:[['江水',6],['江河',6],['湖泊',6],['大海',6],['溪水',5],['潮水',5],['江',5],['河',4.5],['湖',4.5],['海',4.5],['溪',4],['浪',3.5],['潮',3.5],['水',2.5],['渊',4]]},
+  boat:  {label:'舟', poem:'孤舟蓑笠翁，独钓寒江雪', poet:'柳宗元',
+          keys:[['扁舟',6],['孤舟',6],['渔船',6],['垂钓',6],['舟',5.5],['帆',5],['桨',5],['船',5],['钓',4.5],['渔',4],['渡',3.5]]},
+  flower:{label:'花', poem:'桃之夭夭，灼灼其华', poet:'诗经',
+          keys:[['桃花',6],['樱花',6],['玫瑰',6],['花开',6],['春风',4],['春天',5],['春',3],['花',4.5],['桃',4],['樱',4.5],['芳',2],['粉',2.5],['温柔',2],['甜',2],['绽',3]]},
+  bamboo:{label:'竹', poem:'宁可食无肉，不可居无竹', poet:'苏轼',
+          keys:[['不可居无竹',8],['竹子',6],['竹林',6],['竹',6],['笋',4.5],['虚心',3],['气节',3],['谦',2.5]]},
+  autumn:{label:'秋', poem:'停车坐爱枫林晚，霜叶红于二月花', poet:'杜牧',
+          keys:[['枫叶',6],['枫林',6],['红叶',6],['落叶',5.5],['秋天',5.5],['枫',6],['秋',5],['叶',3],['落',1.5],['萧',3],['枯',2.5],['黄',2]]},
+  bird:  {label:'鸟', poem:'千山鸟飞绝，万径人踪灭', poet:'柳宗元',
+          keys:[['飞鸟',6],['大雁',6],['归雁',6],['鸟',5.5],['雁',5],['鹤',5],['雀',4.5],['鸦',4.5],['燕',4],['鸣',3.5],['飞',2]]},
+  cloud: {label:'云', poem:'行到水穷处，坐看云起时', poet:'王维',
+          keys:[['云起',6],['云雾',6],['晚霞',5.5],['自在',3.5],['自由',3.5],['悠闲',3.5],['云',5],['雾',4.5],['烟',4],['霞',4.5],['闲',2.5],['淡',2],['风',2.5]]},
+  mountain:{label:'山', poem:'空山不见人，但闻人语响', poet:'王维',
+          keys:[['山峰',6],['登高',6],['远山',6],['安静',2.5],['山',4],['峰',4],['岭',4],['峦',4],['岳',4],['岩',3.5],['静',1.5],['安',1]]}
+};
+/* 评分：特异词高权重优先；同分时按此序（意象特异度）裁决；mountain 为兜底 */
+var ORDER = ['bamboo','rain','snow','boat','autumn','bird','flower','jiang','cloud','moon','mountain'];
+function detectTheme(text){
+  if(!text) return 'mountain';
+  let best='mountain', bestScore=0;
+  for(const k of ORDER){
+    let s=0;
+    for(const pair of THEMES[k].keys){ if(text.indexOf(pair[0])>=0) s+=pair[1]; }
+    if(s>bestScore){ bestScore=s; best=k; }
+  }
+  return best;
+}
+
+/* ============ 色彩 ============ */
+function hexRgb(h){ return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]; }
+function rgba(h,a){ const c=hexRgb(h); return 'rgba('+c[0]+','+c[1]+','+c[2]+','+a+')'; }
+
+var PALETTES = {
+  base: { far:'#9aa6ad', mid:'#67727b', near:'#39434c', deep:'#232b33', accent:null, water:false, rain:false, snow:false, night:false, moon:false, birds:0, tint:null },
+  moon:  { far:'#8b97a3', mid:'#5b6773', near:'#303a45', deep:'#1d2630', accent:null, water:false, rain:false, snow:false, night:true, moon:true, birds:0, tint:null },
+  rain:  { far:'#8d97a0', mid:'#5a646e', near:'#333d46', deep:'#222a31', accent:null, water:false, rain:true, snow:false, night:false, moon:false, birds:0, tint:null },
+  snow:  { far:'#a7b1ba', mid:'#7e8992', near:'#5b656f', deep:'#454e57', accent:null, water:false, rain:false, snow:true, night:false, moon:false, birds:0, tint:null },
+  jiang: { far:'#9aa6ad', mid:'#64707a', near:'#39434c', deep:'#252d34', accent:null, water:true, rain:false, snow:false, night:false, moon:false, birds:2, tint:null },
+  boat:  { far:'#95a1a8', mid:'#606c76', near:'#36404a', deep:'#232b32', accent:null, water:true, rain:false, snow:false, night:false, moon:false, birds:1, tint:null, boat:true },
+  flower:{ far:'#a3acb0', mid:'#6f787e', near:'#3e474d', deep:'#283036', accent:'#c77a86', water:false, rain:false, snow:false, night:false, moon:false, birds:0, tint:'spring' },
+  bamboo:{ far:'#97a4a5', mid:'#647270', near:'#37433f', deep:'#242d2a', accent:null, water:false, rain:false, snow:false, night:false, moon:false, birds:1, bamboo:true, tint:null },
+  autumn:{ far:'#a59f94', mid:'#746d62', near:'#4a4036', deep:'#322b24', accent:'#a85a3c', water:false, rain:false, snow:false, night:false, moon:false, birds:2, tint:'autumn' },
+  bird:  { far:'#98a3aa', mid:'#626d76', near:'#36404a', deep:'#232b33', accent:null, water:false, rain:false, snow:false, night:false, moon:true, birds:7, tint:null },
+  cloud: { far:'#a9b2b4', mid:'#78818a', near:'#46505a', deep:'#2c353d', accent:null, water:false, rain:false, snow:false, night:false, moon:false, birds:2, mistHeavy:true },
+  mountain:{ far:'#939fa6', mid:'#5f6a73', near:'#353f48', deep:'#222a31', accent:null, water:false, rain:false, snow:false, night:false, moon:false, birds:3, tint:null }
+};
+
+/* ============ 画面常量（逻辑分辨率，竖幅壁纸） ============ */
+var W = 1080, H = 1440;
+
+/* ============ 渲染器 ============ */
+function render(canvas, opts){
+  const phrase = opts.phrase || '';
+  const variant = opts.variant|0;
+  const themeKey = opts.themeKey || detectTheme(phrase);
+  const theme = THEMES[themeKey];
+  const pal = PALETTES[themeKey] || PALETTES.base;
+  const seed = (hashStr(phrase||'空山') ^ (0x9e3779b9 * (variant+1) >>> 0))>>>0;
+  const rng = mulberry32(seed);
+  const nz = makeNoise((seed^0x5bf03635)>>>0);
+
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  /* --- 宣纸底：暖色纵向渐变 + 纤维（夜题不整体压暗纸底，夜意只在月周轻染） --- */
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#f6efe1'); bg.addColorStop(.55,'#f2ead9'); bg.addColorStop(1,'#ece2cd');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  /* 纸纤维：极细短线，确定性，画一次到离屏再贴 */
+  ctx.lineCap = 'round';
+  for(let i=0;i<1500;i++){
+    const x=rng()*W, y=rng()*H, len=6+rng()*22;
+    ctx.strokeStyle = 'rgba(120,104,80,'+(0.018+rng()*0.03)+')';
+    ctx.lineWidth = rng()<0.85?0.7:1.1;
+    ctx.beginPath();
+    const a = rng()*Math.PI*2;
+    ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(a)*len, y+Math.sin(a)*len*0.35); ctx.stroke();
+  }
+  /* 纸边做旧 */
+  const vg = ctx.createRadialGradient(W/2,H*0.42,H*0.3,W/2,H*0.5,H*0.95);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(80,60,35,0.10)');
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+  /* --- 月（夜意只做月周极轻冷晕，不整幅压纸） --- */
+  if(pal.moon || pal.night){
+    const mx = W*0.30 + rng()*W*0.12, my = H*0.16 + rng()*H*0.05, mr = 56+rng()*14;
+    const halo = ctx.createRadialGradient(mx,my,mr*0.6,mx,my,mr*3.4);
+    halo.addColorStop(0,'rgba(70,86,104,0.09)');
+    halo.addColorStop(0.45,'rgba(70,86,104,0.035)');
+    halo.addColorStop(1,'rgba(70,86,104,0)');
+    ctx.fillStyle=halo; ctx.fillRect(0,0,W,H);
+    // 月：暖象牙白月面 + 极淡金晕，在宣纸上要「看得见的月」
+    const glow = ctx.createRadialGradient(mx,my,mr*0.2,mx,my,mr*1.35);
+    glow.addColorStop(0,'rgba(238,228,196,0.55)');
+    glow.addColorStop(1,'rgba(238,228,196,0)');
+    ctx.fillStyle=glow;
+    ctx.beginPath(); ctx.arc(mx,my,mr*1.35,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx,my,mr,0,Math.PI*2);
+    ctx.fillStyle='#efe6cc';
+    ctx.shadowColor='rgba(214,196,150,0.6)'; ctx.shadowBlur=18;
+    ctx.fill(); ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.arc(mx,my,mr,0,Math.PI*2);
+    ctx.strokeStyle='rgba(196,178,138,0.55)'; ctx.lineWidth=2.5; ctx.stroke();
+  }
+
+  /* --- 山脊配置（远/中/近三层，x 连续可复用 P08 长卷） --- */
+  var layers = [
+    { key:'far',  color:pal.far,  base:H*0.40, amp:70,  freq:0.00125, oct:3, alpha:0.42, yshift:0 },
+    { key:'mid',  color:pal.mid,  base:H*0.585, amp:130, freq:0.00185, oct:4, alpha:0.62, yshift:0 },
+    { key:'near', color:pal.near, base:H*0.845, amp:175, freq:0.0026,  oct:5, alpha:0.92,  yshift:0 }
+  ];
+  if(pal.water){ layers.forEach(l=>l.base-= H*0.05); layers[0].amp*=0.8; layers[1].amp*=0.9; }
+  var ridgeCache = {};
+  function ridgePath(L, seedShift){
+    const pts=[], step=6;
+    const fOff = seedShift*137.0;
+    for(let x=-step; x<=W+step; x+=step){
+      let v = nz.fbm(x*L.freq + fOff, L.oct, 2.02, 0.52);
+      v += 0.32*nz.noise1(x*L.freq*3.7 + fOff*1.7);
+      // 高频碎峰：让山脊有尖棱而非圆缓馒头
+      v += 0.16*nz.noise1(x*L.freq*9.5 + fOff*2.3);
+      const y = L.base - v*L.amp;
+      pts.push([x,y]);
+    }
+    return pts;
+  }
+  function strokeRidge(pts, color, width, alpha){
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.strokeStyle=rgba(color,alpha); ctx.lineWidth=width; ctx.stroke();
+  }
+
+  /* 水墨式山体（学山居旧作口径：实色山形 + 蒙版山脚渐隐，墨身无色带）：
+     1) 离屏：白形填到下沿 2) destination-out 纵向渐隐蒙版
+     3) 主画布：铺一层墨色 → destination-in 吃白形 */
+  function inkMountain(pts, colorHex, alpha, fadeStartY, fadeEndY){
+    // 形状蒙版（白形 + 山脚渐隐）
+    const mask = document.createElement('canvas');
+    mask.width=W; mask.height=H;
+    const mc = mask.getContext('2d');
+    mc.beginPath();
+    mc.moveTo(pts[0][0], pts[0][1]);
+    for(let i=1;i<pts.length;i++) mc.lineTo(pts[i][0], pts[i][1]);
+    mc.lineTo(W,H+2); mc.lineTo(0,H+2); mc.closePath();
+    mc.fillStyle='#fff'; mc.fill();
+    mc.globalCompositeOperation='destination-out';
+    const fade = mc.createLinearGradient(0, fadeStartY, 0, fadeEndY);
+    fade.addColorStop(0,'rgba(0,0,0,0)');
+    fade.addColorStop(0.55,'rgba(0,0,0,0.35)');
+    fade.addColorStop(1,'rgba(0,0,0,1)');
+    mc.fillStyle=fade; mc.fillRect(0,fadeStartY,W,H-fadeStartY);
+    mc.globalCompositeOperation='source-over';
+    // 颜色层：在临时画布上铺色、吃蒙版，再贴回主画布（destination-in 不能直接作用主画布）
+    const layer = document.createElement('canvas');
+    layer.width=W; layer.height=H;
+    const lc = layer.getContext('2d');
+    lc.fillStyle=rgba(colorHex, alpha);
+    lc.fillRect(0,0,W,H);
+    lc.globalCompositeOperation='destination-in';
+    lc.drawImage(mask,0,0);
+    lc.globalCompositeOperation='source-over';
+    ctx.drawImage(layer,0,0);
+  }
+  /* 山脊线下的墨晕（让线不硬） */
+  function ridgeBleed(pts, colorHex, alpha, widthPx){
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0],pts[i][1]);
+    ctx.lineWidth=widthPx; ctx.strokeStyle=rgba(colorHex,alpha);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.shadowColor=rgba(colorHex,alpha); ctx.shadowBlur=widthPx*0.9;
+    ctx.stroke(); ctx.restore();
+  }
+  function ridgeTop(pts){ return Math.min.apply(null, pts.map(p=>p[1])); }
+
+  /* --- 远山（最淡，山脚化进雾） --- */
+  var farPts = ridgePath(layers[0], variant*3.1+0.2);
+  inkMountain(farPts, layers[0].color, 0.30, ridgeTop(farPts)+60, ridgeTop(farPts)+360);
+  ridgeBleed(farPts, layers[0].color, 0.22, 6);
+
+  /* 远雾：横在远山与中山之间 */
+  drawMist(H*0.52, H*0.085, 0.5, 3, rng, nz, ctx);
+
+  /* --- 中山 --- */
+  var midPts = ridgePath(layers[1], variant*5.7+1.4);
+  inkMountain(midPts, layers[1].color, 0.50, ridgeTop(midPts)+150, ridgeTop(midPts)+520);
+  ridgeBleed(midPts, layers[1].color, 0.34, 8);
+  cunStrokes(ctx, midPts, pal.mid, 60, rng, 1.0);
+
+  drawMist(H*0.80, H*0.10, pal.mistHeavy?0.9:0.5, 4, rng, nz, ctx);
+
+  /* --- 近山：实墨沉底，山脚保留，山脊最浓 --- */
+  var nearPts = ridgePath(layers[2], variant*8.3+2.8);
+  inkMountain(nearPts, pal.near, 0.92, H-40, H+200);
+  // 山脊焦墨：沿山脊描多道由粗到细、由浓到淡的墨线（贴着轮廓走，不出尖牙）
+  (function(){
+    ctx.save(); ctx.lineJoin='round'; ctx.lineCap='round';
+    const passes=[[26,0.28],[16,0.3],[9,0.34],[4,0.5]];
+    passes.forEach(function(ps){
+      ctx.beginPath();
+      ctx.moveTo(nearPts[0][0],nearPts[0][1]+ps[0]*0.18);
+      for(let i=1;i<nearPts.length;i++) ctx.lineTo(nearPts[i][0],nearPts[i][1]+ps[0]*0.18);
+      ctx.strokeStyle=rgba(pal.deep,ps[1]); ctx.lineWidth=ps[0]; ctx.stroke();
+    });
+    ctx.restore();
+  })();
+  ridgeBleed(nearPts, pal.deep, 0.6, 6);
+  cunStrokes(ctx, nearPts, pal.deep, 150, rng, 1.3, 300);
+
+  /* 雪顶：峰顶肩坡留白块（顺坡小面，不是描边线） */
+  if(pal.snow){
+    [ [midPts,0.55],[nearPts,0.7] ].forEach(function(cfg){
+      const pts=cfg[0], th=cfg[1];
+      ctx.fillStyle='rgba(245,243,236,'+th+')';
+      for(let i=3;i<pts.length-3;i++){
+        const p=pts[i];
+        if(p[1]<pts[i-1][1] && p[1]<=pts[i+1][1] && rng()<0.5){
+          const rw=20+rng()*36, rh=7+rng()*10;
+          ctx.beginPath();
+          ctx.moveTo(p[0]-rw*0.5, p[1]+3);
+          ctx.quadraticCurveTo(p[0]-rw*0.12, p[1]-rh, p[0]+rw*0.5, p[1]+3);
+          ctx.quadraticCurveTo(p[0], p[1]+rh*0.3, p[0]-rw*0.5, p[1]+3);
+          ctx.fill();
+          i+=2;
+        }
+      }
+    });
+  }
+
+  /* --- 水面（江/舟主题）：先压一条云水亮带托住舟，再勾水纹 --- */
+  if(pal.water){
+    const wy0 = layers[2].base + layers[2].amp*0.28;
+    ctx.save();
+    const band = ctx.createLinearGradient(0,wy0,0,H+10);
+    band.addColorStop(0,'rgba(238,232,214,0)');
+    band.addColorStop(0.18,'rgba(238,232,214,0.72)');
+    band.addColorStop(0.75,'rgba(232,224,202,0.85)');
+    band.addColorStop(1,'rgba(228,219,197,0.9)');
+    ctx.fillStyle=band; ctx.fillRect(0,wy0,W,H-wy0);
+    // 水岸交接的软雾
+    const fog=ctx.createLinearGradient(0,wy0-46,0,wy0+30);
+    fog.addColorStop(0,'rgba(240,235,222,0)');
+    fog.addColorStop(1,'rgba(240,235,222,0.85)');
+    ctx.fillStyle=fog; ctx.fillRect(0,wy0-46,W,80);
+    for(let i=0;i<24;i++){
+      const y = wy0 + 40 + i*((H-wy0-70)/24) + (rng()-0.5)*10;
+      const x0 = W*0.06 + rng()*W*0.1;
+      const len = W*(0.26+rng()*0.5);
+      ctx.beginPath(); ctx.moveTo(x0,y);
+      ctx.bezierCurveTo(x0+len*0.3,y-3+rng()*6, x0+len*0.6,y-3+rng()*6, x0+len,y);
+      ctx.strokeStyle='rgba(46,58,68,'+(0.22-(i*0.006))+')';
+      ctx.lineWidth=2.2; ctx.stroke();
+    }
+    ctx.restore();
+    if(pal.boat) drawBoat(ctx, W*0.28+rng()*W*0.14, wy0+150+rng()*70, rng);
+  }
+
+  /* --- 竹 --- */
+  if(pal.bamboo) drawBambooClump(ctx, W*0.80+rng()*W*0.08, layers[2].base+40, rng);
+
+  /* --- 花/秋 点景：只落在浅色坡脚/水畔，不落在黑山脊上 --- */
+  if(pal.tint==='spring' || pal.accent && pal.tint==='autumn'){
+    const dots = pal.tint==='spring'? 24: 28;
+    const floorY = pal.water ? (layers[2].base + layers[2].amp*0.28) : H-60;
+    let placed=0, guard=0;
+    while(placed<dots && guard<dots*8){
+      guard++;
+      const x=W*0.08+rng()*W*0.84;
+      const y=floorY-10 - rng()*150;
+      // 必须在近山山脊之上（浅色中景/雾带里），不压黑近山
+      if(y < ridgeYAt(midPts,x)-14) continue;
+      if(y > ridgeYAt(nearPts,x)+6) continue;
+      const c = pal.tint==='spring' ? 'rgba(197,108,124,0.85)':'rgba(168,82,52,0.85)';
+      dotBlossom(ctx,x,y,3+rng()*3,c,rng);
+      placed++;
+    }
+  }
+
+  /* --- 鸟（远空墨点人字形） --- */
+  if(pal.birds>0){
+    for(let i=0;i<pal.birds;i++){
+      const bx = W*(0.14+rng()*0.55), by = H*(0.13+rng()*0.16), bs=11+rng()*7;
+      drawBird(ctx,bx,by,bs, pal.night?0.78:0.66);
+    }
+  }
+
+  /* --- 雨丝 --- */
+  if(pal.rain){
+    ctx.strokeStyle='rgba(50,60,70,0.13)'; ctx.lineWidth=1.4;
+    for(let i=0;i<170;i++){
+      const x=rng()*W, y=rng()*H*0.92, l=16+rng()*20;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-4,y+l); ctx.stroke();
+    }
+    drawMist(H*0.5,H*0.4,0.4,5,rng,nz,ctx);
+  }
+
+  /* --- 题字 + 落款 + 印 --- */
+  drawInscription(ctx, phrase, themeKey, theme, opts.useOwn, rng);
+
+  return { themeKey:themeKey, themeLabel:theme.label, poem:theme.poem, poet:theme.poet, seed:seed };
+}
+
+/* ---- 云雾：横向软带，上下边缘渐隐（硬边会成横条） ---- */
+function drawMist(centerY, bandH, strength, layer, rng, nz, ctx){
+  for(let i=0;i<4;i++){
+    const y = centerY + (i-1.5)*bandH*0.26 + (rng()-0.5)*10;
+    const h = bandH*(0.4+rng()*0.25);
+    const g = ctx.createLinearGradient(0,y-bandH*0.3,0,y+h+bandH*0.3);
+    const a=0.13*strength;
+    g.addColorStop(0,'rgba(246,240,228,0)');
+    g.addColorStop(0.35,'rgba(246,240,228,'+a+')');
+    g.addColorStop(0.65,'rgba(246,240,228,'+a+')');
+    g.addColorStop(1,'rgba(246,240,228,0)');
+    ctx.beginPath();
+    const step=40;
+    ctx.moveTo(0,y);
+    for(let x=0;x<=W;x+=step){
+      ctx.lineTo(x, y + nz.noise1(x*0.0022+layer*9.3+i)*bandH*0.14);
+    }
+    ctx.lineTo(W,y+h);
+    for(let x=W;x>=0;x-=step){
+      ctx.lineTo(x, y+h + nz.noise1(x*0.0022+layer*9.3+i+3.1)*bandH*0.14);
+    }
+    ctx.closePath();
+    ctx.fillStyle=g; ctx.fill();
+  }
+}
+
+/* ---- 皴笔：沿山脊的短横皴（平行于坡向，短促、低透明度；忌竖长线成「雨丝」） ---- */
+function cunStrokes(ctx, pts, color, count, rng, scale, depth){
+  depth = depth || 60;
+  ctx.lineCap='round';
+  for(let i=0;i<count;i++){
+    const pi = 1 + ((rng()*(pts.length-3))|0);
+    const p0=pts[pi], p1=pts[pi+1];
+    // 贴山脊内侧，顺坡深入 8~depth px
+    const drop = 8+rng()*depth*scale;
+    const t = rng();
+    const x = lerp(p0[0],p1[0],t) + (rng()-0.5)*8;
+    const y = lerp(p0[1],p1[1],t) + drop;
+    const len = (10+rng()*26)*scale;
+    const slope = Math.atan2(p1[1]-p0[1], p1[0]-p0[0]);
+    const a = slope*0.5 + (rng()-0.5)*0.25;
+    ctx.beginPath();
+    ctx.moveTo(x-Math.cos(a)*len*0.5, y-Math.sin(a)*len*0.5);
+    ctx.quadraticCurveTo(x, y+2, x+Math.cos(a)*len*0.5, y+Math.sin(a)*len*0.5);
+    // 越贴山脊越浓，深入坡面转淡
+    const k = 1 - Math.min(1,(drop-8)/(depth*scale));
+    ctx.strokeStyle=rgba(color,0.05+k*0.13);
+    ctx.lineWidth=(0.8+rng()*1.2)*scale; ctx.stroke();
+  }
+}
+
+function ridgeYAt(pts,x){
+  if(x<=pts[0][0]) return pts[0][1];
+  const idx = Math.min(pts.length-2, Math.max(0, Math.floor(x/6)+1));
+  const p0=pts[idx-1]||pts[0], p1=pts[idx];
+  if(!p1) return p0[1];
+  const t=(x-p0[0])/Math.max(1,(p1[0]-p0[0]));
+  return p0[1]+(p1[1]-p0[1])*t;
+}
+
+/* ---- 点景：花/叶 五瓣小点 ---- */
+function dotBlossom(ctx,x,y,r,color,rng){
+  ctx.save(); ctx.translate(x,y);
+  for(let k=0;k<5;k++){
+    const a=k/5*Math.PI*2;
+    ctx.beginPath();
+    ctx.arc(Math.cos(a)*r*0.9, Math.sin(a)*r*0.9, r*0.72,0,Math.PI*2);
+    ctx.fillStyle=color; ctx.fill();
+  }
+  ctx.beginPath(); ctx.arc(0,0,r*0.5,0,Math.PI*2);
+  ctx.fillStyle='rgba(90,60,40,0.55)'; ctx.fill();
+  ctx.restore();
+  void rng;
+}
+
+/* ---- 远鸟：两笔人字 ---- */
+function drawBird(ctx,x,y,s,alpha){
+  ctx.beginPath();
+  ctx.moveTo(x-s,y+s*0.35); ctx.quadraticCurveTo(x-s*0.42,y-s*0.25,x,y+s*0.12);
+  ctx.quadraticCurveTo(x+s*0.42,y-s*0.25,x+s,y+s*0.35);
+  ctx.strokeStyle='rgba(35,42,50,'+alpha+')'; ctx.lineWidth=Math.max(2.4,s*0.22);
+  ctx.lineCap='round'; ctx.stroke();
+}
+
+/* ---- 小舟（放在亮水带上，焦墨重笔 + 淡倒影） ---- */
+function drawBoat(ctx,x,y,rng){
+  ctx.save(); ctx.translate(x,y);
+  // 倒影
+  ctx.save();
+  ctx.scale(1,-0.55); ctx.translate(0,-22);
+  ctx.globalAlpha=0.12;
+  ctx.beginPath();
+  ctx.moveTo(-62,0); ctx.quadraticCurveTo(0,24,62,0);
+  ctx.quadraticCurveTo(32,13,-62,0);
+  ctx.fillStyle='#26303a'; ctx.fill();
+  ctx.restore();
+  ctx.beginPath();
+  ctx.moveTo(-62,0); ctx.quadraticCurveTo(0,24,62,0);
+  ctx.quadraticCurveTo(32,14,-62,0);
+  ctx.fillStyle='rgba(30,38,46,0.92)'; ctx.fill();
+  // 篷
+  ctx.beginPath(); ctx.moveTo(-22,-3); ctx.quadraticCurveTo(-2,-30,22,-3); ctx.closePath();
+  ctx.fillStyle='rgba(44,50,54,0.85)'; ctx.fill();
+  // 钓翁
+  ctx.beginPath(); ctx.arc(30,-8,4.2,0,Math.PI*2); ctx.fillStyle='rgba(24,30,36,0.95)'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(30,-12); ctx.lineTo(46,-42);
+  ctx.strokeStyle='rgba(34,42,50,0.85)'; ctx.lineWidth=2; ctx.stroke();
+  // 钓线
+  ctx.beginPath(); ctx.moveTo(46,-42); ctx.lineTo(48,8);
+  ctx.strokeStyle='rgba(34,42,50,0.4)'; ctx.lineWidth=1; ctx.stroke();
+  ctx.restore();
+  void rng;
+}
+
+/* ---- 竹丛（近景点题，瘦劲） ---- */
+function drawBambooClump(ctx, baseX, baseY, rng){
+  const n=3+ (rng()*2|0);
+  for(let i=0;i<n;i++){
+    const x=baseX+(i-1)*34+(rng()-0.5)*10;
+    const topY=baseY-330-rng()*120;
+    ctx.beginPath(); ctx.moveTo(x,baseY);
+    ctx.quadraticCurveTo(x-10+(rng()*20),(baseY+topY)/2, x-4+(rng()-0.5)*8, topY);
+    ctx.strokeStyle='rgba(42,56,50,0.85)'; ctx.lineWidth=7-rng()*2; ctx.lineCap='round'; ctx.stroke();
+    // 节
+    for(let j=1;j<=4;j++){
+      const t=j/5, yy=baseY+(topY-baseY)*t;
+      ctx.beginPath(); ctx.moveTo(x-6,yy); ctx.lineTo(x+6,yy-1);
+      ctx.strokeStyle='rgba(30,40,36,0.5)'; ctx.lineWidth=2; ctx.stroke();
+    }
+    // 叶
+    for(let j=0;j<7;j++){
+      const lx=x+(rng()-0.5)*16, ly=topY+20+rng()*90, dir=rng()<0.5?-1:1;
+      drawBambooLeaf(ctx,lx,ly,34+rng()*16,dir,rng());
+    }
+  }
+}
+function drawBambooLeaf(ctx,x,y,len,dir,t){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(dir*(-0.25-t*0.5));
+  ctx.beginPath(); ctx.moveTo(0,0);
+  ctx.quadraticCurveTo(len*0.5,-6,len,0);
+  ctx.quadraticCurveTo(len*0.5,5,0,0);
+  ctx.fillStyle='rgba(46,62,55,0.82)'; ctx.fill();
+  ctx.restore();
+}
+
+/* ---- 竖排题字器（原语：可复用于 P08/其他工具） ---- */
+function drawVerticalText(ctx, text, x, yTop, fontSize, color, lineGap){
+  ctx.save();
+  ctx.fillStyle=color; ctx.font=fontSize+'px "Songti SC","STSong","SimSun",serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle'; // 中字基线，保证逐字列间对齐
+  const gap = lineGap||fontSize*1.32;
+  let y=yTop+fontSize*0.5;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(ch==='，'||ch==='。'||ch===' '){ continue; } // 竖排省标点
+    ctx.fillText(ch,x,y);
+    y += gap;
+  }
+  ctx.restore();
+  return yTop + text.length*gap; // 末字底部
+}
+
+/* ---- 程序化朱印（圆角方印，单字，斑驳边缘） ---- */
+function drawSeal(ctx, cx, cy, size, char){
+  ctx.save();
+  const red='#b3402f';
+  // 斑驳：用多个小圆叠出方印外轮廓
+  ctx.fillStyle=red;
+  const r=size*0.16;
+  roundRect(ctx, cx-size/2, cy-size/2, size, size, r); ctx.fill();
+  // 做旧：镂空白点
+  const rng = mulberry32(hashStr(char+'seal'));
+  for(let i=0;i<70;i++){
+    const px=cx-size/2+rng()*size, py=cy-size/2+rng()*size;
+    if(Math.abs(px-cx)<size*0.30 && Math.abs(py-cy)<size*0.30) continue; // 留字区
+    ctx.beginPath(); ctx.arc(px,py,rng()*2.4,0,Math.PI*2);
+    ctx.fillStyle='rgba(244,237,224,'+(0.25+rng()*0.4)+')'; ctx.fill();
+  }
+  // 印文（白文，单字）
+  ctx.fillStyle='#f4ede0';
+  ctx.font='bold '+Math.round(size*0.62)+'px "Songti SC","STSong","SimSun",serif';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(char, cx, cy+size*0.03);
+  // 内框
+  ctx.strokeStyle='rgba(244,237,224,0.55)'; ctx.lineWidth=3;
+  roundRect(ctx, cx-size/2+9, cy-size/2+9, size-18, size-18, size*0.1); ctx.stroke();
+  ctx.restore();
+}
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+
+/* ---- 题字布局：右起两列诗句，左下落款+印 ---- */
+function drawInscription(ctx, phrase, themeKey, theme, useOwn, rng){
+  var main, signature;
+  if(useOwn && phrase.trim()){
+    main = phrase.trim();
+    signature = '';
+  } else {
+    main = theme.poem;
+    signature = theme.poet;
+  }
+  const size=46, gap=size*1.34;
+  // 右起两列；单句一列时居右，两列时 x1 最右
+  var x1 = W*0.865, x2 = W*0.792;
+  var yTop = H*0.075;
+  var clean = main.replace(/[，。\s]/g,'');
+  var col1, col2;
+  if(clean.length<=7){
+    col1=clean; col2='';
+  } else {
+    const half=Math.ceil(clean.length/2);
+    col1=clean.slice(0,half); col2=clean.slice(half);
+  }
+  if(col1.length>7){ col1=col1.slice(0,7); }
+  if(col2.length>7){ col2=col2.slice(0,6)+'…'; }
+
+  var maxLen = Math.max(col1.length,col2.length);
+  const th = maxLen*gap+40;
+
+  // 题字区淡纸晕：右侧实、向左整体渐隐到 0（不留硬边）
+  var leftEdge = col2 ? x2 : x1;
+  var signCol = (signature || true);
+  void signCol;
+  const washX = leftEdge-44, washW = W-washX+4;
+  const wash=ctx.createLinearGradient(washX,0,W+4,0);
+  wash.addColorStop(0,'rgba(246,240,228,0)');
+  wash.addColorStop(0.28,'rgba(246,240,228,.30)');
+  wash.addColorStop(1,'rgba(246,240,228,.66)');
+  ctx.fillStyle=wash; ctx.fillRect(washX, yTop-22, washW, th);
+
+  drawVerticalText(ctx,col1,x1,yTop,size,'rgba(34,40,46,0.92)',gap);
+  if(col2) drawVerticalText(ctx,col2,x2,yTop,size,'rgba(34,40,46,0.92)',gap);
+
+  // 落款（小字，单列诗句时在诗句左下方；两列时在左列左下）
+  const signX = (col2?x2:x1) - 58;
+  var signEnd = yTop + 6;
+  if(signature){
+    signEnd = drawVerticalText(ctx, signature, signX, yTop+gap*0.35, 26, 'rgba(70,62,52,0.8)', 26*1.32);
+  }
+  // 印文：用主题意象字（月/雨/雪/舟…），不取输入首字以免语义错位
+  var sealChar = (theme && theme.label) ? theme.label : '墨';
+  const sealSize=76;
+  drawSeal(ctx, signX, signEnd+sealSize*0.6+6, sealSize, sealChar);
+  void themeKey; void rng;
+}
+
+/* ============ 页面接线 ============ */
+var canvas=document.getElementById('paper');
+var stage=document.getElementById('stage');
+var input=document.getElementById('phrase');
+var btnGen=document.getElementById('btnGen');
+var btnShuffle=document.getElementById('btnShuffle');
+var btnSave=document.getElementById('btnSave');
+var useOwn=document.getElementById('useOwn');
+var note=document.getElementById('themeNote');
+
+var state={ phrase:'', variant:0, themeKey:'mountain', seed:0, lastLabel:'' };
+var renderToken=0;
+
+function scheduleRender(){
+  state.busy=true;
+  stage.classList.add('busy');
+  const token=++renderToken;
+  // 让 loading 先上屏
+  setTimeout(function(){
+    const info = render(canvas,{
+      phrase:state.phrase, variant:state.variant,
+      themeKey: state.phrase ? null : 'mountain',
+      useOwn: useOwn.checked
+    });
+    if(token!==renderToken) return;
+    state.themeKey=info.themeKey; state.seed=info.seed;
+    state.poem=info.poem; state.poet=info.poet; state.label=info.themeLabel;
+    state.rendered=true; state.busy=false;
+    note.textContent = '成题：' + info.poem + ' · ' + info.poet +
+                       (useOwn.checked && state.phrase.trim() ? '（你的原句）' : '');
+    stage.classList.remove('busy');
+    window.__p01 = state; // 验收镜像
+  },30);
+}
+
+btnGen.addEventListener('click', function(){
+  state.phrase = input.value.trim();
+  state.variant=0;
+  scheduleRender();
+});
+input.addEventListener('keydown', function(e){ if(e.key==='Enter'){ btnGen.click(); } });
+btnShuffle.addEventListener('click', function(){
+  state.variant++;
+  scheduleRender();
+});
+useOwn.addEventListener('change', function(){
+  if(state.phrase || input.value.trim()) scheduleRender();
+});
+btnSave.addEventListener('click', function(){
+  var a=document.createElement('a');
+  var name=(state.phrase||'ink').slice(0,12).replace(/[\\/:*?"<>|\s]/g,'_');
+  a.download='yijuhua_'+name+'_v'+state.variant+'.png';
+  a.href=canvas.toDataURL('image/png');
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+/* 首屏：默认空山一幅 */
+scheduleRender();
+
+/* 验收只读镜像（paint 同步直绘，不经 UI 异步；无副作用于输入框） */
+window.__p01Debug = {
+  state: function(){ return state; },
+  detectTheme: detectTheme,
+  paint: function(text, variant, useOwn){
+    const info = render(canvas, { phrase:text, variant:variant|0, themeKey:null, useOwn:!!useOwn });
+    // 像素摘要：每 97 个字节取一个，足够区分整幅构图，不拷贝全量 dataURL
+    const d = canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+    let h=2166136261>>>0;
+    for(let i=0;i<d.length;i+=97){ h ^= d[i]; h=Math.imul(h,16777619)>>>0; }
+    return { hash: ('00000000'+h.toString(16)).slice(-8), seed:info.seed,
+             themeKey:info.themeKey, poem:info.poem };
+  }
+};
+
+})();
+</script>
+</body>
+</html>
